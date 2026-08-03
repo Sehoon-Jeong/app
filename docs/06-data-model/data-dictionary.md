@@ -9,7 +9,7 @@
 | 영역 | 포함 내용 |
 | --- | --- |
 | [표기와 공통 규칙](#표기) | 공통 타입, 시각, FK와 JSONB 원칙 |
-| [1. 사용자와 개인정보](#1-사용자와-개인정보) | `app_user`, 인증 세션, 피부 고민, 알림 구독, 계정 삭제 작업 |
+| [1. 사용자와 개인정보](#1-사용자와-개인정보) | `app_user`, 피부 고민, 알림 구독, 계정 삭제 작업 |
 | [2. 제품·성분·기능](#2-제품성분기능) | 브랜드, 제품 버전, 바코드, 성분과 제품 기능 |
 | [3. 이미지와 AI 작업](#3-이미지와-ai-작업) | 비공개 업로드, AI 작업, 성분·구매 내역 추출 결과 |
 | [4. 안정 루틴](#4-안정-루틴) | 루틴, 불변 루틴 버전과 아침·저녁 제품 순서 |
@@ -44,20 +44,7 @@
 | `write_locked_at` | NULL 허용 | 계정 삭제 중 새 쓰기 차단 |
 | `created_at` | NOT NULL | 최초 프로필 생성 시각 |
 
-비밀번호 원문과 JWT는 저장하지 않는다. 이메일은 로그인과 계정 관리에만 사용한다. `SPECIFIED`이면 `user_concern`이 하나 이상 있어야 하고, `UNKNOWN`이면 고민 행이 없어야 한다. 두 변경은 한 트랜잭션에서 처리한다.
-
-### `auth_refresh_session` — P0
-
-| 필드 | 제약 | 의미 |
-| --- | --- | --- |
-| `id` | PK | 로그인 유지 세션 |
-| `user_id` | FK app_user, NOT NULL | 소유자 |
-| `token_hash` | UNIQUE, NOT NULL | 현재 refresh token의 단방향 해시 |
-| `expires_at` | NOT NULL | 재발급 가능 만료 시각 |
-| `last_rotated_at` | NULL 허용 | refresh token을 마지막 교체한 시각 |
-| `revoked_at` | NULL 허용 | 로그아웃·삭제·이상 사용으로 폐기한 시각 |
-
-access JWT와 refresh token 원문은 저장하지 않는다. access JWT의 session ID가 이 행을 가리키며, 개인 API는 폐기·만료 session을 거부한다. access JWT는 15분, refresh token은 7일 동안 사용한다. refresh token은 `HttpOnly`·`Secure` cookie로 전달하고 재발급 시 해시와 cookie를 함께 교체해 동시 재사용을 막는다.
+비밀번호 원문과 access JWT는 저장하지 않는다. 이메일은 로그인과 계정 관리에만 사용한다. 서버는 30일짜리 단일 access JWT만 발급하며 refresh token·인증 cookie·서버 인증 session은 저장하지 않는다. 모든 개인 API는 JWT 검증 후 `app_user`의 존재와 `write_locked_at`을 확인한다. `SPECIFIED`이면 `user_concern`이 하나 이상 있어야 하고, `UNKNOWN`이면 고민 행이 없어야 한다. 두 변경은 한 트랜잭션에서 처리한다.
 
 ### `user_concern` — P0
 
@@ -712,7 +699,6 @@ quest의 experiment 사용자와 subscription 사용자는 같아야 한다. 완
 | 부모 | 자식 | 정책 | 이유 |
 | --- | --- | --- | --- |
 | app_user | 개인 도메인 전체 | 계정 삭제 작업에서 명시적 순서 삭제 | 외부 파일·인증과 함께 성공 여부를 추적해야 함 |
-| app_user | auth_refresh_session | CASCADE | 계정이 없으면 재발급 세션도 유효하지 않음 |
 | app_user | privacy_deletion_job | SET NULL | 삭제 완료 상태만 제한 기간 보존 |
 | routine | routine_version/item | CASCADE | 계정 삭제 시 사용자 루틴 단위 정리 |
 | product | product_version | RESTRICT | 과거 실험 참조 보존, 계정 삭제 시 개인 제품은 참조부터 삭제 |
@@ -731,7 +717,7 @@ quest의 experiment 사용자와 subscription 사용자는 같아야 한다. 완
 
 ### 계정 삭제 순서
 
-1. app_user를 쓰기 잠금하고 refresh session을 폐기한다.
+1. `app_user.write_locked_at`을 설정해 기존 JWT를 포함한 모든 개인 요청을 차단한다.
 2. OCI 객체를 삭제하고 push subscription을 제거한다.
 3. notification/LAB/Rescue/observation/experiment부터 루틴·추천 방향으로 개인 aggregate를 삭제한다.
 4. AI 작업과 개인 제품 초안을 참조 역순으로 삭제한다.
@@ -757,7 +743,6 @@ quest의 experiment 사용자와 subscription 사용자는 같아야 한다. 완
 
 - `product_version(normalized_name)`과 `brand(normalized_name)` 검색 인덱스
 - `product_identifier(type, value)` 정확 검색 인덱스
-- `auth_refresh_session(user_id, revoked_at, expires_at)` 유효 세션 인덱스
 - `experiment(user_id, status, created_at desc)`
 - 열린 실험 부분 유일 인덱스
 - `observation_quest(experiment_id, due_at, status)`

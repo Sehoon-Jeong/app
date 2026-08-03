@@ -263,20 +263,6 @@ Table app_user {
   updated_at timestamptz [not null]
 }
 
-Table auth_refresh_session {
-  id uuid [pk]
-  user_id uuid [not null]
-  token_hash varchar(255) [not null, unique]
-  expires_at timestamptz [not null]
-  last_rotated_at timestamptz
-  revoked_at timestamptz
-  created_at timestamptz [not null]
-
-  indexes {
-    (user_id, revoked_at, expires_at)
-  }
-}
-
 Table user_concern {
   user_id uuid [not null]
   concern_code varchar(50) [not null]
@@ -907,7 +893,6 @@ Table notification_delivery {
   }
 }
 
-Ref: auth_refresh_session.user_id > app_user.id [delete: cascade]
 Ref: user_concern.user_id > app_user.id [delete: cascade]
 Ref: web_push_subscription.user_id > app_user.id [delete: cascade]
 Ref: privacy_deletion_job.user_id > app_user.id [delete: set null]
@@ -1010,7 +995,6 @@ Ref: notification_delivery.subscription_id > web_push_subscription.id [delete: c
 
 TableGroup identity_and_privacy {
   app_user
-  auth_refresh_session
   user_concern
   web_push_subscription
   privacy_deletion_job

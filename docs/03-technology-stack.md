@@ -48,9 +48,10 @@ React는 Spring Boot API를 통해서만 사용자 데이터에 접근한다. �
 
 - 이메일과 비밀번호로 로그인하고 Spring Security가 JWT를 발급·검증한다.
 - 비밀번호는 단방향 해시로만 저장하며, 모든 개인 API는 현재 사용자의 데이터 소유권을 확인한다.
-- access JWT는 15분 동안 브라우저 메모리에서 사용한다. 7일짜리 refresh token은
-  `HttpOnly`·`Secure` cookie로 전달하고 사용할 때마다 교체하며, 로그아웃하면 서버 세션도 폐기한다.
-- refresh·logout 요청은 배포한 프론트엔드 Origin만 허용한다.
+- 로그인 응답은 30일짜리 단일 access JWT만 반환한다. refresh token과 인증 cookie는 사용하지 않는다.
+- 프론트엔드는 access JWT를 `sessionStorage`에 저장하고 개인 API마다 `Authorization: Bearer` 헤더로 보낸다. 브라우저 세션이 끝나거나 사용자가 로그아웃하면 토큰과 인증 상태를 삭제한다.
+- 서버는 모든 개인 요청에서 JWT뿐 아니라 `app_user`의 존재와 삭제 잠금 상태를 확인한다. 별도 서버 인증 세션은 저장하지 않는다.
+- access JWT를 JavaScript에서 다루므로 로그·오류·분석 이벤트에 포함하지 않고, 임의 HTML 실행을 허용하지 않는다.
 - 이미지는 OCI Object Storage의 비공개 버킷에 저장한다.
 - 브라우저가 OCI 자격 증명을 갖지 않도록 서버가 업로드를 중계하거나 짧게 유효한 URL을 발급한다.
 - 사용자가 구조화 결과를 확인한 원본 이미지는 정해진 보존 기간에 따라 삭제한다.

@@ -23,13 +23,17 @@
 
 ## 인증과 소유권
 
-로그인 성공 시 받은 access JWT를 브라우저 메모리에 두고 개인 API의
-`Authorization: Bearer <token>` 헤더에 보낸다. access JWT는 15분 동안 사용한다.
-7일 동안 유효한 refresh token은 `HttpOnly`·`Secure` cookie로만 전달하며,
-재발급할 때마다 교체하고 로그아웃하면 서버 session과 함께 폐기한다. cookie를 쓰는 인증 요청은
-배포한 프론트엔드 Origin만 허용한다.
+로그인 성공 시 30일짜리 단일 access JWT를 받는다. 프론트엔드는 이를 브라우저
+`sessionStorage`에 저장하고 개인 API의 `Authorization: Bearer <token>` 헤더에 보낸다.
+refresh token, 인증 cookie와 서버 인증 session은 사용하지 않는다.
+
+로그아웃은 별도 API 호출이 아니라 프론트엔드가 `sessionStorage`의 토큰과 인증 상태를 삭제하는
+동작이다. 브라우저 세션이 끝나거나 JWT가 만료된 경우에는 다시 로그인한다. 복사되거나 탈취된
+JWT를 개별 폐기하는 서버 목록은 두지 않으므로 토큰을 로그·오류·분석 이벤트에 절대 남기지 않는다.
 
 서버는 토큰에서 확인한 사용자만 신뢰하며 요청 본문의 사용자 ID를 소유권 근거로 사용하지 않는다.
+모든 개인 요청에서 `app_user`의 존재와 `write_locked_at`도 확인하므로 계정 삭제가 시작되면 기존
+JWT의 남은 만료 시간과 관계없이 접근을 거부한다.
 
 다른 사용자의 UUID로 개인 리소스를 요청하면 `403`으로 존재를 알려주지 않고 `404 RESOURCE_NOT_FOUND`를 반환한다. 계정 삭제가 시작돼 쓰기가 잠긴 경우에는 `423 ACCOUNT_WRITE_LOCKED`를 반환한다.
 
