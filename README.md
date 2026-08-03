@@ -39,4 +39,4 @@ SkinCause는 피부를 진단하거나 범인을 지목하지 않는다. 현재 
 - 결과: 실제 URL에서 첫 실험과 다음 추천까지 이어지는 제품
 - 제외: 피부질환 진단, 원인 확정, 코호트 추천, 브랜드 도구, 전문가 상담과 커머스
 
-[통합 기능명세서](./docs/05-features/functional-specification.md)는 MVP 기능 전체의 조건·처리·결과를 설명하고, GitHub Story는 기능별 상세 흐름과 완료 조건을 관리한다. API 계약의 원본은 [`openapi.yaml`](./docs/api/openapi.yaml), 저장 구조의 원본은 [ERD와 데이터 사전](./docs/06-data-model/README.md)이다.
+[통합 기능명세서](./docs/05-features/functional-specification.md)는 MVP 기능 전체의 조건·처리·결과를 설명하고, GitHub Story는 기능별 상세 흐름과 완료 조건을 관리한다. API는 [웹 문서](https://sksksksksksss.github.io/service/)에서 읽을 수 있고 계약 원본은 [`openapi.yaml`](./docs/api/openapi.yaml)이다. 저장 구조의 원본은 [ERD와 데이터 사전](./docs/06-data-model/README.md)이다.

@@ -17,7 +17,7 @@ SkinCause는 현재 잘 쓰는 스킨케어 루틴을 기준으로 다음에 시
 5. [요구사항 명세](./04-requirements.md)
 6. [통합 기능명세서](./05-features/functional-specification.md)
 7. [ERD와 데이터 사전](./06-data-model/README.md)
-8. [OpenAPI 계약](./api/README.md)
+8. [API 웹 문서](https://sksksksksksss.github.io/service/) ([계약 원본](./api/README.md))
 9. [기술 스택과 선택 이유](./03-technology-stack.md)
 
 ## 이번에 검토받고 싶은 결정

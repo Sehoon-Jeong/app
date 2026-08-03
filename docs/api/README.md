@@ -1,5 +1,9 @@
 # SkinCause API 계약
 
+> **웹에서 보기:** [SkinCause MVP API 문서](https://sksksksksksss.github.io/service/)
+
+`main`의 [`openapi.yaml`](./openapi.yaml)이 바뀌면 GitHub Actions가 계약을 검증하고 정적 Redoc 문서를 다시 배포한다. 웹 문서는 사람이 읽고 검토하기 위한 화면이며, API 계약의 원본은 항상 이 저장소의 YAML이다.
+
 ## 이 문서의 역할
 
 [`openapi.yaml`](./openapi.yaml)은 SkinCause P0·P1 웹과 서버 사이의 **API 계약 원본(SSOT)**이다. 화면별 요청을 나열하지 않고 `안정 루틴 확정`, `실험 시작`, `관찰 기록`, `실험 완료`처럼 사용자의 행동과 도메인 결과를 기준으로 나눈다.
@@ -70,8 +74,17 @@ AI 요청·응답 원문은 애플리케이션 로그나 `ai_job`에 영구 저�
 Node.js가 설치된 환경에서 다음 명령을 사용한다.
 
 ```bash
-npx @redocly/cli lint docs/api/openapi.yaml
-npx @redocly/cli preview-docs docs/api/openapi.yaml
+npx --yes @redocly/cli@2.43.3 lint docs/api/openapi.yaml
+npx --yes @redocly/cli@2.43.3 preview-docs docs/api/openapi.yaml
 ```
 
 두 번째 명령이 출력한 로컬 주소에서 전체 API와 예시를 확인할 수 있다.
+
+## 공개 문서 배포
+
+배포 설정은 [`.github/workflows/api-docs.yml`](../../.github/workflows/api-docs.yml)에 있다.
+
+- `main`의 OpenAPI 계약이나 배포 설정이 바뀌면 자동 배포한다.
+- 배포 전에 Redocly 검증을 통과해야 한다.
+- 정적 HTML은 Actions에서만 생성하며 저장소에는 커밋하지 않는다.
+- 필요하면 Actions의 `Deploy API documentation`에서 수동으로 다시 배포할 수 있다.

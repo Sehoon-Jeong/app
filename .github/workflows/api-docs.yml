@@ -1,0 +1,63 @@
+name: Deploy API documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/api/openapi.yaml
+      - .github/workflows/api-docs.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build static API documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Validate OpenAPI contract
+        run: npx --yes @redocly/cli@2.43.3 lint docs/api/openapi.yaml
+
+      - name: Build static Redoc site
+        run: |
+          mkdir -p _site
+          npx --yes @redocly/cli@2.43.3 build-docs docs/api/openapi.yaml \
+            --output _site/index.html \
+            --title "SkinCause MVP API"
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy static site
+        id: deployment
+        uses: actions/deploy-pages@v4

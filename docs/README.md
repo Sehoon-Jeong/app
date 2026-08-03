@@ -21,7 +21,7 @@ AI와 구현 작업을 시작할 때는 루트의 [작업 안내](../AGENTS.md)�
 | --- | --- | --- |
 | 요구사항 | [요구사항 명세](./04-requirements.md) | 제품이 반드시 만족해야 할 조건과 요구사항 ID |
 | 기능명세 | [통합 기능명세서](./05-features/functional-specification.md) | MVP 기능별 시작 조건·입력·처리·결과·규칙·예외·완료 기준 |
-| API | [OpenAPI](./api/README.md) | 인증, endpoint, 요청·응답과 오류 계약 |
+| API | [웹 API 문서](https://sksksksksksss.github.io/service/) · [계약 원본](./api/README.md) | 인증, endpoint, 요청·응답과 오류 계약 |
 | 데이터 | [ERD와 데이터 사전](./06-data-model/README.md) | 엔터티 관계, 상태, 소유권과 제약 |
 | 기술 | [기술 스택](./03-technology-stack.md) | 무엇으로 만들며 왜 선택했는가? |
 | 작업 | [GitHub Project](https://github.com/orgs/sksksksksksss/projects/1) | Priority, 담당자, 상태, 일정과 Sub-task |
