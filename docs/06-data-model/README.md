@@ -6,7 +6,7 @@
 
 | 문서 | 용도 |
 | --- | --- |
-| **dbdiagram.io ERD** | 공유 링크 준비 중 |
+| [**dbdiagram.io ERD**](https://dbdiagram.io/d/6a70c370829f06bdc872fcae) | 브라우저에서 테이블 관계를 확인한다. |
 | [`schema.dbml`](./schema.dbml) | ERD 구조 원본. dbdiagram.io에 그대로 붙여 넣는다. |
 | [데이터 사전](./data-dictionary.md) | 필드 의미, 허용값과 DBML만으로 표현하기 어려운 불변조건 |
 
@@ -17,8 +17,8 @@
 - 실제 DDL은 구현할 때 Flyway로 만들며 DBML과 함께 변경한다.
 - Pn인 브랜드 실험, 코호트, 전문가 공유는 포함하지 않는다.
 
-## dbdiagram.io에 올리는 방법
+## ERD 업데이트
 
-1. [dbdiagram.io](https://dbdiagram.io/)에서 새 다이어그램을 만든다.
-2. `schema.dbml` 전체를 붙여 넣는다.
-3. 저장한 뒤 공유 URL을 이 README의 `dbdiagram.io ERD` 행에 넣는다.
+1. 저장소의 `schema.dbml`을 먼저 수정한다.
+2. 같은 내용을 dbdiagram.io 다이어그램에 붙여 넣는다.
+3. 다이어그램을 저장하고 관계가 정상적으로 표시되는지 확인한다.
