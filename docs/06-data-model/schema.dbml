@@ -1,0 +1,1072 @@
+Project SkinCauseMVP {
+  database_type: "PostgreSQL"
+  Note: "SkinCause P0·P1 logical schema. Paste this file into dbdiagram.io."
+}
+
+Enum concern_input_state {
+  UNSET
+  UNKNOWN
+  SPECIFIED
+}
+
+Enum deletion_job_status {
+  REQUESTED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+Enum brand_status {
+  ACTIVE
+  MERGED
+  INACTIVE
+}
+
+Enum product_status {
+  ACTIVE
+  MERGED
+  ARCHIVED
+}
+
+Enum product_source_type {
+  CATALOG
+  USER_DRAFT
+}
+
+Enum verification_status {
+  DRAFT
+  USER_CONFIRMED
+  OPERATOR_VERIFIED
+}
+
+Enum ingredient_status {
+  VERIFIED
+  ARCHIVED
+}
+
+Enum product_function_source {
+  CLAIM
+  INGREDIENT_RULE
+  OPERATOR
+}
+
+Enum product_identifier_type {
+  BARCODE
+}
+
+Enum product_ingredient_source {
+  CATALOG
+  IMAGE
+  MANUAL
+}
+
+Enum upload_purpose {
+  INGREDIENT_LABEL
+  PURCHASE_IMAGE
+}
+
+Enum upload_status {
+  UPLOADED
+  PROCESSING
+  DELETE_PENDING
+  DELETED
+  FAILED
+}
+
+Enum ai_invocation_source {
+  USER_REQUEST
+  SERVICE_ASSIST
+}
+
+Enum ai_job_status {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  TIMED_OUT
+}
+
+Enum ai_task_type {
+  INGREDIENT_EXTRACTION
+  PURCHASE_ITEM_EXTRACTION
+  GOAL_CLASSIFICATION
+  OBSERVATION_STRUCTURING
+  RECOMMENDATION_RANKING
+  EXPLANATION
+}
+
+Enum extraction_review_status {
+  PENDING
+  ACCEPTED
+  CORRECTED
+  REJECTED
+}
+
+Enum routine_version_status {
+  DRAFT
+  CONFIRMED
+}
+
+Enum routine_version_source {
+  INITIAL
+  MANUAL_UPDATE
+  EXPERIMENT_RESULT
+}
+
+Enum time_slot {
+  AM
+  PM
+}
+
+Enum change_intent {
+  ADD
+  REPLACE
+}
+
+Enum recommendation_status {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+Enum ranking_source {
+  AI_VALIDATED
+  RULE_FALLBACK
+  NO_ELIGIBLE_CANDIDATE
+}
+
+Enum evidence_strength {
+  SUFFICIENT
+  LIMITED
+  INSUFFICIENT
+}
+
+Enum candidate_source_type {
+  RECOMMENDATION
+  SEARCH
+  DIRECT
+}
+
+Enum candidate_status {
+  SAVED
+  STALE
+  STARTED
+  ARCHIVED
+}
+
+Enum experiment_status {
+  PLANNED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+Enum experiment_event_type {
+  FIRST_USE
+  PRODUCT_STOPPED
+  PRODUCT_RESTARTED
+  PLAN_DEVIATION
+  UNPLANNED_PRODUCT_CHANGE
+}
+
+Enum quest_type {
+  FIRST_USE
+  EARLY_CHECK
+  MID_CHECK
+  FINAL_CHECK
+}
+
+Enum quest_status {
+  SCHEDULED
+  COMPLETED
+  SKIPPED
+  CANCELLED
+}
+
+Enum schedule_change_reason {
+  FIRST_USE_RECALC
+  PLAN_EDIT
+  PAUSE_RESUME
+  TIMEZONE_BEFORE_START
+}
+
+Enum observation_kind {
+  QUEST
+  CHANGE
+  STOP
+  RESTART
+}
+
+Enum observation_condition {
+  NO_CHANGE
+  COMFORTABLE_OR_BETTER
+  DISCOMFORT
+  UNSURE
+  NOT_USED
+}
+
+Enum discomfort_severity {
+  MILD
+  MODERATE
+  SEVERE
+}
+
+Enum rescue_classification {
+  CHECK_FIRST
+  HOLD
+  KEEP_CANDIDATE
+  UNDETERMINED
+}
+
+Enum rescue_change_source {
+  EXPERIMENT
+  UNPLANNED
+  STABLE
+  UNKNOWN
+}
+
+Enum experiment_outcome {
+  TOLERATED
+  DISCOMFORT
+  HOLD
+  INCONCLUSIVE
+}
+
+Enum lab_item_type {
+  CHARACTER
+  THEME
+  DECORATION
+  RESEARCH_SAMPLE
+}
+
+Enum notification_type {
+  DUE
+  OVERDUE
+}
+
+Enum notification_status {
+  PENDING
+  SENT
+  FAILED
+  SUPPRESSED
+}
+
+Table app_user {
+  id uuid [pk]
+  email varchar(320) [not null, unique, note: "Normalized login email"]
+  password_hash varchar(255) [not null]
+  timezone varchar(64) [not null, note: "IANA timezone"]
+  concern_input_state concern_input_state [not null, default: 'UNSET']
+  write_locked_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table auth_refresh_session {
+  id uuid [pk]
+  user_id uuid [not null]
+  token_hash varchar(255) [not null, unique]
+  expires_at timestamptz [not null]
+  last_rotated_at timestamptz
+  revoked_at timestamptz
+  created_at timestamptz [not null]
+
+  indexes {
+    (user_id, revoked_at, expires_at)
+  }
+}
+
+Table user_concern {
+  user_id uuid [not null]
+  concern_code varchar(50) [not null]
+  recorded_at timestamptz [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (user_id, concern_code) [pk]
+  }
+}
+
+Table web_push_subscription {
+  id uuid [pk]
+  user_id uuid [not null]
+  endpoint_hash varchar(255) [not null, unique]
+  endpoint_ciphertext text [not null]
+  public_key_ciphertext text [not null]
+  auth_secret_ciphertext text [not null]
+  expires_at timestamptz
+  revoked_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table privacy_deletion_job {
+  id uuid [pk]
+  user_id uuid [unique]
+  operation_reference varchar(100) [not null, unique]
+  status deletion_job_status [not null]
+  current_step varchar(100)
+  error_code varchar(100)
+  completed_at timestamptz
+  purge_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table brand {
+  id uuid [pk]
+  name varchar(200) [not null]
+  normalized_name varchar(200) [not null]
+  merged_into_brand_id uuid
+  status brand_status [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    normalized_name
+  }
+}
+
+Table product {
+  id uuid [pk]
+  brand_id uuid
+  owner_user_id uuid
+  latest_version_id uuid
+  merged_into_product_id uuid
+  source_type product_source_type [not null]
+  status product_status [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table product_version {
+  id uuid [pk]
+  product_id uuid [not null]
+  version_no int [not null]
+  name varchar(300) [not null]
+  normalized_name varchar(300) [not null]
+  brand_display_name varchar(200) [not null]
+  category_code varchar(50) [not null]
+  verification_status verification_status [not null]
+  source_reference text
+  confirmed_at timestamptz
+  created_at timestamptz [not null]
+
+  indexes {
+    (product_id, version_no) [unique]
+    normalized_name
+  }
+}
+
+Table product_identifier {
+  id uuid [pk]
+  product_version_id uuid [not null]
+  type product_identifier_type [not null]
+  value varchar(200) [not null]
+  verification_status verification_status [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (product_version_id, type, value) [unique]
+    (type, value)
+  }
+}
+
+Table ingredient {
+  id uuid [pk]
+  canonical_name varchar(300) [not null, unique]
+  status ingredient_status [not null]
+  created_at timestamptz [not null]
+}
+
+Table ingredient_alias {
+  ingredient_id uuid [not null]
+  locale varchar(20) [not null]
+  normalized_alias varchar(300) [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (ingredient_id, locale, normalized_alias) [pk]
+    (locale, normalized_alias)
+  }
+}
+
+Table product_ingredient {
+  product_version_id uuid [not null]
+  position int [not null]
+  raw_name varchar(500) [not null]
+  ingredient_id uuid
+  verification_status verification_status [not null]
+  source_type product_ingredient_source [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (product_version_id, position) [pk]
+  }
+}
+
+Table function_type {
+  code varchar(50) [pk]
+  display_name varchar(100) [not null]
+  description text [not null]
+  active boolean [not null]
+  created_at timestamptz [not null]
+}
+
+Table product_function {
+  product_version_id uuid [not null]
+  function_code varchar(50) [not null]
+  source_type product_function_source [not null]
+  source_reference text [not null]
+  verification_status verification_status [not null]
+  observation_note text
+  created_at timestamptz [not null]
+
+  indexes {
+    (product_version_id, function_code) [pk]
+  }
+}
+
+Table upload_asset {
+  id uuid [pk]
+  user_id uuid [not null]
+  purpose upload_purpose [not null]
+  object_key varchar(500) [not null, unique]
+  content_type varchar(100) [not null]
+  byte_size bigint [not null]
+  status upload_status [not null]
+  delete_after timestamptz [not null]
+  delete_requested_at timestamptz
+  deletion_error_code varchar(100)
+  deleted_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (status, delete_after)
+  }
+}
+
+Table ai_job {
+  id uuid [pk]
+  user_id uuid [not null]
+  task_type ai_task_type [not null]
+  invocation_source ai_invocation_source [not null]
+  input_asset_id uuid
+  model varchar(100) [not null]
+  prompt_version varchar(50) [not null]
+  schema_version varchar(50) [not null]
+  status ai_job_status [not null]
+  input_fingerprint varchar(255) [not null]
+  structured_output jsonb
+  error_code varchar(100)
+  requested_at timestamptz [not null]
+  started_at timestamptz
+  completed_at timestamptz
+  created_at timestamptz [not null]
+
+  indexes {
+    (status, requested_at)
+  }
+}
+
+Table ingredient_extraction_item {
+  id uuid [pk]
+  ai_job_id uuid [not null]
+  position int [not null]
+  raw_text varchar(500) [not null]
+  suggested_ingredient_id uuid
+  review_status extraction_review_status [not null]
+  confirmed_ingredient_id uuid
+  created_at timestamptz [not null]
+
+  indexes {
+    (ai_job_id, position) [unique]
+  }
+}
+
+Table purchase_extraction_item {
+  id uuid [pk]
+  ai_job_id uuid [not null]
+  raw_brand varchar(300)
+  raw_product_name varchar(500)
+  suggested_product_version_id uuid
+  review_status extraction_review_status [not null]
+  confirmed_product_version_id uuid
+  created_draft_product_id uuid
+  created_at timestamptz [not null]
+}
+
+Table routine {
+  id uuid [pk]
+  user_id uuid [not null, unique]
+  name varchar(100) [not null]
+  current_stable_version_id uuid
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table routine_version {
+  id uuid [pk]
+  routine_id uuid [not null]
+  version_no int [not null]
+  status routine_version_status [not null]
+  confirmed_at timestamptz
+  source_type routine_version_source [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (routine_id, version_no) [unique]
+  }
+}
+
+Table routine_item {
+  id uuid [pk]
+  routine_version_id uuid [not null]
+  time_slot time_slot [not null]
+  position int [not null]
+  product_version_id uuid [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (routine_version_id, time_slot, position) [unique]
+    (routine_version_id, time_slot, product_version_id) [unique]
+  }
+}
+
+Table recommendation_request {
+  id uuid [pk]
+  user_id uuid [not null]
+  routine_version_id uuid [not null]
+  goal_function_code varchar(50) [not null]
+  change_intent change_intent [not null]
+  target_routine_item_id uuid
+  preference_snapshot jsonb [not null]
+  policy_version varchar(50) [not null]
+  status recommendation_status [not null]
+  goal_classification_ai_job_id uuid [unique]
+  ranking_ai_job_id uuid [unique]
+  ranking_source ranking_source
+  fallback_reason_code varchar(100)
+  created_at timestamptz [not null]
+  completed_at timestamptz
+
+  indexes {
+    (user_id, created_at)
+  }
+}
+
+Table recommendation_pool_item {
+  request_id uuid [not null]
+  product_version_id uuid [not null]
+  eligibility_policy_version varchar(50) [not null]
+  comparison_facts jsonb [not null]
+  eligible_at timestamptz [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (request_id, product_version_id) [pk]
+  }
+}
+
+Table recommendation_candidate {
+  id uuid [pk]
+  request_id uuid [not null]
+  product_version_id uuid [not null]
+  rank int [not null]
+  evidence_strength evidence_strength [not null]
+  evidence_snapshot jsonb [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (request_id, rank) [unique]
+    (request_id, product_version_id) [unique]
+  }
+}
+
+Table experiment_candidate {
+  id uuid [pk]
+  user_id uuid [not null]
+  routine_version_id uuid [not null]
+  product_version_id uuid [not null]
+  recommendation_candidate_id uuid
+  source_type candidate_source_type [not null]
+  goal_function_code varchar(50) [not null]
+  change_intent change_intent [not null]
+  target_routine_item_id uuid
+  status candidate_status [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (user_id, status, created_at)
+    (user_id, routine_version_id, product_version_id, change_intent, target_routine_item_id) [note: "Flyway: UNIQUE NULLS NOT DISTINCT for unfinished candidates"]
+  }
+}
+
+Table candidate_comparison {
+  id uuid [pk]
+  candidate_id uuid [not null]
+  version_no int [not null]
+  policy_version varchar(50) [not null]
+  evidence_strength evidence_strength [not null]
+  product_diff jsonb [not null]
+  function_diff jsonb [not null]
+  observation_focus jsonb [not null]
+  invalidated_at timestamptz
+  invalidation_reason_code varchar(100)
+  created_at timestamptz [not null]
+
+  indexes {
+    (candidate_id, version_no) [unique]
+  }
+}
+
+Table candidate_ordering {
+  id uuid [pk]
+  user_id uuid [not null]
+  routine_version_id uuid [not null]
+  policy_version varchar(50) [not null]
+  evidence_strength evidence_strength [not null]
+  explanation_ai_job_id uuid [unique]
+  created_at timestamptz [not null]
+
+  indexes {
+    (user_id, created_at)
+  }
+}
+
+Table candidate_ordering_item {
+  ordering_id uuid [not null]
+  comparison_id uuid [not null]
+  rank int [not null]
+  reason_snapshot jsonb [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (ordering_id, comparison_id) [pk]
+    (ordering_id, rank) [unique]
+  }
+}
+
+Table experiment {
+  id uuid [pk]
+  user_id uuid [not null]
+  candidate_id uuid [not null, unique]
+  comparison_id uuid [not null, unique]
+  ordering_id uuid
+  baseline_routine_version_id uuid [not null]
+  parent_experiment_id uuid
+  status experiment_status [not null]
+  duration_days int [not null, default: 14]
+  planned_start_date date [not null]
+  planned_end_date date [not null]
+  planned_at timestamptz [not null]
+  actual_started_at timestamptz
+  expected_end_at timestamptz
+  completed_at timestamptz
+  time_slot time_slot [not null]
+  position int [not null]
+  retrial_stability_confirmed_at timestamptz
+  idempotency_key varchar(100) [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (user_id, idempotency_key) [unique]
+    (user_id, status, created_at)
+    (user_id) [note: "Flyway: partial unique index where status is PLANNED, ACTIVE, or PAUSED"]
+    (ordering_id, comparison_id)
+  }
+}
+
+Table experiment_transition {
+  id uuid [pk]
+  experiment_id uuid [not null]
+  transition_no int [not null]
+  from_status experiment_status
+  to_status experiment_status [not null]
+  reason_code varchar(100)
+  occurred_at timestamptz [not null]
+  idempotency_key varchar(100) [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (experiment_id, transition_no) [unique]
+    (experiment_id, idempotency_key) [unique]
+  }
+}
+
+Table experiment_event {
+  id uuid [pk]
+  experiment_id uuid [not null]
+  type experiment_event_type [not null]
+  product_version_id uuid
+  source_observation_id uuid
+  occurred_at timestamptz [not null]
+  recorded_at timestamptz [not null]
+  details jsonb [not null]
+  idempotency_key varchar(100) [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (experiment_id, idempotency_key) [unique]
+  }
+}
+
+Table observation_quest {
+  id uuid [pk]
+  experiment_id uuid [not null]
+  type quest_type [not null]
+  required boolean [not null]
+  due_at timestamptz [not null]
+  status quest_status [not null]
+  skip_reason_code varchar(100)
+  resolved_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (experiment_id, type) [unique]
+    (experiment_id, due_at, status)
+  }
+}
+
+Table quest_schedule_change {
+  id uuid [pk]
+  quest_id uuid [not null]
+  change_no int [not null]
+  from_due_at timestamptz [not null]
+  to_due_at timestamptz [not null]
+  reason_code schedule_change_reason [not null]
+  changed_at timestamptz [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (quest_id, change_no) [unique]
+  }
+}
+
+Table observation {
+  id uuid [pk]
+  experiment_id uuid [not null]
+  quest_id uuid [unique]
+  kind observation_kind [not null]
+  condition observation_condition [not null]
+  used_as_planned boolean
+  memo text
+  structuring_ai_job_id uuid [unique]
+  observed_at timestamptz [not null]
+  recorded_at timestamptz [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (experiment_id, observed_at)
+  }
+}
+
+Table discomfort_detail {
+  observation_id uuid [pk]
+  severity discomfort_severity [not null]
+  first_noticed_at timestamptz
+  help_needed boolean [not null]
+  spreading_or_worsening boolean [not null]
+  type_codes jsonb [not null]
+  area_codes jsonb [not null]
+  context_change_codes jsonb [not null]
+  other_context text
+  created_at timestamptz [not null]
+}
+
+Table rescue_case {
+  id uuid [pk]
+  experiment_id uuid [not null]
+  trigger_observation_id uuid [not null, unique]
+  baseline_routine_version_id uuid [not null]
+  policy_version varchar(50) [not null]
+  evidence_strength evidence_strength [not null]
+  safety_priority boolean [not null]
+  context_snapshot jsonb [not null]
+  missing_information jsonb [not null]
+  explanation_ai_job_id uuid [unique]
+  created_at timestamptz [not null]
+}
+
+Table rescue_item {
+  id uuid [pk]
+  rescue_case_id uuid [not null]
+  product_version_id uuid [not null]
+  classification rescue_classification [not null]
+  change_source rescue_change_source [not null]
+  evidence_snapshot jsonb [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (rescue_case_id, product_version_id) [unique]
+  }
+}
+
+Table experiment_result {
+  id uuid [pk]
+  experiment_id uuid [not null, unique]
+  outcome experiment_outcome [not null]
+  summary text
+  promote_to_stable boolean [not null]
+  resulting_routine_version_id uuid [unique]
+  completed_at timestamptz [not null]
+  idempotency_key varchar(100) [not null, unique]
+  created_at timestamptz [not null]
+}
+
+Table lab_profile {
+  user_id uuid [pk]
+  selected_character_code varchar(50)
+  selected_theme_code varchar(50)
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table lab_record {
+  id uuid [pk]
+  user_id uuid [not null]
+  experiment_id uuid [not null, unique]
+  display_asset_code varchar(50) [not null]
+  earned_at timestamptz [not null]
+  created_at timestamptz [not null]
+}
+
+Table badge_definition {
+  code varchar(50) [not null]
+  rule_version int [not null]
+  name varchar(100) [not null]
+  description text [not null]
+  rule_code varchar(100) [not null]
+  reward_item_code varchar(50)
+  active boolean [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (code, rule_version) [pk]
+  }
+}
+
+Table user_badge {
+  user_id uuid [not null]
+  badge_code varchar(50) [not null]
+  rule_version int [not null]
+  source_experiment_id uuid
+  evidence_snapshot jsonb [not null]
+  earned_at timestamptz [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (user_id, badge_code) [pk]
+  }
+}
+
+Table lab_item_definition {
+  code varchar(50) [pk]
+  type lab_item_type [not null]
+  name varchar(100) [not null]
+  asset_reference varchar(300) [not null]
+  default_available boolean [not null]
+  active boolean [not null]
+  created_at timestamptz [not null]
+}
+
+Table user_lab_item {
+  user_id uuid [not null]
+  item_code varchar(50) [not null]
+  source_badge_code varchar(50)
+  source_experiment_id uuid
+  rule_version int [not null]
+  evidence_snapshot jsonb [not null]
+  earned_at timestamptz [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (user_id, item_code) [pk]
+  }
+}
+
+Table notification_delivery {
+  id uuid [pk]
+  quest_id uuid [not null]
+  subscription_id uuid [not null]
+  type notification_type [not null]
+  status notification_status [not null]
+  scheduled_at timestamptz [not null]
+  sent_at timestamptz
+  error_code varchar(100)
+  created_at timestamptz [not null]
+
+  indexes {
+    (quest_id, subscription_id, type) [unique]
+    (status, scheduled_at)
+  }
+}
+
+Ref: auth_refresh_session.user_id > app_user.id [delete: cascade]
+Ref: user_concern.user_id > app_user.id [delete: cascade]
+Ref: web_push_subscription.user_id > app_user.id [delete: cascade]
+Ref: privacy_deletion_job.user_id > app_user.id [delete: set null]
+
+Ref: brand.merged_into_brand_id > brand.id
+Ref: product.brand_id > brand.id
+Ref: product.owner_user_id > app_user.id
+Ref: product.latest_version_id > product_version.id
+Ref: product.merged_into_product_id > product.id
+Ref: product_version.product_id > product.id
+Ref: product_identifier.product_version_id > product_version.id
+Ref: ingredient_alias.ingredient_id > ingredient.id
+Ref: product_ingredient.product_version_id > product_version.id
+Ref: product_ingredient.ingredient_id > ingredient.id
+Ref: product_function.product_version_id > product_version.id
+Ref: product_function.function_code > function_type.code
+
+Ref: upload_asset.user_id > app_user.id
+Ref: ai_job.user_id > app_user.id
+Ref: ai_job.input_asset_id > upload_asset.id [delete: set null]
+Ref: ingredient_extraction_item.ai_job_id > ai_job.id
+Ref: ingredient_extraction_item.suggested_ingredient_id > ingredient.id
+Ref: ingredient_extraction_item.confirmed_ingredient_id > ingredient.id
+Ref: purchase_extraction_item.ai_job_id > ai_job.id
+Ref: purchase_extraction_item.suggested_product_version_id > product_version.id
+Ref: purchase_extraction_item.confirmed_product_version_id > product_version.id
+Ref: purchase_extraction_item.created_draft_product_id > product.id
+
+Ref: routine.user_id > app_user.id
+Ref: routine.current_stable_version_id > routine_version.id
+Ref: routine_version.routine_id > routine.id [delete: cascade]
+Ref: routine_item.routine_version_id > routine_version.id [delete: cascade]
+Ref: routine_item.product_version_id > product_version.id
+
+Ref: recommendation_request.user_id > app_user.id
+Ref: recommendation_request.routine_version_id > routine_version.id
+Ref: recommendation_request.goal_function_code > function_type.code
+Ref: recommendation_request.target_routine_item_id > routine_item.id
+Ref: recommendation_request.goal_classification_ai_job_id > ai_job.id
+Ref: recommendation_request.ranking_ai_job_id > ai_job.id
+Ref: recommendation_pool_item.request_id > recommendation_request.id [delete: cascade]
+Ref: recommendation_pool_item.product_version_id > product_version.id
+Ref: recommendation_candidate.(request_id, product_version_id) > recommendation_pool_item.(request_id, product_version_id)
+Ref: experiment_candidate.user_id > app_user.id
+Ref: experiment_candidate.routine_version_id > routine_version.id
+Ref: experiment_candidate.product_version_id > product_version.id
+Ref: experiment_candidate.recommendation_candidate_id > recommendation_candidate.id
+Ref: experiment_candidate.goal_function_code > function_type.code
+Ref: experiment_candidate.target_routine_item_id > routine_item.id
+Ref: candidate_comparison.candidate_id > experiment_candidate.id
+Ref: candidate_ordering.user_id > app_user.id
+Ref: candidate_ordering.routine_version_id > routine_version.id
+Ref: candidate_ordering.explanation_ai_job_id > ai_job.id
+Ref: candidate_ordering_item.ordering_id > candidate_ordering.id [delete: cascade]
+Ref: candidate_ordering_item.comparison_id > candidate_comparison.id
+
+Ref: experiment.user_id > app_user.id
+Ref: experiment.candidate_id > experiment_candidate.id
+Ref: experiment.comparison_id > candidate_comparison.id
+Ref: experiment.ordering_id > candidate_ordering.id
+Ref: experiment.(ordering_id, comparison_id) > candidate_ordering_item.(ordering_id, comparison_id)
+Ref: experiment.baseline_routine_version_id > routine_version.id
+Ref: experiment.parent_experiment_id > experiment.id
+Ref: experiment_transition.experiment_id > experiment.id [delete: cascade]
+Ref: experiment_event.experiment_id > experiment.id [delete: cascade]
+Ref: experiment_event.product_version_id > product_version.id
+Ref: experiment_event.source_observation_id > observation.id
+Ref: observation_quest.experiment_id > experiment.id [delete: cascade]
+Ref: quest_schedule_change.quest_id > observation_quest.id [delete: cascade]
+Ref: observation.experiment_id > experiment.id [delete: cascade]
+Ref: observation.quest_id > observation_quest.id
+Ref: observation.structuring_ai_job_id > ai_job.id
+Ref: discomfort_detail.observation_id > observation.id [delete: cascade]
+
+Ref: rescue_case.experiment_id > experiment.id [delete: cascade]
+Ref: rescue_case.trigger_observation_id > observation.id
+Ref: rescue_case.baseline_routine_version_id > routine_version.id
+Ref: rescue_case.explanation_ai_job_id > ai_job.id
+Ref: rescue_item.rescue_case_id > rescue_case.id [delete: cascade]
+Ref: rescue_item.product_version_id > product_version.id
+Ref: experiment_result.experiment_id > experiment.id [delete: cascade]
+Ref: experiment_result.resulting_routine_version_id > routine_version.id
+
+Ref: lab_profile.user_id > app_user.id [delete: cascade]
+Ref: lab_profile.selected_character_code > lab_item_definition.code
+Ref: lab_profile.selected_theme_code > lab_item_definition.code
+Ref: lab_record.user_id > app_user.id [delete: cascade]
+Ref: lab_record.experiment_id > experiment.id [delete: cascade]
+Ref: lab_record.display_asset_code > lab_item_definition.code
+Ref: badge_definition.reward_item_code > lab_item_definition.code
+Ref: user_badge.user_id > app_user.id [delete: cascade]
+Ref: user_badge.(badge_code, rule_version) > badge_definition.(code, rule_version)
+Ref: user_badge.source_experiment_id > experiment.id
+Ref: user_lab_item.user_id > app_user.id [delete: cascade]
+Ref: user_lab_item.item_code > lab_item_definition.code
+Ref: user_lab_item.(source_badge_code, rule_version) > badge_definition.(code, rule_version)
+Ref: user_lab_item.source_experiment_id > experiment.id
+Ref: notification_delivery.quest_id > observation_quest.id [delete: cascade]
+Ref: notification_delivery.subscription_id > web_push_subscription.id [delete: cascade]
+
+TableGroup identity_and_privacy {
+  app_user
+  auth_refresh_session
+  user_concern
+  web_push_subscription
+  privacy_deletion_job
+}
+
+TableGroup catalog {
+  brand
+  product
+  product_version
+  product_identifier
+  ingredient
+  ingredient_alias
+  product_ingredient
+  function_type
+  product_function
+}
+
+TableGroup ai_and_uploads {
+  upload_asset
+  ai_job
+  ingredient_extraction_item
+  purchase_extraction_item
+}
+
+TableGroup routine_and_discovery {
+  routine
+  routine_version
+  routine_item
+  recommendation_request
+  recommendation_pool_item
+  recommendation_candidate
+  experiment_candidate
+  candidate_comparison
+  candidate_ordering
+  candidate_ordering_item
+}
+
+TableGroup experiment_and_rescue {
+  experiment
+  experiment_transition
+  experiment_event
+  observation_quest
+  quest_schedule_change
+  observation
+  discomfort_detail
+  rescue_case
+  rescue_item
+  experiment_result
+}
+
+TableGroup lab_and_notifications {
+  lab_profile
+  lab_record
+  badge_definition
+  user_badge
+  lab_item_definition
+  user_lab_item
+  notification_delivery
+}
