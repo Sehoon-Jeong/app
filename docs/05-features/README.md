@@ -1,58 +1,52 @@
-# P0·P1 기능명세
+# 기능명세
 
-## 읽는 방법
+SkinCause의 개별 기능명세는 **GitHub Story 본문**에서 관리한다. 별도의 Markdown 문서에 같은 내용을 복사하지 않는다.
 
-이 폴더는 화면 목록이 아니라 사용자가 시작해서 결과를 얻는 흐름을 설명한다. 공통 정책은 [요구사항 명세](../04-requirements.md), 저장 구조는 [데이터 모델](../06-data-model/README.md)을 기준으로 한다.
+## 전체 기능 보기
 
-| 문서 | 담당 흐름 | 주요 GitHub 이슈 |
-| --- | --- | --- |
-| [루틴·제품 추천](./01-routine-and-recommendation.md) | 로그인, 안정 루틴, 제품 찾기, 추천과 후보 저장 | #7~#10, #45~#46, #49~#50 |
-| [비교·실험 계획](./02-comparison-and-experiment-plan.md) | 루틴 차이, 후보 순서, 실험 계획과 상태 | #13~#16 |
-| [관찰·LAB](./03-observation-and-lab.md) | 관찰 퀘스트, 리마인드, 진행도와 연구실 성장 | #17~#21, #51~#52 |
-| [Rescue·Archive](./04-rescue-and-archive.md) | 불편 대응, 결과, 안정 루틴 갱신과 개인 이력 | #22~#29, #47 |
-| [공통 기반](./05-platform-and-common.md) | 계정, API·AI 규칙, 분석, 접근성, 배포와 운영 | #31~#37, #45~#46, #48 |
+- [User Story Map](../product/story-map.md): 사용자 흐름과 P0·P1·Pn 범위
+- [GitHub Project](https://github.com/orgs/sksksksksksss/projects/1): 일정, 상태, 담당자와 Sub-task
+- [요구사항 추적표](./traceability.md): 요구사항과 Story·데이터·검증의 연결
 
-모든 요구사항이 어느 기능·이슈·데이터·검증으로 이어지는지는 [추적표](./traceability.md)에서 확인한다.
+## Epic
 
-## 기능명세의 경계
-
-- 기능명세는 사용자 흐름, 정책, 상태, 예외와 완료 조건을 정의한다.
-- 요청·응답 필드의 최종 형식은 OpenAPI가 책임진다.
-- 테이블과 제약조건은 데이터 모델이 책임진다.
-- 화면의 정확한 배치와 시각 표현은 디자인 파일이 책임진다.
-- GitHub Story는 이 문서의 한 흐름을 구현·검증하는 작업 단위다.
-
-동일한 규칙을 여러 문서에 복사하지 않는다. 다른 흐름의 규칙이 필요하면 해당 절을 링크한다.
-
-## 공통 화면 상태
-
-모든 핵심 화면은 다음 상태를 의도적으로 처리한다.
-
-| 상태 | 기본 동작 |
+| 제품 영역 | GitHub Epic |
 | --- | --- |
-| Loading | 기존 입력을 지우지 않고 진행 중인 작업을 설명한다. |
-| Empty | 왜 비어 있는지와 사용자가 할 수 있는 다음 행동을 함께 보여준다. |
-| Validation error | 문제가 있는 입력 가까이에 원인과 수정 방법을 표시한다. |
-| Network error | 입력을 보존하고 같은 작업을 다시 시도할 수 있게 한다. |
-| AI timeout/error | 직접 입력 또는 일반 규칙 기반 결과로 전환한다. |
-| Forbidden | 존재 여부를 노출하지 않고 접근할 수 없음을 표시한다. |
+| 안정 루틴과 제품 추천 | [#1 현재 루틴과 다음 제품 선택](https://github.com/sksksksksksss/service/issues/1) |
+| 루틴 비교와 실험 계획 | [#2 새 제품 비교와 실험 설계](https://github.com/sksksksksksss/service/issues/2) |
+| 관찰과 게임 경험 | [#3 관찰 퀘스트와 LAB 성장](https://github.com/sksksksksksss/service/issues/3) |
+| 불편 대응과 개인 이력 | [#4 피부 불편 대응과 경험 아카이브](https://github.com/sksksksksksss/service/issues/4) |
+| 공통 기술 기반 | [#5 MVP 서비스 기반](https://github.com/sksksksksksss/service/issues/5) |
+| 검증 이후 확장 | [#6 브랜드 제품 사용 실험](https://github.com/sksksksksksss/service/issues/6), [#43 데이터 기반 제품 탐색 확장](https://github.com/sksksksksksss/service/issues/43), [#44 전문가 연계](https://github.com/sksksksksksss/service/issues/44) |
 
-## 용어
+## Story 본문이 답해야 하는 것
 
-- `안정 루틴`: 사용자가 문제없이 쓰고 있다고 직접 확인한 불변 버전
-- `제품 후보`: 추천 또는 직접 탐색으로 저장했지만 아직 실험하지 않은 제품
-- `비교안`: 후보 하나를 안정 루틴에 추가·교체한 가상 루틴과 차이
-- `실험`: 한 후보를 정해진 계획으로 실제 사용하는 기록
-- `관찰 퀘스트`: 판단에 필요한 시점에 생성된 짧은 상태 확인
-- `Rescue`: 불편함이 있을 때 안정 루틴 이후 변경점을 복원하고 다음 행동을 정하는 흐름
-- `Beauty Archive`: 완료·보류·취소한 실험 이력을 다시 사용하는 화면
+모든 Story에는 다음 내용이 있다.
 
-## Ready 판단
+1. 사용자가 얻는 결과
+2. 시작 조건
+3. 처음부터 끝까지의 사용자 흐름
+4. 반드시 지켜야 할 제품 규칙
+5. 예외와 기능 경계
+6. 검증 가능한 완료 조건
+7. 관련 요구사항·데이터·문서
+8. 착수 전 확인할 의존성
 
-Story는 다음 조건을 만족할 때 `Ready`로 이동한다.
+Story는 `무엇을 왜 만드는지`를 정의한다. OpenAPI는 요청·응답, ERD는 저장 구조, 디자인은 화면의 배치와 표현을 책임진다.
 
-1. 연결된 요구사항 ID와 기능명세 절이 있다.
-2. 정상 흐름과 실패·빈 상태가 정의되어 있다.
-3. 데이터 생성·변경·삭제가 데이터 모델과 맞는다.
-4. Given–When–Then 완료 조건이 있다.
-5. 선행 이슈와 담당 흐름이 정해져 있다.
+## Sub-task의 경계
+
+P0·P1 Story와 Task는 착수 전에 네이티브 GitHub Sub-issue까지 나눈다. Sub-task에는 결과, 관련 화면·데이터·API, 예외와 확인 방법을 적는다.
+
+클래스명, 패키지 구조, 디자인 패턴, 함수 분리와 내부 구현 순서는 담당자가 결정한다. 기획은 개발자가 제품 정책을 추측하지 않게 하지만 구현 방법까지 고정하지 않는다.
+
+## Ready 기준
+
+다음 조건을 모두 만족해야 `Ready`로 이동한다.
+
+- Story의 모든 필수 섹션이 작성됐다.
+- P0·P1 중 하나와 부모 Epic이 연결됐다.
+- 관련 요구사항, 제품 규칙, OpenAPI와 데이터 엔터티를 찾을 수 있다.
+- 필요한 Sub-task와 강한 선행 의존성이 연결됐다.
+- 담당자와 목표일이 정해졌다.
+- 디자인에서 결정할 부분과 제품 규칙이 구분됐다.
