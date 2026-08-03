@@ -1,10 +1,10 @@
 # 기능명세
 
-먼저 [통합 기능명세서](./functional-specification.md)에서 MVP 기능 전체의 시작 조건·입력·처리·결과·규칙·예외·완료 기준을 읽는다. 각 기능의 상세 사용자 흐름과 검증 항목은 연결된 GitHub Story에서 관리한다.
+먼저 [통합 기능명세서](./functional-specification.md)에서 필요한 기능을 찾고 기능 ID를 눌러 상세 명세를 읽는다. 각 기능의 더 상세한 사용자 흐름과 검증 항목은 연결된 GitHub Story에서 관리한다.
 
 ## 전체 기능 보기
 
-- [통합 기능명세서](./functional-specification.md): MVP 사용자 기능 28개의 전체 명세
+- [통합 기능명세서](./functional-specification.md): MVP 사용자 기능 28개의 인덱스와 기능 ID별 상세 명세
 - [MVP 기능 목록](https://github.com/orgs/sksksksksksss/projects/1/views/9): 기능명, 사용자 단계, P0·P1과 한 줄 결과
 - [User Story Map](../product/story-map.md): 전체 사용자 흐름과 P0·P1·Pn 경계
 - [개발 칸반](https://github.com/orgs/sksksksksksss/projects/1/views/3): 상태, 담당자와 Sub-task 실행
