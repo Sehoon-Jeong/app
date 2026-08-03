@@ -19,7 +19,7 @@
 
 ## 계정과 개인정보
 
-| 요구사항 | GitHub 기능명세 | 관련 operationId | 기준 데이터 | 주 검증 |
+| 요구사항 | 관련 Story | 관련 operationId | 기준 데이터 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `FR-AUTH-001` | [#45 이메일로 로그인하고 내 기록 불러오기](https://github.com/sksksksksksss/service/issues/45) | `signUp`, `login`, `refreshSession`, `logout`, `getMyProfile` | `app_user.email`, `password_hash`; `auth_refresh_session.token_hash`, `expires_at`, `revoked_at` | E2E: 가입→재접속→로그아웃; API: 폐기 세션 거부 |
 | `FR-AUTH-002` | [#45 이메일로 로그인하고 내 기록 불러오기](https://github.com/sksksksksksss/service/issues/45); [#32 사용자별 루틴·실험 기록 저장 기반](https://github.com/sksksksksksss/service/issues/32) | `getMyProfile`, `updateMyProfile`; 개인 operation 전체 | 개인 aggregate의 `user_id`와 데이터 사전의 같은 사용자 복합 제약 | API: 다른 사용자 ID로 조회·수정 모두 거부 |
@@ -27,7 +27,7 @@
 
 ## 안정 루틴
 
-| 요구사항 | GitHub 기능명세 | 관련 operationId | 기준 데이터 | 주 검증 |
+| 요구사항 | 관련 Story | 관련 operationId | 기준 데이터 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `FR-RTN-001` | [#7 현재 문제없이 쓰는 아침·저녁 루틴 저장](https://github.com/sksksksksksss/service/issues/7) | `getCurrentRoutine`, `saveRoutineDraft` | `routine`; `routine_version.status`; `routine_item.time_slot`, `position`, `product_version_id` | E2E: 한 시간대 이상 저장 후 복원 |
 | `FR-RTN-002` | [#7 현재 문제없이 쓰는 아침·저녁 루틴 저장](https://github.com/sksksksksksss/service/issues/7) | `getCurrentRoutine`, `confirmRoutineDraft` | `routine.current_stable_version_id`; `routine_version.status`, `confirmed_at` | DOMAIN: 미확정 초안 비교 기준 사용 금지; E2E: 사용자 확인 후 확정 |
@@ -36,7 +36,7 @@
 
 ## 제품 찾기와 등록
 
-| 요구사항 | GitHub 기능명세 | 관련 operationId | 기준 데이터 | 주 검증 |
+| 요구사항 | 관련 Story | 관련 operationId | 기준 데이터 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `FR-PRD-001` | [#7 현재 문제없이 쓰는 아침·저녁 루틴 저장](https://github.com/sksksksksksss/service/issues/7); [#9 추천 제품 또는 관심 제품을 실험 후보로 저장](https://github.com/sksksksksksss/service/issues/9); [#33 제품·성분·기능 데이터 기반](https://github.com/sksksksksksss/service/issues/33) | `searchProducts` | `brand.normalized_name`; `product.status`; `product_version.normalized_name`, `verification_status` | E2E: 브랜드·제품명 검색 후 루틴·후보에 추가 |
 | `FR-PRD-002` | [#10 제품 직접 입력과 전성분 사진 등록](https://github.com/sksksksksksss/service/issues/10) | `createPersonalProduct`, `updatePersonalProduct` | `product.owner_user_id`, `source_type`; 개인 `product_version` | API: 소유자만 조회·수정; E2E: 직접 입력 복구 |
@@ -47,7 +47,7 @@
 
 ## 제품 추천과 실험 후보
 
-| 요구사항 | GitHub 기능명세 | 관련 operationId | 기준 데이터 | 주 검증 |
+| 요구사항 | 관련 Story | 관련 operationId | 기준 데이터 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `FR-REC-001` | [#8 피부 고민·사용 목적 기반 제품 추천](https://github.com/sksksksksksss/service/issues/8) | `getMyConcerns`, `replaceMyConcerns`, `createRecommendation` | `app_user.concern_input_state`; `user_concern`; `recommendation_request.goal_function_code`, `change_intent`, `target_routine_item_id` | API: 추가·교체 조건 검증; E2E: 목적과 기준 루틴이 요청에 반영 |
 | `FR-REC-002` | [#8 피부 고민·사용 목적 기반 제품 추천](https://github.com/sksksksksksss/service/issues/8) | `createRecommendation`, `getRecommendation` | `recommendation_pool_item`; `recommendation_candidate.product_version_id`, `rank` | DOMAIN: 허용된 실제 제품만 최대 3개; E2E: 루틴별 결과 차이 |
@@ -59,7 +59,7 @@
 
 ## 루틴 비교와 실험 설계
 
-| 요구사항 | GitHub 기능명세 | 관련 operationId | 기준 데이터 | 주 검증 |
+| 요구사항 | 관련 Story | 관련 operationId | 기준 데이터 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `FR-CMP-001` | [#13 새 제품의 추가·중복·교체 요소 비교](https://github.com/sksksksksksss/service/issues/13) | `compareExperimentCandidate` | `experiment_candidate.change_intent`, `target_routine_item_id`; `candidate_comparison.product_diff` | DOMAIN: 추가·유지·제거 집합과 의도 일치 |
 | `FR-CMP-002` | [#13 새 제품의 추가·중복·교체 요소 비교](https://github.com/sksksksksksss/service/issues/13) | `compareExperimentCandidate` | `candidate_comparison.function_diff`, `observation_focus`, `evidence_strength` | DOMAIN: 확인 데이터만 선별; UI: 전체 성분 나열로 대체 금지 |
@@ -72,7 +72,7 @@
 
 ## 관찰 퀘스트
 
-| 요구사항 | GitHub 기능명세 | 관련 operationId | 기준 데이터 | 주 검증 |
+| 요구사항 | 관련 Story | 관련 operationId | 기준 데이터 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `FR-OBS-001` | [#17 첫 사용·24시간·중간·종료 관찰 퀘스트](https://github.com/sksksksksksss/service/issues/17) | `createExperimentPlan`, `updateExperimentPlan`, `resumeExperiment`, `listExperimentQuests`, `answerObservationQuest` | `observation_quest.type`, `due_at`, `required`, `status`; `quest_schedule_change` | DOMAIN: 네 기본 시점과 기간·첫 사용·재개에 따른 재계산 |
 | `FR-OBS-002` | [#17 첫 사용·24시간·중간·종료 관찰 퀘스트](https://github.com/sksksksksksss/service/issues/17) | `answerObservationQuest`, `updateObservation` | `observation.condition`, `memo`, `observed_at`, `recorded_at`, `quest_id` | E2E: 선택·메모 저장 후 수정·복원; API: 미래 관찰 거부 |
@@ -83,7 +83,7 @@
 
 ## Rescue와 안전 행동
 
-| 요구사항 | GitHub 기능명세 | 관련 operationId | 기준 데이터 | 주 검증 |
+| 요구사항 | 관련 Story | 관련 operationId | 기준 데이터 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `FR-RSC-001` | [#22 피부 불편과 평소와 달랐던 변화 기록](https://github.com/sksksksksksss/service/issues/22); [#23 마지막 안정 루틴 이후 변경 제품 확인](https://github.com/sksksksksksss/service/issues/23) | `answerObservationQuest`, `createAdHocObservation`, `updateObservation`, `createExperimentEvent`, `getRescueCase` | `rescue_case.trigger_observation_id`, `baseline_routine_version_id`; 실험·계획 밖 변경 이력 | E2E: 불편 기록으로 Rescue 생성; DOMAIN: 기준 버전 이후 변경 복원 |
 | `FR-RSC-002` | [#24 유지 후보·우선 확인·보류와 다음 행동 안내](https://github.com/sksksksksksss/service/issues/24) | `getRescueCase` | `rescue_item.classification`, `change_source`, `evidence_snapshot`; `rescue_case.policy_version` | DOMAIN: 고정 규칙의 네 분류 재현; AI가 분류 변경 불가 |
@@ -93,7 +93,7 @@
 
 ## 실험 결과와 Beauty Archive
 
-| 요구사항 | GitHub 기능명세 | 관련 operationId | 기준 데이터 | 주 검증 |
+| 요구사항 | 관련 Story | 관련 operationId | 기준 데이터 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `FR-ARC-001` | [#25 실험 결과 저장과 안정 루틴 선택적 갱신](https://github.com/sksksksksksss/service/issues/25) | `completeExperiment` | `experiment_result.outcome`, `summary`, `completed_at`; 관찰·사용 기간 | E2E: 네 결과 중 하나로 완료; DB: 실험당 결과 하나 |
 | `FR-ARC-002` | [#25 실험 결과 저장과 안정 루틴 선택적 갱신](https://github.com/sksksksksksss/service/issues/25) | `completeExperiment` | `experiment_result.promote_to_stable`, `resulting_routine_version_id`; `routine.current_stable_version_id` | E2E: 명시 동의 때만 승격; DB: 허용 결과와 새 확정 버전 원자 저장 |
@@ -104,7 +104,7 @@
 
 ## LAB 게임 경험
 
-| 요구사항 | GitHub 기능명세 | 관련 operationId | 기준 데이터 | 주 검증 |
+| 요구사항 | 관련 Story | 관련 operationId | 기준 데이터 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `FR-LAB-001` | [#19 실험 진행도와 퀘스트 완료 보상](https://github.com/sksksksksksss/service/issues/19) | `getCurrentExperiment`, `getExperiment`, `listExperimentQuests`, `answerObservationQuest`, `skipObservationQuest`, `getMyLab` | `observation_quest.required`, `status`; 최종 결과 존재 여부 | DOMAIN: 필수 퀘스트만 분모·완료에 반영; UI: 계산 근거 표시 |
 | `FR-LAB-002` | [#20 실험 완료 기록을 연구실에 추가](https://github.com/sksksksksksss/service/issues/20) | `completeExperiment`, `getMyLab` | `lab_record.experiment_id`, `earned_at`, `display_asset_code`; `experiment_result` | DB: 완료 실험당 연구 기록 하나; E2E: 원본 실험 이동 |
@@ -113,7 +113,7 @@
 
 ## 비기능 요구사항
 
-| 요구사항 | GitHub 기능명세 | 적용 계약 | 기준 데이터·설정 | 주 검증 |
+| 요구사항 | 관련 Story | 적용 계약 | 기준 데이터·설정 | 주 검증 |
 | --- | --- | --- | --- | --- |
 | `NFR-SAF-001` | [#24 유지 후보·우선 확인·보류와 다음 행동 안내](https://github.com/sksksksksksss/service/issues/24); [#34 공통 API·오류 처리·데이터 규칙](https://github.com/sksksksksksss/service/issues/34) | `createRecommendation`, `rankExperimentCandidates`, `createAdHocObservation`, `getRescueCase` | 금지 표현 정책; 추천·순서·Rescue의 검증된 근거 스냅샷 | AI-EVAL: 금지 표현 고정 사례; UI: 안전 문구 우선순위 |
 | `NFR-SAF-002` | [#34 공통 API·오류 처리·데이터 규칙](https://github.com/sksksksksksss/service/issues/34); [#48 핵심 흐름의 접근성·빈 상태·오류 복구](https://github.com/sksksksksksss/service/issues/48) | `createRecommendation`, `getRescueCase` | `recommendation_request.ranking_source`, `fallback_reason_code`; `ai_job.status`, `error_code`; 고정 규칙 결과 | DOMAIN: AI 실패 fallback; E2E: 재시도·고정 결과 경로 |

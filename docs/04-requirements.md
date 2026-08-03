@@ -2,7 +2,7 @@
 
 ## 문서의 역할
 
-이 문서는 3주 MVP에서 반드시 성립해야 하는 제품 계약을 정의한다. 개별 기능명세는 GitHub Story, API 형식은 OpenAPI, 테이블과 제약은 데이터 모델에서 정한다.
+이 문서는 3주 MVP에서 반드시 성립해야 하는 제품 계약을 정의한다. 사용자 기능 전체는 [통합 기능명세서](./05-features/functional-specification.md), 기능별 상세 흐름은 GitHub Story, API 형식은 OpenAPI, 테이블과 제약은 데이터 모델에서 정한다.
 
 요구사항의 최종 범위는 다음과 같다.
 

@@ -1,15 +1,16 @@
 # 기능명세
 
-먼저 [GitHub 기능명세 View](https://github.com/orgs/sksksksksksss/projects/1/views/9)에서 MVP 기능 전체를 훑고, 기능을 클릭해 Story의 상세 명세를 읽는다. 별도의 Markdown 문서에 같은 내용을 복사하지 않는다.
+먼저 [통합 기능명세서](./functional-specification.md)에서 MVP 기능 전체의 시작 조건·입력·처리·결과·규칙·예외·완료 기준을 읽는다. 각 기능의 상세 사용자 흐름과 검증 항목은 연결된 GitHub Story에서 관리한다.
 
 ## 전체 기능 보기
 
-- [기능명세 View](https://github.com/orgs/sksksksksksss/projects/1/views/9): MVP Story의 사용자 단계, 한 줄 결과와 P0·P1
+- [통합 기능명세서](./functional-specification.md): MVP 사용자 기능 28개의 전체 명세
+- [MVP 기능 목록](https://github.com/orgs/sksksksksksss/projects/1/views/9): 기능명, 사용자 단계, P0·P1과 한 줄 결과
 - [User Story Map](../product/story-map.md): 전체 사용자 흐름과 P0·P1·Pn 경계
 - [개발 칸반](https://github.com/orgs/sksksksksksss/projects/1/views/3): 상태, 담당자와 Sub-task 실행
 - [요구사항 추적표](./traceability.md): 요구사항과 Story·데이터·검증의 연결
 
-기능명세 View의 한 행은 Story 하나다. 표는 제품 전체를 빠르게 찾는 목차이고, Story 본문이 기능별 원본이다. `기능 요약`은 Story의 `사용자 결과`를 그대로 사용하며 따로 작성하지 않는다.
+통합 기능명세서의 기능 하나는 Story 하나와 대응한다. 기능명세서는 전체 기능을 비교하는 기준이고, Story는 담당자가 구현·검증할 상세 흐름과 완료 조건이다. 제품 의미가 달라지면 둘을 같은 변경에서 함께 수정한다.
 
 ## Epic
 

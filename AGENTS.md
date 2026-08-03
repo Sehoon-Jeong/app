@@ -3,10 +3,11 @@
 이 저장소에서 사람과 AI는 같은 제품 기준을 사용한다. 구현을 시작하기 전에 아래 순서로 맥락을 확인한다.
 
 1. 담당 GitHub Story 또는 Task와 연결된 Sub-task
-2. [제품 규칙과 AI 경계](./docs/product/product-rules.md)
-3. [요구사항 추적표](./docs/05-features/traceability.md)
-4. [OpenAPI 계약](./docs/api/openapi.yaml)
-5. [데이터 모델과 사전](./docs/06-data-model/README.md)
+2. [통합 기능명세서](./docs/05-features/functional-specification.md)의 해당 기능
+3. [제품 규칙과 AI 경계](./docs/product/product-rules.md)
+4. [요구사항 추적표](./docs/05-features/traceability.md)
+5. [OpenAPI 계약](./docs/api/openapi.yaml)
+6. [데이터 모델과 사전](./docs/06-data-model/README.md)
 
 ## 작업 원칙
 

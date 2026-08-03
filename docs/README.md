@@ -20,7 +20,7 @@ AI와 구현 작업을 시작할 때는 루트의 [작업 안내](../AGENTS.md)�
 | 기준 | 원본 | 역할 |
 | --- | --- | --- |
 | 요구사항 | [요구사항 명세](./04-requirements.md) | 제품이 반드시 만족해야 할 조건과 요구사항 ID |
-| 기능명세 | [GitHub 기능명세 View](https://github.com/orgs/sksksksksksss/projects/1/views/9) | MVP 기능의 단계·한 줄 결과·P0/P1을 훑고 Story 상세로 이동 |
+| 기능명세 | [통합 기능명세서](./05-features/functional-specification.md) | MVP 기능별 시작 조건·입력·처리·결과·규칙·예외·완료 기준 |
 | API | [OpenAPI](./api/README.md) | 인증, endpoint, 요청·응답과 오류 계약 |
 | 데이터 | [ERD와 데이터 사전](./06-data-model/README.md) | 엔터티 관계, 상태, 소유권과 제약 |
 | 기술 | [기술 스택](./03-technology-stack.md) | 무엇으로 만들며 왜 선택했는가? |
@@ -33,7 +33,7 @@ AI와 구현 작업을 시작할 때는 루트의 [작업 안내](../AGENTS.md)�
 | 질문 | 우선하는 원본 |
 | --- | --- |
 | 왜 만드는가, 무엇을 하지 않는가? | 제품 소개·MVP 정의 |
-| 사용자가 무엇을 할 수 있어야 하는가? | GitHub Story와 요구사항 |
+| 사용자가 무엇을 할 수 있어야 하는가? | 통합 기능명세서·GitHub Story와 요구사항 |
 | 공통 제품 규칙은 무엇인가? | 제품 규칙 |
 | API 필드와 오류 코드는 무엇인가? | OpenAPI |
 | 무엇을 어떻게 저장하는가? | ERD·데이터 사전 |

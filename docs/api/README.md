@@ -9,7 +9,7 @@
 ## 읽는 방법
 
 - `x-priority`: 이번 MVP의 `P0` 또는 `P1`
-- `x-github-issue`: 기능명세 원본인 GitHub Story 번호
+- `x-github-issue`: 통합 기능명세의 해당 기능과 연결된 GitHub Story 번호
 - `x-requirements`: 이 작업으로 구현하는 요구사항 ID
 - `operationId`: 프론트 클라이언트와 서버 테스트에서 사용할 안정적인 작업 이름
 - `components/schemas`: 요청·응답이 함께 사용하는 데이터 구조와 열거형
