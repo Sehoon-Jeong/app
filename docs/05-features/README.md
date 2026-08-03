@@ -1,12 +1,15 @@
 # 기능명세
 
-SkinCause의 개별 기능명세는 **GitHub Story 본문**에서 관리한다. 별도의 Markdown 문서에 같은 내용을 복사하지 않는다.
+먼저 [GitHub 기능명세 View](https://github.com/orgs/sksksksksksss/projects/1/views/9)에서 MVP 기능 전체를 훑고, 기능을 클릭해 Story의 상세 명세를 읽는다. 별도의 Markdown 문서에 같은 내용을 복사하지 않는다.
 
 ## 전체 기능 보기
 
-- [User Story Map](../product/story-map.md): 사용자 흐름과 P0·P1·Pn 범위
-- [GitHub Project](https://github.com/orgs/sksksksksksss/projects/1): 일정, 상태, 담당자와 Sub-task
+- [기능명세 View](https://github.com/orgs/sksksksksksss/projects/1/views/9): MVP Story의 사용자 단계, 한 줄 결과와 P0·P1
+- [User Story Map](../product/story-map.md): 전체 사용자 흐름과 P0·P1·Pn 경계
+- [개발 칸반](https://github.com/orgs/sksksksksksss/projects/1/views/3): 상태, 담당자와 Sub-task 실행
 - [요구사항 추적표](./traceability.md): 요구사항과 Story·데이터·검증의 연결
+
+기능명세 View의 한 행은 Story 하나다. 표는 제품 전체를 빠르게 찾는 목차이고, Story 본문이 기능별 원본이다. `기능 요약`은 Story의 `사용자 결과`를 그대로 사용하며 따로 작성하지 않는다.
 
 ## Epic
 

@@ -20,7 +20,7 @@ AI와 구현 작업을 시작할 때는 루트의 [작업 안내](../AGENTS.md)�
 | 기준 | 원본 | 역할 |
 | --- | --- | --- |
 | 요구사항 | [요구사항 명세](./04-requirements.md) | 제품이 반드시 만족해야 할 조건과 요구사항 ID |
-| 기능명세 | [GitHub Story 목록](./05-features/README.md) | 기능별 흐름·규칙·예외·완료 조건 |
+| 기능명세 | [GitHub 기능명세 View](https://github.com/orgs/sksksksksksss/projects/1/views/9) | MVP 기능의 단계·한 줄 결과·P0/P1을 훑고 Story 상세로 이동 |
 | API | [OpenAPI](./api/README.md) | 인증, endpoint, 요청·응답과 오류 계약 |
 | 데이터 | [ERD와 데이터 사전](./06-data-model/README.md) | 엔터티 관계, 상태, 소유권과 제약 |
 | 기술 | [기술 스택](./03-technology-stack.md) | 무엇으로 만들며 왜 선택했는가? |
