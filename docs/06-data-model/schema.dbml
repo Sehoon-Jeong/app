@@ -91,7 +91,7 @@ Enum ai_task_type {
   PURCHASE_ITEM_EXTRACTION
   GOAL_CLASSIFICATION
   OBSERVATION_STRUCTURING
-  RECOMMENDATION_RANKING
+  FOLLOW_UP_QUESTIONS
   EXPLANATION
 }
 
@@ -118,6 +118,26 @@ Enum time_slot {
   PM
 }
 
+Enum routine_frequency_type {
+  DAILY
+  SPECIFIC_DAYS
+  WEEKLY_COUNT
+  AS_NEEDED
+  UNKNOWN
+}
+
+Enum date_precision {
+  EXACT
+  APPROXIMATE
+  UNKNOWN
+}
+
+Enum answer_state {
+  YES
+  NO
+  UNKNOWN
+}
+
 Enum change_intent {
   ADD
   REPLACE
@@ -130,8 +150,7 @@ Enum recommendation_status {
 }
 
 Enum ranking_source {
-  AI_VALIDATED
-  RULE_FALLBACK
+  SERVER_RULES
   NO_ELIGIBLE_CANDIDATE
 }
 
@@ -196,6 +215,7 @@ Enum observation_kind {
   CHANGE
   STOP
   RESTART
+  FOLLOW_UP
 }
 
 Enum observation_condition {
@@ -213,10 +233,10 @@ Enum discomfort_severity {
 }
 
 Enum rescue_classification {
-  CHECK_FIRST
-  HOLD
-  KEEP_CANDIDATE
-  UNDETERMINED
+  RECENT_CHANGE
+  CHANGED_TOGETHER
+  NO_RECORDED_CHANGE
+  INSUFFICIENT_INFORMATION
 }
 
 Enum rescue_change_source {
@@ -226,11 +246,31 @@ Enum rescue_change_source {
   UNKNOWN
 }
 
-Enum experiment_outcome {
-  TOLERATED
-  DISCOMFORT
+Enum discomfort_outcome {
+  NONE
+  PRESENT
+  UNSURE
+}
+
+Enum goal_outcome {
+  HELPED
+  NO_CHANGE
+  UNSURE
+}
+
+Enum next_use_decision {
+  PROMOTE_TO_STABLE
+  STOP
   HOLD
-  INCONCLUSIVE
+  RETRY
+}
+
+Enum baseline_routine_use_state {
+  NOT_APPLICABLE
+  ALL_CONTINUED
+  SOME_STOPPED
+  ALL_STOPPED
+  UNKNOWN
 }
 
 Enum lab_item_type {
@@ -500,6 +540,12 @@ Table routine_version {
   status routine_version_status [not null]
   confirmed_at timestamptz
   source_type routine_version_source [not null]
+  routine_started_on date
+  routine_started_on_precision date_precision [not null, default: 'UNKNOWN']
+  last_product_change_on date
+  last_product_change_precision date_precision [not null, default: 'UNKNOWN']
+  current_discomfort_state answer_state [not null, default: 'UNKNOWN']
+  evidence_strength evidence_strength [not null, default: 'INSUFFICIENT']
   created_at timestamptz [not null]
 
   indexes {
@@ -513,6 +559,9 @@ Table routine_item {
   time_slot time_slot [not null]
   position int [not null]
   product_version_id uuid [not null]
+  frequency_type routine_frequency_type [not null]
+  weekly_count int
+  days_of_week jsonb [not null, default: '[]']
   created_at timestamptz [not null]
 
   indexes {
@@ -532,7 +581,7 @@ Table recommendation_request {
   policy_version varchar(50) [not null]
   status recommendation_status [not null]
   goal_classification_ai_job_id uuid [unique]
-  ranking_ai_job_id uuid [unique]
+  explanation_ai_job_id uuid [unique]
   ranking_source ranking_source
   fallback_reason_code varchar(100)
   created_at timestamptz [not null]
@@ -741,6 +790,8 @@ Table observation {
   kind observation_kind [not null]
   condition observation_condition [not null]
   used_as_planned boolean
+  uses_since_last_check int
+  other_product_change_state answer_state
   memo text
   structuring_ai_job_id uuid [unique]
   observed_at timestamptz [not null]
@@ -796,9 +847,13 @@ Table rescue_item {
 Table experiment_result {
   id uuid [pk]
   experiment_id uuid [not null, unique]
-  outcome experiment_outcome [not null]
+  discomfort_outcome discomfort_outcome [not null]
+  goal_outcome goal_outcome [not null]
+  next_use_decision next_use_decision [not null]
+  baseline_routine_use_state baseline_routine_use_state [not null]
+  evidence_strength evidence_strength [not null]
+  record_completeness jsonb [not null]
   summary text
-  promote_to_stable boolean [not null]
   resulting_routine_version_id uuid [unique]
   completed_at timestamptz [not null]
   idempotency_key varchar(100) [not null, unique]
@@ -818,6 +873,7 @@ Table lab_record {
   user_id uuid [not null]
   experiment_id uuid [not null, unique]
   display_asset_code varchar(50) [not null]
+  observation_completion_snapshot jsonb [not null]
   earned_at timestamptz [not null]
   created_at timestamptz [not null]
 }
@@ -932,7 +988,7 @@ Ref: recommendation_request.routine_version_id > routine_version.id
 Ref: recommendation_request.goal_function_code > function_type.code
 Ref: recommendation_request.target_routine_item_id > routine_item.id
 Ref: recommendation_request.goal_classification_ai_job_id > ai_job.id
-Ref: recommendation_request.ranking_ai_job_id > ai_job.id
+Ref: recommendation_request.explanation_ai_job_id > ai_job.id
 Ref: recommendation_pool_item.request_id > recommendation_request.id [delete: cascade]
 Ref: recommendation_pool_item.product_version_id > product_version.id
 Ref: recommendation_candidate.(request_id, product_version_id) > recommendation_pool_item.(request_id, product_version_id)

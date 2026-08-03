@@ -4,7 +4,7 @@
 
 ## 전체 기능 보기
 
-- [통합 기능명세서](./functional-specification.md): MVP 사용자 기능 28개의 인덱스와 기능 ID별 상세 명세
+- [통합 기능명세서](./functional-specification.md): MVP 사용자 기능 29개의 인덱스와 기능 ID별 상세 명세
 - [MVP 기능 목록](https://github.com/orgs/sksksksksksss/projects/1/views/9): 기능명, 사용자 단계, P0·P1과 한 줄 결과
 - [User Story Map](../product/story-map.md): 전체 사용자 흐름과 P0·P1·Pn 경계
 - [개발 칸반](https://github.com/orgs/sksksksksksss/projects/1/views/3): 상태, 담당자와 Sub-task 실행

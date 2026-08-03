@@ -232,11 +232,11 @@ USER_CONFIRMED 또는 OPERATOR_VERIFIED version과 연결 성분·기능은 수�
 | `requested_at` | NOT NULL | 작업을 등록한 시각 |
 | `started_at`, `completed_at` | NULL 허용 | 지연시간 측정 |
 
-허용 작업은 `INGREDIENT_EXTRACTION`, `PURCHASE_ITEM_EXTRACTION`, `GOAL_CLASSIFICATION`, `OBSERVATION_STRUCTURING`, `RECOMMENDATION_RANKING`, `EXPLANATION`이다. `SUCCEEDED`는 JSON Schema와 서버 규칙을 모두 통과했다는 뜻이다. 공급자 응답 원문, 숨겨진 추론, 이미지 URL과 사용자 메모 원문은 이 테이블에 보존하지 않는다.
+허용 작업은 `INGREDIENT_EXTRACTION`, `PURCHASE_ITEM_EXTRACTION`, `GOAL_CLASSIFICATION`, `OBSERVATION_STRUCTURING`, `FOLLOW_UP_QUESTIONS`, `EXPLANATION`이다. `SUCCEEDED`는 JSON Schema·허용 ID·근거 참조·금지 표현 검사를 통과했다는 뜻이며 자연어 의미 전체를 검증했다는 뜻은 아니다. 공급자 응답 원문, 숨겨진 추론, 이미지 URL과 사용자 메모 원문은 이 테이블에 보존하지 않는다.
 
 이미지 추출과 관찰 메모 구조화는 사용자가 해당 작업을 직접 요청한 `USER_REQUEST`일 때만 호출한다. 이미지 추출 작업은 같은 사용자의 upload asset이 필수이고 나머지 작업은 input asset을 두지 않는다. provider payload에는 이메일, 사용자 ID, 인증 정보, 무관한 프로필이나 다른 실험 기록을 넣지 않는다. RUNNING이면 started_at, 종료 상태이면 completed_at이 필수이며 SUCCEEDED일 때만 검증된 structured output을 저장한다.
 
-목적 구조화·추천 순위·후보 순서 설명·관찰 구조화·Rescue 설명은 각각 사용하는 도메인 행에서 최종 채택 작업을 참조한다. 실패한 재시도 작업도 사용자의 `ai_job` 이력에는 남지만 도메인 결과를 바꾸지 않는다.
+목적 구조화·추천 및 후보 순서 설명·확인 질문·관찰 구조화·Rescue 설명은 각각 사용하는 도메인 행에서 최종 채택 작업을 참조한다. 추천 순위 자체는 AI 작업을 참조하지 않는다. 실패한 재시도 작업도 사용자의 `ai_job` 이력에는 남지만 도메인 결과를 바꾸지 않는다.
 
 ### `ingredient_extraction_item` — P1
 
@@ -296,10 +296,16 @@ PLANNED/ACTIVE/PAUSED 실험이 있으면 일반 편집으로 현재 안정 버�
 | `status` | DRAFT/CONFIRMED | 확정 여부 |
 | `confirmed_at` | NULL 허용 | 사용자가 안정 상태를 확인한 시각 |
 | `source_type` | INITIAL/MANUAL_UPDATE/EXPERIMENT_RESULT | 생성 이유 |
+| `routine_started_on`, `routine_started_on_precision` | 날짜·EXACT/APPROXIMATE/UNKNOWN | 이 조합을 사용하기 시작한 시점과 사용자 지식 수준 |
+| `last_product_change_on`, `last_product_change_precision` | 날짜·EXACT/APPROXIMATE/UNKNOWN | 가장 최근 제품 변경 시점과 사용자 지식 수준 |
+| `current_discomfort_state` | YES/NO/UNKNOWN | 사용자가 답한 현재 불편 여부. CONFIRMED 버전은 NO만 허용 |
+| `evidence_strength` | SUFFICIENT/LIMITED/INSUFFICIENT | 위 기준 정보를 재현할 수 있는 정도. 안정성 확률이 아님 |
 
 `CONFIRMED` 후 항목을 수정하지 않는다. 현재 여부는 status가 아니라 `routine.current_stable_version_id`로 판단한다.
 
 `confirmed_at`은 CONFIRMED에서 필수이고 DRAFT에서는 NULL이다. `source_type = EXPERIMENT_RESULT`인 버전은 정확히 하나의 `experiment_result.resulting_routine_version_id`에서 생성 근거를 찾을 수 있어야 한다.
+
+CONFIRMED 버전은 `current_discomfort_state = NO`만 허용한다. 정보 수준은 ① 사용 시작 날짜를 정확히 또는 대략 앎, ② 최근 제품 변경 날짜를 정확히 또는 대략 앎, ③ 모든 제품의 빈도를 `UNKNOWN`이 아닌 값으로 앎의 세 항목으로 계산한다. 세 항목이면 SUFFICIENT, 한두 항목이면 LIMITED, 하나도 없으면 INSUFFICIENT다. 사용 기간의 길이에 대한 임의의 임상 기준은 적용하지 않는다.
 
 ### `routine_item` — P0
 
@@ -310,6 +316,9 @@ PLANNED/ACTIVE/PAUSED 실험이 있으면 일반 편집으로 현재 안정 버�
 | `time_slot` | AM/PM | 사용 시간대 |
 | `position` | NOT NULL | 시간대 안의 순서 |
 | `product_version_id` | FK product_version | 당시 제품 정보 |
+| `frequency_type` | DAILY/SPECIFIC_DAYS/WEEKLY_COUNT/AS_NEEDED/UNKNOWN | 실제 사용 빈도 방식 |
+| `weekly_count` | NULL 허용 | WEEKLY_COUNT일 때 1~7 |
+| `days_of_week` | JSONB 배열 | SPECIFIC_DAYS일 때 중복 없는 요일 코드 |
 
 유일 제약:
 
@@ -317,6 +326,8 @@ PLANNED/ACTIVE/PAUSED 실험이 있으면 일반 편집으로 현재 안정 버�
 - `routine_version_id + time_slot + product_version_id`
 
 `position > 0`이며 확정 시 각 시간대의 순서가 1부터 빈틈없이 이어져야 한다. 루틴에 들어가는 개인 제품은 해당 루틴 사용자 소유의 초안이어야 한다.
+
+`weekly_count`는 WEEKLY_COUNT에서만 필수이고, `days_of_week`는 SPECIFIC_DAYS에서만 하나 이상이다. AS_NEEDED·UNKNOWN은 빈도를 추측하지 않으며 비교 결과의 정보 부족에 반영한다.
 
 ## 5. 추천·후보·비교
 
@@ -334,11 +345,11 @@ PLANNED/ACTIVE/PAUSED 실험이 있으면 일반 편집으로 현재 안정 버�
 | `policy_version` | NOT NULL | 추천 일반 규칙 버전 |
 | `status` | RUNNING/COMPLETED/FAILED | 처리 상태 |
 | `goal_classification_ai_job_id` | UNIQUE, FK ai_job, NULL 허용 | 자유 입력 목적을 구조화한 작업 |
-| `ranking_ai_job_id` | UNIQUE, FK ai_job, NULL 허용 | 순위 생성에서 채택하거나 fallback 직전 시도한 AI 작업 |
-| `ranking_source` | AI_VALIDATED/RULE_FALLBACK/NO_ELIGIBLE_CANDIDATE, 완료 전 NULL | 최종 후보를 정한 경로 |
-| `fallback_reason_code` | NULL 허용 | AI 실패·검증 거부 시 비민감 사유 |
+| `explanation_ai_job_id` | UNIQUE, FK ai_job, NULL 허용 | 서버가 계산한 우선순위를 설명한 작업 |
+| `ranking_source` | SERVER_RULES/NO_ELIGIBLE_CANDIDATE, 완료 전 NULL | 서버 결정표 적용 결과 |
+| `fallback_reason_code` | NULL 허용 | 설명 AI 미사용·실패·검증 거부 시 비민감 사유 |
 
-REPLACE이면 target은 필수이며 같은 routine version의 item이어야 한다. ADD이면 target은 NULL이다. `ranking_source = AI_VALIDATED`이면 성공한 `RECOMMENDATION_RANKING` 작업이 필수이고, `RULE_FALLBACK`이면 fallback 사유가 필수다. fallback 직전 AI 시도가 있었다면 실패·시간 초과·검증 거부 작업을 연결하고, AI를 호출하지 않은 fallback이면 NULL일 수 있다. 적격 pool이 비어 있으면 `NO_ELIGIBLE_CANDIDATE`로 완료하고 ranking 작업과 후보를 만들지 않는다. goal 작업이 있으면 성공한 `GOAL_CLASSIFICATION`이고 사용자 확인 후의 `goal_function_code`를 저장한다.
+REPLACE이면 target은 필수이며 같은 routine version의 item이어야 한다. ADD이면 target은 NULL이다. 후보 자격과 순위는 목적 관련성 → 목적과 무관한 중복·변수 수 → 정보 확인 → 관련 개인 경험의 지지·반대 방향과 기록 완성도 → 운영 확인 수준·정규화 제품명·제품 버전 ID 안정 정렬 순으로 서버가 계산한다. 개인 경험은 같은 제품, 목적과 연결된 확인 성분·기능, 제품군 순으로 관련성을 낮추며 충돌하거나 기록이 부족하면 영향도를 낮춘다. 적격 pool이 비면 `NO_ELIGIBLE_CANDIDATE`로 완료하고 후보를 만들지 않는다. 설명 작업이 있으면 성공한 EXPLANATION이며 순위를 바꿀 수 없다. goal 작업이 있으면 성공한 GOAL_CLASSIFICATION이고 사용자가 확정한 `goal_function_code`를 저장한다.
 
 preference snapshot에는 요청 당시의 concern input state와 사용자가 확인한 고민 코드, 제품 종류·시간대 같은 선택 조건만 넣는다. 자유 입력 원문이나 이메일은 넣지 않는다.
 
@@ -352,7 +363,7 @@ preference snapshot에는 요청 당시의 concern input state와 사용자가 �
 | `comparison_facts` | JSONB, NOT NULL | 목적 연결·기능 중복·개인 결과·정보 수준의 구조화 사실 |
 | `eligible_at` | NOT NULL | 후보군을 확정한 시각 |
 
-서버가 자격을 확인한 ACTIVE 공용 product의 OPERATOR_VERIFIED 최신 version만 저장한다. AI에는 이 테이블의 product version ID와 구조화 사실만 전달한다. 자유 문장 효능, 개인 초안이나 카탈로그 밖 제품은 후보군에 들어갈 수 없다.
+서버가 자격을 확인한 ACTIVE 공용 product의 OPERATOR_VERIFIED 최신 version만 저장한다. 목적 관련성·중복·변수 수·개인 결과와 그 기록 완성도를 구조화 사실로 저장한다. AI 설명에는 필요한 ID와 구조화 사실만 전달하며 자유 문장 효능, 개인 초안이나 카탈로그 밖 제품은 후보군에 들어갈 수 없다.
 
 ### `recommendation_candidate` — P0
 
@@ -365,7 +376,7 @@ preference snapshot에는 요청 당시의 concern input state와 사용자가 �
 | `evidence_strength` | SUFFICIENT/LIMITED/INSUFFICIENT | 정보 재현 수준 |
 | `evidence_snapshot` | JSONB, NOT NULL | 지지·반대·부족 정보와 참조 실험 ID |
 
-`request_id + product_version_id`도 유일하며 같은 조합의 `recommendation_pool_item`을 복합 FK로 참조한다. `rank`는 1~3 CHECK를 둔다. evidence에는 서버 비교 사실, 반영한 개인 실험 ID, AI 설명 채택 여부와 fallback 여부만 허용한다. 이 스냅샷은 이후 기록·모델·정책이 바뀌어도 수정하지 않는다.
+`request_id + product_version_id`도 유일하며 같은 조합의 `recommendation_pool_item`을 복합 FK로 참조한다. `rank`는 1~3 CHECK를 둔다. evidence에는 서버 결정표 사실, 반영한 개인 실험 ID·기록 완성도, AI 설명 사용 여부만 허용한다. 이 스냅샷은 이후 기록·모델·정책이 바뀌어도 수정하지 않는다.
 
 ### `experiment_candidate` — P0
 
@@ -420,7 +431,7 @@ JSONB 안의 제품과 기능 값은 서버가 계산한 ID·코드만 허용하
 | `ordering_id` | FK candidate_ordering, 복합 PK | 순서 묶음 |
 | `comparison_id` | FK candidate_comparison, 복합 PK | 같은 안정 루틴의 최신 비교 결과 |
 | `rank` | ordering_id와 UNIQUE | 먼저 시험할 순서, 1부터 시작 |
-| `reason_snapshot` | JSONB, NOT NULL | 목적·개인 이력·변수 수·정보 수준의 구조화 근거 |
+| `reason_snapshot` | JSONB, NOT NULL | 추천과 같은 결정표의 목적·중복·변수 수·정보·개인 기록 완성도 근거 |
 
 같은 ordering 안에서 comparison과 rank는 각각 유일하다. 포함된 comparison은 ordering의 사용자와 안정 루틴에 속해야 하고 무효화되지 않은 버전이어야 한다. 항목 수만큼 rank가 1부터 빈틈없이 이어지는지 생성 트랜잭션에서 검증한다.
 
@@ -452,7 +463,7 @@ JSONB 안의 제품과 기능 값은 서버가 계산한 ID·코드만 허용하
 
 부분 유일 인덱스로 사용자당 열린 실험 하나를 강제한다. `candidate_id`와 `comparison_id`는 각각 유일해 같은 후보·비교를 두 실험이 재사용할 수 없다. 후보, 비교, 기준 루틴과 parent는 모두 같은 사용자에 속해야 하고 comparison의 candidate·routine도 실험과 일치해야 한다. ordering이 있으면 `ordering_id + comparison_id`가 실제 ordering item을 복합 참조한다.
 
-parent가 있으면 자신이나 후손을 가리킬 수 없고, 원본 결과는 HOLD 또는 INCONCLUSIVE여야 하며 `retrial_stability_confirmed_at`이 필수다. 재시험은 현재 안정 루틴에서 만든 새 후보·비교를 사용한다.
+parent가 있으면 자신이나 후손을 가리킬 수 없고, 원본 결과의 `next_use_decision`은 HOLD 또는 RETRY여야 하며 `retrial_stability_confirmed_at`이 필수다. 재시험은 현재 안정 루틴에서 만든 새 후보·비교를 사용한다.
 
 duration은 7~28일이고 계획 종료 미리보기는 계획 시작과 duration으로 계산한다. 첫 사용 전에는 duration을 바꿀 수 있지만 첫 사용 후에는 제품·기준 루틴과 함께 고정한다.
 
@@ -501,7 +512,7 @@ FIRST_USE 관찰의 observed_at을 actual_started_at으로 사용하고 `expecte
 | `skip_reason_code` | NULL 허용 | 건너뜀 이유 |
 | `resolved_at` | NULL 허용 | 완료·건너뜀·취소로 예정 상태를 벗어난 시각 |
 
-`experiment_id + type`은 기본 필수 퀘스트에 대해 유일하다. `SCHEDULED`이면 resolved와 skip reason은 NULL이고, `SKIPPED`이면 둘 다 필수다. `COMPLETED` 퀘스트에는 정확히 하나의 observation이 있어야 한다.
+`experiment_id + type`은 기본 필수 퀘스트에 대해 유일하다. `SCHEDULED`이면 resolved와 skip reason은 NULL이고, `SKIPPED`이면 둘 다 필수다. `COMPLETED` 퀘스트에는 정확히 하나의 observation이 있어야 한다. 사용자가 결과를 먼저 확정하면 남은 필수 퀘스트는 `RESULT_RECORDED_WITHOUT_OBSERVATION` 사유로 SKIPPED 처리해 관찰 완성도의 분모에 남긴다. 실험 자체를 CANCELLED한 경우에만 미완료 퀘스트를 CANCELLED로 바꾸고 수행률 계산에서 제외한다.
 
 ### `quest_schedule_change` — P0
 
@@ -523,14 +534,16 @@ FIRST_USE 관찰의 observed_at을 actual_started_at으로 사용하고 `expecte
 | `id` | PK | 실제 관찰 |
 | `experiment_id` | FK experiment | 실험 |
 | `quest_id` | FK observation_quest, UNIQUE, NULL 허용 | 예정 퀘스트 응답 |
-| `kind` | QUEST/CHANGE/STOP/RESTART | 입력 계기 |
+| `kind` | QUEST/CHANGE/STOP/RESTART/FOLLOW_UP | 입력 계기. FOLLOW_UP은 완료 후 기록 |
 | `condition` | NO_CHANGE/COMFORTABLE_OR_BETTER/DISCOMFORT/UNSURE/NOT_USED | 사용자 선택 |
 | `used_as_planned` | NULL 허용 | 계획 준수 여부 |
+| `uses_since_last_check` | NULL 허용, 0 이상 | 이전 확인 이후 실제 사용 횟수 |
+| `other_product_change_state` | YES/NO/UNKNOWN, NULL 허용 | 실험 제품 외 화장품 변경 여부 |
 | `memo` | NULL 허용 | 사용자 짧은 기록 |
 | `structuring_ai_job_id` | UNIQUE, FK ai_job, NULL 허용 | 메모에서 확인 질문을 만든 작업 |
 | `observed_at`, `recorded_at` | NOT NULL | 실제 관찰·입력 시각 |
 
-`observed_at <= recorded_at`이고 미래 관찰을 저장하지 않는다. QUEST kind이면 quest가 필수이며 같은 experiment에 속해야 한다. quest가 없는 예정 밖 관찰은 CHANGE/STOP/RESTART만 허용한다. condition이 DISCOMFORT이면 `discomfort_detail`이 필수이고, 다른 condition에는 detail을 만들지 않는다. structuring 작업이 있으면 같은 사용자의 성공한 `OBSERVATION_STRUCTURING` 작업이어야 하며 사용자가 확인하지 않은 출력은 관찰 사실로 저장하지 않는다.
+`observed_at <= recorded_at`이고 미래 관찰을 저장하지 않는다. QUEST kind이면 quest가 필수이며 같은 experiment에 속해야 한다. FIRST_USE·MID_CHECK·FINAL_CHECK에는 사용 횟수와 다른 제품 변경 답을 요구하되 모름을 허용한다. YES이면 같은 관찰을 출처로 한 UNPLANNED_PRODUCT_CHANGE 사건이 하나 이상 있어야 한다. FOLLOW_UP은 COMPLETED 실험에만 허용하고 원래 결과와 상태를 바꾸지 않는다. condition이 DISCOMFORT이면 `discomfort_detail`이 필수다.
 
 ### `discomfort_detail` — P0
 
@@ -574,13 +587,13 @@ trigger observation은 같은 experiment의 DISCOMFORT 관찰이어야 한다. b
 | `id` | PK | 제품별 Rescue 결과 |
 | `rescue_case_id` | FK rescue_case | Rescue |
 | `product_version_id` | FK product_version | 제품 |
-| `classification` | CHECK_FIRST/HOLD/KEEP_CANDIDATE/UNDETERMINED | 분류 |
+| `classification` | RECENT_CHANGE/CHANGED_TOGETHER/NO_RECORDED_CHANGE/INSUFFICIENT_INFORMATION | 기록된 사실 분류 |
 | `change_source` | EXPERIMENT/UNPLANNED/STABLE/UNKNOWN | 변경 출처 |
 | `evidence_snapshot` | JSONB, NOT NULL | 시점과 규칙 사실 |
 
 `rescue_case_id + product_version_id`는 유일하다.
 
-`evidence_snapshot`에는 변경 시점, stable/experiment/unplanned 출처, 적용한 규칙 코드와 반대 사실을 저장한다. AI 출력은 classification과 제품 식별자를 변경할 수 없다.
+`evidence_snapshot`에는 변경 시점, stable/experiment/unplanned 출처, 적용한 규칙 코드와 반대 사실을 저장한다. 분류는 원인 확률·안전성·유지 권고가 아니며 AI 출력은 classification과 제품 식별자를 변경할 수 없다. safety priority이면 일반 제품별 행동 제안은 저장하지 않는다.
 
 ### `experiment_result` — P0
 
@@ -588,16 +601,18 @@ trigger observation은 같은 experiment의 DISCOMFORT 관찰이어야 한다. b
 | --- | --- | --- |
 | `id` | PK | 최종 결과 |
 | `experiment_id` | FK experiment, UNIQUE | 완료 실험 |
-| `outcome` | TOLERATED/DISCOMFORT/HOLD/INCONCLUSIVE | 사용자 선택 |
+| `discomfort_outcome` | NONE/PRESENT/UNSURE | 이번 사용 중 불편 여부 |
+| `goal_outcome` | HELPED/NO_CHANGE/UNSURE | 사용 목적에 대한 주관적 체감 |
+| `next_use_decision` | PROMOTE_TO_STABLE/STOP/HOLD/RETRY | 사용자가 선택한 다음 행동 |
+| `baseline_routine_use_state` | NOT_APPLICABLE/ALL_CONTINUED/SOME_STOPPED/ALL_STOPPED/UNKNOWN | Rescue 이후 기존 안정 루틴 제품을 어떻게 사용했는지에 대한 사용자 응답 |
+| `evidence_strength` | SUFFICIENT/LIMITED/INSUFFICIENT | 결과 기록을 재현할 수 있는 정도 |
+| `record_completeness` | JSONB, NOT NULL | 실제 기간·총 사용 횟수·필수 관찰 완료·건너뜀·전체, 다른 변경 YES/NO/UNKNOWN |
 | `summary` | NULL 허용 | 사용자 최종 메모 |
-| `promote_to_stable` | NOT NULL | 루틴 반영 동의 |
 | `resulting_routine_version_id` | UNIQUE, FK routine_version, NULL 허용 | 생성된 새 안정 루틴 |
 | `completed_at` | NOT NULL | 결과 확정 시각 |
 | `idempotency_key` | UNIQUE | 중복 결과 방지 |
 
-`promote_to_stable`은 outcome이 TOLERATED일 때만 true이며 true이면 resulting version이 필수다.
-
-반대로 promote가 false이면 resulting version은 NULL이어야 한다. resulting version은 같은 사용자의 routine에 속하고 `CONFIRMED`, `source_type = EXPERIMENT_RESULT`여야 하며 다른 결과가 재사용할 수 없다. 결과, COMPLETED 전환, 선택적 루틴 승격과 LAB record는 idempotency key를 공유하는 하나의 완료 작업으로 처리한다.
+`next_use_decision = PROMOTE_TO_STABLE`은 discomfort가 NONE일 때만 허용하고 resulting version이 필수다. 그 밖의 결정에서는 resulting version이 NULL이다. Rescue가 없으면 baseline routine use는 NOT_APPLICABLE이고, Rescue가 있으면 ALL_CONTINUED/SOME_STOPPED/ALL_STOPPED/UNKNOWN 중 하나여야 한다. 기록 수준은 실제 사용일이 계획 기간에 도달하고 필수 관찰 4개 완료·모든 구간 사용 횟수 확인·다른 제품 변경 NO이면 SUFFICIENT다. 필수 관찰 2개 이상과 확인된 사용 횟수 하나 이상이 있지만 기간·관찰·횟수·다른 변경 조건 중 하나라도 부족하면 LIMITED, 나머지는 INSUFFICIENT다. 이는 임상적 신뢰도가 아니라 계획 대비 사용·입력 완성도다. 기간이 짧거나 관찰 누락·다른 변경이 있어도 결과를 저장한다. resulting version은 같은 사용자의 routine에 속하고 `CONFIRMED`, `source_type = EXPERIMENT_RESULT`여야 한다. 결과, COMPLETED 전환, 선택적 루틴 승격과 LAB record는 하나의 완료 작업으로 처리한다.
 
 Beauty Archive는 이 테이블과 관련 이력을 조회하는 view다.
 
@@ -621,9 +636,10 @@ Beauty Archive는 이 테이블과 관련 이력을 조회하는 view다.
 | `user_id` | FK app_user | 소유자 |
 | `experiment_id` | FK experiment, UNIQUE | 완료 실험 |
 | `display_asset_code` | FK lab_item_definition, NOT NULL | 선반에 표시할 RESEARCH_SAMPLE |
+| `observation_completion_snapshot` | JSONB, NOT NULL | 필수 관찰 완료·전체·건너뜀과 결과 저장 여부 |
 | `earned_at` | NOT NULL | 획득 시각 |
 
-실험 outcome에 따라 획득 여부를 차별하지 않는다. COMPLETED 결과가 있어야 생성한다.
+세 결과의 방향이나 관찰 완성도에 따라 기본 획득 여부를 차별하지 않는다. COMPLETED 결과가 있어야 생성한다.
 
 user와 experiment 소유자는 같아야 하고 experiment에 정확히 하나의 결과가 있어야 한다. display asset은 RESEARCH_SAMPLE type만 허용한다.
 
