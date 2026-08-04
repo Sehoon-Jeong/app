@@ -8,7 +8,7 @@
 
 | 영역 | 포함 내용 |
 | --- | --- |
-| [표기와 공통 규칙](#표기) | 공통 타입, 시각, FK와 JSONB 원칙 |
+| [표기와 공통 규칙](#표기) | SQLite 공통 타입, 시각, FK와 JSON 원칙 |
 | [1. 사용자와 개인정보](#1-사용자와-개인정보) | `app_user`, 피부 고민, 알림 구독, 계정 삭제 작업 |
 | [2. 제품·성분·기능](#2-제품성분기능) | 브랜드, 제품 버전, 바코드, 성분과 제품 기능 |
 | [3. 이미지와 AI 작업](#3-이미지와-ai-작업) | 비공개 업로드, AI 작업, 성분·구매 내역 추출 결과 |
@@ -22,13 +22,15 @@
 
 ## 표기
 
-- 모든 ID는 UUID다.
+- 모든 ID는 애플리케이션이 생성한 UUID 문자열이며 SQLite `TEXT`로 저장한다.
 - 공통 `created_at`과 변경 가능한 행의 `updated_at`은 DBML에 명시한다.
-- 시각은 PostgreSQL `timestamptz`로 UTC 저장한다.
+- 시각은 고정 형식 `YYYY-MM-DDTHH:MM:SS.SSSZ`, 날짜는 `YYYY-MM-DD` 문자열로 SQLite `TEXT`에 저장한다. UTC로 정규화한 값만 정렬·비교한다.
 - `P0`, `P1`은 해당 테이블이 처음 필요한 범위다.
-- 자유 문장과 JSONB는 구조화 필드를 대신하지 않고 설명·스냅샷에만 사용한다.
+- enum은 `TEXT + CHECK`, boolean은 `INTEGER + CHECK(value IN (0, 1))`로 구현한다. DBML의 enum과 boolean 표기는 ERD 가독성을 위한 논리 타입이다.
+- JSON은 SQLite `TEXT`로 저장하고 JSON 필드의 migration에 `CHECK(json_valid(...))`를 둔다. 자유 문장과 JSON은 구조화 필드를 대신하지 않고 설명·스냅샷에만 사용한다.
 - FK는 별도 표기가 없으면 부모가 존재하는 동안 삭제를 제한한다. 계정 삭제와 aggregate 하위 데이터 삭제 정책은 9절에서 따로 정한다.
-- DBML이 표현하지 못하는 CHECK·부분 인덱스·동일 사용자 제약은 Flyway에서 구현한다.
+- 모든 연결에서 `PRAGMA foreign_keys = ON`을 적용한다. DBML이 표현하지 못하는 CHECK·부분 인덱스·동일 사용자 제약은 SQLite용 Flyway migration에서 구현한다.
+- SQLite 파일은 한 API 인스턴스만 쓴다. 쓰기 트랜잭션은 짧게 유지하고 AI·Object Storage·외부 알림 호출을 트랜잭션 안에서 기다리지 않는다.
 
 ## 1. 사용자와 개인정보
 
@@ -227,7 +229,7 @@ USER_CONFIRMED 또는 OPERATOR_VERIFIED version과 연결 성분·기능은 수�
 | `model`, `prompt_version`, `schema_version` | NOT NULL | 재현 정보 |
 | `status` | QUEUED/RUNNING/SUCCEEDED/FAILED/TIMED_OUT | 처리 상태 |
 | `input_fingerprint` | NOT NULL | 원문을 보존하지 않는 입력 변경 확인용 해시 |
-| `structured_output` | JSONB, NULL 허용 | 검증을 통과한 최소 출력 |
+| `structured_output` | JSON 문자열, NULL 허용 | 검증을 통과한 최소 출력 |
 | `error_code` | NULL 허용 | 비민감 실패 코드 |
 | `requested_at` | NOT NULL | 작업을 등록한 시각 |
 | `started_at`, `completed_at` | NULL 허용 | 지연시간 측정 |
@@ -318,7 +320,7 @@ CONFIRMED 버전은 `current_discomfort_state = NO`만 허용한다. 정보 수�
 | `product_version_id` | FK product_version | 당시 제품 정보 |
 | `frequency_type` | DAILY/SPECIFIC_DAYS/WEEKLY_COUNT/AS_NEEDED/UNKNOWN | 실제 사용 빈도 방식 |
 | `weekly_count` | NULL 허용 | WEEKLY_COUNT일 때 1~7 |
-| `days_of_week` | JSONB 배열 | SPECIFIC_DAYS일 때 중복 없는 요일 코드 |
+| `days_of_week` | JSON 문자열 배열 | SPECIFIC_DAYS일 때 중복 없는 요일 코드 |
 
 유일 제약:
 
@@ -341,7 +343,7 @@ CONFIRMED 버전은 `current_discomfort_state = NO`만 허용한다. 정보 수�
 | `goal_function_code` | FK function_type | 우선 목적 |
 | `change_intent` | ADD/REPLACE | 변경 의도 |
 | `target_routine_item_id` | FK routine_item, NULL 허용 | 교체 대상 |
-| `preference_snapshot` | JSONB | 확인된 선택 조건만 보존 |
+| `preference_snapshot` | JSON 문자열 | 확인된 선택 조건만 보존 |
 | `policy_version` | NOT NULL | 추천 일반 규칙 버전 |
 | `status` | RUNNING/COMPLETED/FAILED | 처리 상태 |
 | `goal_classification_ai_job_id` | UNIQUE, FK ai_job, NULL 허용 | 자유 입력 목적을 구조화한 작업 |
@@ -360,7 +362,7 @@ preference snapshot에는 요청 당시의 concern input state와 사용자가 �
 | `request_id` | FK recommendation_request, 복합 PK | 추천 요청 |
 | `product_version_id` | FK product_version, 복합 PK | 서버가 허용한 실제 제품 |
 | `eligibility_policy_version` | NOT NULL | 후보 자격 규칙 버전 |
-| `comparison_facts` | JSONB, NOT NULL | 목적 연결·기능 중복·개인 결과·정보 수준의 구조화 사실 |
+| `comparison_facts` | JSON 문자열, NOT NULL | 목적 연결·기능 중복·개인 결과·정보 수준의 구조화 사실 |
 | `eligible_at` | NOT NULL | 후보군을 확정한 시각 |
 
 서버가 자격을 확인한 ACTIVE 공용 product의 OPERATOR_VERIFIED 최신 version만 저장한다. 목적 관련성·중복·변수 수·개인 결과와 그 기록 완성도를 구조화 사실로 저장한다. AI 설명에는 필요한 ID와 구조화 사실만 전달하며 자유 문장 효능, 개인 초안이나 카탈로그 밖 제품은 후보군에 들어갈 수 없다.
@@ -374,7 +376,7 @@ preference snapshot에는 요청 당시의 concern input state와 사용자가 �
 | `product_version_id` | FK product_version | 허용 후보군에 있던 실제 제품 |
 | `rank` | request_id와 UNIQUE | 1부터 최대 3 |
 | `evidence_strength` | SUFFICIENT/LIMITED/INSUFFICIENT | 정보 재현 수준 |
-| `evidence_snapshot` | JSONB, NOT NULL | 지지·반대·부족 정보와 참조 실험 ID |
+| `evidence_snapshot` | JSON 문자열, NOT NULL | 지지·반대·부족 정보와 참조 실험 ID |
 
 `request_id + product_version_id`도 유일하며 같은 조합의 `recommendation_pool_item`을 복합 FK로 참조한다. `rank`는 1~3 CHECK를 둔다. evidence에는 서버 결정표 사실, 반영한 개인 실험 ID·기록 완성도, AI 설명 사용 여부만 허용한다. 이 스냅샷은 이후 기록·모델·정책이 바뀌어도 수정하지 않는다.
 
@@ -404,13 +406,13 @@ preference snapshot에는 요청 당시의 concern input state와 사용자가 �
 | `version_no` | candidate_id와 UNIQUE | 재계산 이력 번호 |
 | `policy_version` | NOT NULL | 비교 규칙 버전 |
 | `evidence_strength` | NOT NULL | 정보 수준 |
-| `product_diff` | JSONB, NOT NULL | 추가·제거·유지 제품 ID 스냅샷 |
-| `function_diff` | JSONB, NOT NULL | 추가·중복·제거 기능 코드 |
-| `observation_focus` | JSONB, NOT NULL | 근거가 있는 관찰 항목 |
+| `product_diff` | JSON 문자열, NOT NULL | 추가·제거·유지 제품 ID 스냅샷 |
+| `function_diff` | JSON 문자열, NOT NULL | 추가·중복·제거 기능 코드 |
+| `observation_focus` | JSON 문자열, NOT NULL | 근거가 있는 관찰 항목 |
 | `invalidated_at` | NULL 허용 | 기준 루틴·제품 버전 변경으로 무효화 |
 | `invalidation_reason_code` | NULL 허용 | 무효화 이유 |
 
-JSONB 안의 제품과 기능 값은 서버가 계산한 ID·코드만 허용하고 자유 생성 텍스트는 설명과 분리한다. 비교 결과는 수정하지 않으며 정책 또는 입력이 바뀌면 새 version을 만든다. 실제 실험은 사용자가 선택한 comparison을 직접 참조한다.
+JSON 문자열 안의 제품과 기능 값은 서버가 계산한 ID·코드만 허용하고 자유 생성 텍스트는 설명과 분리한다. 비교 결과는 수정하지 않으며 정책 또는 입력이 바뀌면 새 version을 만든다. 실제 실험은 사용자가 선택한 comparison을 직접 참조한다.
 
 ### `candidate_ordering` — P0
 
@@ -431,7 +433,7 @@ JSONB 안의 제품과 기능 값은 서버가 계산한 ID·코드만 허용하
 | `ordering_id` | FK candidate_ordering, 복합 PK | 순서 묶음 |
 | `comparison_id` | FK candidate_comparison, 복합 PK | 같은 안정 루틴의 최신 비교 결과 |
 | `rank` | ordering_id와 UNIQUE | 먼저 시험할 순서, 1부터 시작 |
-| `reason_snapshot` | JSONB, NOT NULL | 추천과 같은 결정표의 목적·중복·변수 수·정보·개인 기록 완성도 근거 |
+| `reason_snapshot` | JSON 문자열, NOT NULL | 추천과 같은 결정표의 목적·중복·변수 수·정보·개인 기록 완성도 근거 |
 
 같은 ordering 안에서 comparison과 rank는 각각 유일하다. 포함된 comparison은 ordering의 사용자와 안정 루틴에 속해야 하고 무효화되지 않은 버전이어야 한다. 항목 수만큼 rank가 1부터 빈틈없이 이어지는지 생성 트랜잭션에서 검증한다.
 
@@ -494,7 +496,7 @@ FIRST_USE 관찰의 observed_at을 actual_started_at으로 사용하고 `expecte
 | `product_version_id` | FK product_version, NULL 허용 | 관련 제품 |
 | `source_observation_id` | FK observation, NULL 허용 | 관찰 입력에서 함께 생성된 사건 |
 | `occurred_at`, `recorded_at` | NOT NULL | 실제·입력 시각 |
-| `details` | JSONB | 종류별 검증된 최소 정보 |
+| `details` | JSON 문자열 | 종류별 검증된 최소 정보 |
 | `idempotency_key` | experiment_id와 UNIQUE | 중복 사건 방지 |
 
 제품 사건은 product version이 필수이고 해당 사용자에게 보이는 제품이어야 한다. 관찰에서 생성된 사건은 같은 experiment의 observation만 연결할 수 있다. 실제 시각은 미래일 수 없고 입력 시각과 구분한다.
@@ -554,7 +556,7 @@ FIRST_USE 관찰의 observed_at을 actual_started_at으로 사용하고 `expecte
 | `first_noticed_at` | NULL 허용 | 처음 인지 시점 |
 | `help_needed` | NOT NULL | 전문가 도움 필요 선택 |
 | `spreading_or_worsening` | NOT NULL | 넓어짐·악화 선택 |
-| `type_codes`, `area_codes`, `context_change_codes` | 배열/JSONB, 검증 | 통제된 복수 선택 코드 |
+| `type_codes`, `area_codes`, `context_change_codes` | 배열/JSON 문자열, 검증 | 통제된 복수 선택 코드 |
 | `other_context` | NULL 허용 | 선택적 기타 설명 |
 
 복수 선택 코드는 애플리케이션 코드셋으로 검증한다. 향후 독립 검색 요구가 생기면 연결 테이블로 분리한다.
@@ -574,8 +576,8 @@ severity, help_needed와 spreading_or_worsening은 불편 기록 완료 시 필�
 | `policy_version` | NOT NULL | 분류 규칙 버전 |
 | `evidence_strength` | SUFFICIENT/LIMITED/INSUFFICIENT | 기록 재현 수준 |
 | `safety_priority` | NOT NULL | 안전 안내 우선 여부 |
-| `context_snapshot` | JSONB, NOT NULL | 당시 불편·생활 변화·동시 변경 코드와 참조 이벤트 ID |
-| `missing_information` | JSONB | 분류에 부족한 항목 코드 |
+| `context_snapshot` | JSON 문자열, NOT NULL | 당시 불편·생활 변화·동시 변경 코드와 참조 이벤트 ID |
+| `missing_information` | JSON 문자열 | 분류에 부족한 항목 코드 |
 | `explanation_ai_job_id` | UNIQUE, FK ai_job, NULL 허용 | 설명 작업 |
 
 trigger observation은 같은 experiment의 DISCOMFORT 관찰이어야 한다. baseline은 experiment의 기준 루틴과 같아야 한다. AI 작업은 성공한 EXPLANATION 작업만 연결할 수 있고, 없어도 분류와 고정 설명은 유효하다.
@@ -589,7 +591,7 @@ trigger observation은 같은 experiment의 DISCOMFORT 관찰이어야 한다. b
 | `product_version_id` | FK product_version | 제품 |
 | `classification` | RECENT_CHANGE/CHANGED_TOGETHER/NO_RECORDED_CHANGE/INSUFFICIENT_INFORMATION | 기록된 사실 분류 |
 | `change_source` | EXPERIMENT/UNPLANNED/STABLE/UNKNOWN | 변경 출처 |
-| `evidence_snapshot` | JSONB, NOT NULL | 시점과 규칙 사실 |
+| `evidence_snapshot` | JSON 문자열, NOT NULL | 시점과 규칙 사실 |
 
 `rescue_case_id + product_version_id`는 유일하다.
 
@@ -606,7 +608,7 @@ trigger observation은 같은 experiment의 DISCOMFORT 관찰이어야 한다. b
 | `next_use_decision` | PROMOTE_TO_STABLE/STOP/HOLD/RETRY | 사용자가 선택한 다음 행동 |
 | `baseline_routine_use_state` | NOT_APPLICABLE/ALL_CONTINUED/SOME_STOPPED/ALL_STOPPED/UNKNOWN | Rescue 이후 기존 안정 루틴 제품을 어떻게 사용했는지에 대한 사용자 응답 |
 | `evidence_strength` | SUFFICIENT/LIMITED/INSUFFICIENT | 결과 기록을 재현할 수 있는 정도 |
-| `record_completeness` | JSONB, NOT NULL | 실제 기간·총 사용 횟수·필수 관찰 완료·건너뜀·전체, 다른 변경 YES/NO/UNKNOWN |
+| `record_completeness` | JSON 문자열, NOT NULL | 실제 기간·총 사용 횟수·필수 관찰 완료·건너뜀·전체, 다른 변경 YES/NO/UNKNOWN |
 | `summary` | NULL 허용 | 사용자 최종 메모 |
 | `resulting_routine_version_id` | UNIQUE, FK routine_version, NULL 허용 | 생성된 새 안정 루틴 |
 | `completed_at` | NOT NULL | 결과 확정 시각 |
@@ -636,7 +638,7 @@ Beauty Archive는 이 테이블과 관련 이력을 조회하는 view다.
 | `user_id` | FK app_user | 소유자 |
 | `experiment_id` | FK experiment, UNIQUE | 완료 실험 |
 | `display_asset_code` | FK lab_item_definition, NOT NULL | 선반에 표시할 RESEARCH_SAMPLE |
-| `observation_completion_snapshot` | JSONB, NOT NULL | 필수 관찰 완료·전체·건너뜀과 결과 저장 여부 |
+| `observation_completion_snapshot` | JSON 문자열, NOT NULL | 필수 관찰 완료·전체·건너뜀과 결과 저장 여부 |
 | `earned_at` | NOT NULL | 획득 시각 |
 
 세 결과의 방향이나 관찰 완성도에 따라 기본 획득 여부를 차별하지 않는다. COMPLETED 결과가 있어야 생성한다.
@@ -662,7 +664,7 @@ user와 experiment 소유자는 같아야 하고 experiment에 정확히 하나�
 | `badge_code` | 복합 PK, 복합 FK badge_definition | 배지 |
 | `rule_version` | 복합 FK badge_definition, NOT NULL | 획득 당시 규칙 버전 |
 | `source_experiment_id` | FK experiment, NULL 허용 | 획득 근거 |
-| `evidence_snapshot` | JSONB, NOT NULL | 충족한 퀘스트·Rescue·실험 ID와 계산 사실 |
+| `evidence_snapshot` | JSON 문자열, NOT NULL | 충족한 퀘스트·Rescue·실험 ID와 계산 사실 |
 | `earned_at` | NOT NULL | 획득 시각 |
 
 PK는 `user_id + badge_code`이므로 규칙 버전이 바뀌어도 일회성 배지를 다시 주지 않는다. source experiment가 있으면 같은 사용자 소유여야 한다.
@@ -688,7 +690,7 @@ P0는 완료 실험을 보여줄 RESEARCH_SAMPLE만 정의한다. CHARACTER, THE
 | `source_badge_code` | 복합 FK badge_definition, NULL 허용 | 해금 근거 배지 코드 |
 | `source_experiment_id` | FK experiment, NULL 허용 | 직접 실험 조건으로 해금한 경우 |
 | `rule_version` | NOT NULL | 해금 규칙 버전 |
-| `evidence_snapshot` | JSONB, NOT NULL | 획득 조건을 재현하는 구조화 근거 |
+| `evidence_snapshot` | JSON 문자열, NOT NULL | 획득 조건을 재현하는 구조화 근거 |
 | `earned_at` | NOT NULL | 해금 시각 |
 
 source badge가 있으면 `source_badge_code + rule_version`으로 정의 버전을 참조한다. badge 또는 source experiment 중 적어도 하나는 있어야 하며 source experiment는 같은 사용자 소유다. RESEARCH_SAMPLE은 실험별 `lab_record`로 관리하므로 `user_lab_item`에 중복 저장하지 않는다. 나머지 항목은 사용자와 코드 조합당 한 번만 해금한다.

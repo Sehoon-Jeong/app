@@ -7,14 +7,14 @@
 | 문서 | 용도 |
 | --- | --- |
 | [**dbdiagram.io ERD**](https://dbdiagram.io/d/6a70c370829f06bdc872fcae) | 브라우저에서 테이블 관계를 확인한다. |
-| [`schema.dbml`](./schema.dbml) | ERD 구조 원본. dbdiagram.io에 그대로 붙여 넣는다. |
+| [`schema.dbml`](./schema.dbml) | SQLite 기준 ERD 구조 원본. dbdiagram.io에 그대로 붙여 넣는다. |
 | [데이터 사전](./data-dictionary.md) | 필드 의미, 허용값과 DBML만으로 표현하기 어려운 불변조건 |
 
 ## 기준
 
-- 관계·컬럼·타입·PK·FK·인덱스는 `schema.dbml`을 기준으로 한다.
+- 관계·컬럼·논리 타입·PK·FK·인덱스는 `schema.dbml`을 기준으로 한다.
 - 필드의 제품 의미와 교차 테이블 규칙은 데이터 사전을 기준으로 한다.
-- 실제 DDL은 구현할 때 Flyway로 만들며 DBML과 함께 변경한다.
+- 실제 DDL은 SQLite용 Flyway migration으로 만들며 DBML과 함께 변경한다. DBML enum·boolean은 migration에서 `TEXT`·`INTEGER`와 CHECK 제약으로 구현한다.
 - Pn인 브랜드 실험, 코호트, 전문가 공유는 포함하지 않는다.
 
 ## ERD 업데이트

@@ -1,6 +1,6 @@
 Project SkinCauseMVP {
-  database_type: "PostgreSQL"
-  Note: "SkinCause P0·P1 logical schema. Paste this file into dbdiagram.io."
+  database_type: "SQLite"
+  Note: "SkinCause P0·P1 SQLite schema. Enums and booleans are logical ERD types; Flyway maps them to TEXT/INTEGER with CHECK constraints."
 }
 
 Enum concern_input_state {
@@ -293,21 +293,21 @@ Enum notification_status {
 }
 
 Table app_user {
-  id uuid [pk]
+  id varchar(36) [pk]
   email varchar(320) [not null, unique, note: "Normalized login email"]
   password_hash varchar(255) [not null]
   timezone varchar(64) [not null, note: "IANA timezone"]
   concern_input_state concern_input_state [not null, default: 'UNSET']
-  write_locked_at timestamptz
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  write_locked_at text
+  created_at text [not null]
+  updated_at text [not null]
 }
 
 Table user_concern {
-  user_id uuid [not null]
+  user_id varchar(36) [not null]
   concern_code varchar(50) [not null]
-  recorded_at timestamptz [not null]
-  created_at timestamptz [not null]
+  recorded_at text [not null]
+  created_at text [not null]
 
   indexes {
     (user_id, concern_code) [pk]
@@ -315,39 +315,39 @@ Table user_concern {
 }
 
 Table web_push_subscription {
-  id uuid [pk]
-  user_id uuid [not null]
+  id varchar(36) [pk]
+  user_id varchar(36) [not null]
   endpoint_hash varchar(255) [not null, unique]
   endpoint_ciphertext text [not null]
   public_key_ciphertext text [not null]
   auth_secret_ciphertext text [not null]
-  expires_at timestamptz
-  revoked_at timestamptz
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  expires_at text
+  revoked_at text
+  created_at text [not null]
+  updated_at text [not null]
 }
 
 Table privacy_deletion_job {
-  id uuid [pk]
-  user_id uuid [unique]
+  id varchar(36) [pk]
+  user_id varchar(36) [unique]
   operation_reference varchar(100) [not null, unique]
   status deletion_job_status [not null]
   current_step varchar(100)
   error_code varchar(100)
-  completed_at timestamptz
-  purge_at timestamptz
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  completed_at text
+  purge_at text
+  created_at text [not null]
+  updated_at text [not null]
 }
 
 Table brand {
-  id uuid [pk]
+  id varchar(36) [pk]
   name varchar(200) [not null]
   normalized_name varchar(200) [not null]
-  merged_into_brand_id uuid
+  merged_into_brand_id varchar(36)
   status brand_status [not null]
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  created_at text [not null]
+  updated_at text [not null]
 
   indexes {
     normalized_name
@@ -355,20 +355,20 @@ Table brand {
 }
 
 Table product {
-  id uuid [pk]
-  brand_id uuid
-  owner_user_id uuid
-  latest_version_id uuid
-  merged_into_product_id uuid
+  id varchar(36) [pk]
+  brand_id varchar(36)
+  owner_user_id varchar(36)
+  latest_version_id varchar(36)
+  merged_into_product_id varchar(36)
   source_type product_source_type [not null]
   status product_status [not null]
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  created_at text [not null]
+  updated_at text [not null]
 }
 
 Table product_version {
-  id uuid [pk]
-  product_id uuid [not null]
+  id varchar(36) [pk]
+  product_id varchar(36) [not null]
   version_no int [not null]
   name varchar(300) [not null]
   normalized_name varchar(300) [not null]
@@ -376,8 +376,8 @@ Table product_version {
   category_code varchar(50) [not null]
   verification_status verification_status [not null]
   source_reference text
-  confirmed_at timestamptz
-  created_at timestamptz [not null]
+  confirmed_at text
+  created_at text [not null]
 
   indexes {
     (product_id, version_no) [unique]
@@ -386,12 +386,12 @@ Table product_version {
 }
 
 Table product_identifier {
-  id uuid [pk]
-  product_version_id uuid [not null]
+  id varchar(36) [pk]
+  product_version_id varchar(36) [not null]
   type product_identifier_type [not null]
   value varchar(200) [not null]
   verification_status verification_status [not null]
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (product_version_id, type, value) [unique]
@@ -400,17 +400,17 @@ Table product_identifier {
 }
 
 Table ingredient {
-  id uuid [pk]
+  id varchar(36) [pk]
   canonical_name varchar(300) [not null, unique]
   status ingredient_status [not null]
-  created_at timestamptz [not null]
+  created_at text [not null]
 }
 
 Table ingredient_alias {
-  ingredient_id uuid [not null]
+  ingredient_id varchar(36) [not null]
   locale varchar(20) [not null]
   normalized_alias varchar(300) [not null]
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (ingredient_id, locale, normalized_alias) [pk]
@@ -419,13 +419,13 @@ Table ingredient_alias {
 }
 
 Table product_ingredient {
-  product_version_id uuid [not null]
+  product_version_id varchar(36) [not null]
   position int [not null]
   raw_name varchar(500) [not null]
-  ingredient_id uuid
+  ingredient_id varchar(36)
   verification_status verification_status [not null]
   source_type product_ingredient_source [not null]
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (product_version_id, position) [pk]
@@ -437,17 +437,17 @@ Table function_type {
   display_name varchar(100) [not null]
   description text [not null]
   active boolean [not null]
-  created_at timestamptz [not null]
+  created_at text [not null]
 }
 
 Table product_function {
-  product_version_id uuid [not null]
+  product_version_id varchar(36) [not null]
   function_code varchar(50) [not null]
   source_type product_function_source [not null]
   source_reference text [not null]
   verification_status verification_status [not null]
   observation_note text
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (product_version_id, function_code) [pk]
@@ -455,19 +455,19 @@ Table product_function {
 }
 
 Table upload_asset {
-  id uuid [pk]
-  user_id uuid [not null]
+  id varchar(36) [pk]
+  user_id varchar(36) [not null]
   purpose upload_purpose [not null]
   object_key varchar(500) [not null, unique]
   content_type varchar(100) [not null]
-  byte_size bigint [not null]
+  byte_size integer [not null]
   status upload_status [not null]
-  delete_after timestamptz [not null]
-  delete_requested_at timestamptz
+  delete_after text [not null]
+  delete_requested_at text
   deletion_error_code varchar(100)
-  deleted_at timestamptz
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  deleted_at text
+  created_at text [not null]
+  updated_at text [not null]
 
   indexes {
     (status, delete_after)
@@ -475,22 +475,22 @@ Table upload_asset {
 }
 
 Table ai_job {
-  id uuid [pk]
-  user_id uuid [not null]
+  id varchar(36) [pk]
+  user_id varchar(36) [not null]
   task_type ai_task_type [not null]
   invocation_source ai_invocation_source [not null]
-  input_asset_id uuid
+  input_asset_id varchar(36)
   model varchar(100) [not null]
   prompt_version varchar(50) [not null]
   schema_version varchar(50) [not null]
   status ai_job_status [not null]
   input_fingerprint varchar(255) [not null]
-  structured_output jsonb
+  structured_output text
   error_code varchar(100)
-  requested_at timestamptz [not null]
-  started_at timestamptz
-  completed_at timestamptz
-  created_at timestamptz [not null]
+  requested_at text [not null]
+  started_at text
+  completed_at text
+  created_at text [not null]
 
   indexes {
     (status, requested_at)
@@ -498,14 +498,14 @@ Table ai_job {
 }
 
 Table ingredient_extraction_item {
-  id uuid [pk]
-  ai_job_id uuid [not null]
+  id varchar(36) [pk]
+  ai_job_id varchar(36) [not null]
   position int [not null]
   raw_text varchar(500) [not null]
-  suggested_ingredient_id uuid
+  suggested_ingredient_id varchar(36)
   review_status extraction_review_status [not null]
-  confirmed_ingredient_id uuid
-  created_at timestamptz [not null]
+  confirmed_ingredient_id varchar(36)
+  created_at text [not null]
 
   indexes {
     (ai_job_id, position) [unique]
@@ -513,40 +513,40 @@ Table ingredient_extraction_item {
 }
 
 Table purchase_extraction_item {
-  id uuid [pk]
-  ai_job_id uuid [not null]
+  id varchar(36) [pk]
+  ai_job_id varchar(36) [not null]
   raw_brand varchar(300)
   raw_product_name varchar(500)
-  suggested_product_version_id uuid
+  suggested_product_version_id varchar(36)
   review_status extraction_review_status [not null]
-  confirmed_product_version_id uuid
-  created_draft_product_id uuid
-  created_at timestamptz [not null]
+  confirmed_product_version_id varchar(36)
+  created_draft_product_id varchar(36)
+  created_at text [not null]
 }
 
 Table routine {
-  id uuid [pk]
-  user_id uuid [not null, unique]
+  id varchar(36) [pk]
+  user_id varchar(36) [not null, unique]
   name varchar(100) [not null]
-  current_stable_version_id uuid
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  current_stable_version_id varchar(36)
+  created_at text [not null]
+  updated_at text [not null]
 }
 
 Table routine_version {
-  id uuid [pk]
-  routine_id uuid [not null]
+  id varchar(36) [pk]
+  routine_id varchar(36) [not null]
   version_no int [not null]
   status routine_version_status [not null]
-  confirmed_at timestamptz
+  confirmed_at text
   source_type routine_version_source [not null]
-  routine_started_on date
+  routine_started_on varchar(10)
   routine_started_on_precision date_precision [not null, default: 'UNKNOWN']
-  last_product_change_on date
+  last_product_change_on varchar(10)
   last_product_change_precision date_precision [not null, default: 'UNKNOWN']
   current_discomfort_state answer_state [not null, default: 'UNKNOWN']
   evidence_strength evidence_strength [not null, default: 'INSUFFICIENT']
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (routine_id, version_no) [unique]
@@ -554,15 +554,15 @@ Table routine_version {
 }
 
 Table routine_item {
-  id uuid [pk]
-  routine_version_id uuid [not null]
+  id varchar(36) [pk]
+  routine_version_id varchar(36) [not null]
   time_slot time_slot [not null]
   position int [not null]
-  product_version_id uuid [not null]
+  product_version_id varchar(36) [not null]
   frequency_type routine_frequency_type [not null]
   weekly_count int
-  days_of_week jsonb [not null, default: '[]']
-  created_at timestamptz [not null]
+  days_of_week text [not null, default: '[]']
+  created_at text [not null]
 
   indexes {
     (routine_version_id, time_slot, position) [unique]
@@ -571,21 +571,21 @@ Table routine_item {
 }
 
 Table recommendation_request {
-  id uuid [pk]
-  user_id uuid [not null]
-  routine_version_id uuid [not null]
+  id varchar(36) [pk]
+  user_id varchar(36) [not null]
+  routine_version_id varchar(36) [not null]
   goal_function_code varchar(50) [not null]
   change_intent change_intent [not null]
-  target_routine_item_id uuid
-  preference_snapshot jsonb [not null]
+  target_routine_item_id varchar(36)
+  preference_snapshot text [not null]
   policy_version varchar(50) [not null]
   status recommendation_status [not null]
-  goal_classification_ai_job_id uuid [unique]
-  explanation_ai_job_id uuid [unique]
+  goal_classification_ai_job_id varchar(36) [unique]
+  explanation_ai_job_id varchar(36) [unique]
   ranking_source ranking_source
   fallback_reason_code varchar(100)
-  created_at timestamptz [not null]
-  completed_at timestamptz
+  created_at text [not null]
+  completed_at text
 
   indexes {
     (user_id, created_at)
@@ -593,12 +593,12 @@ Table recommendation_request {
 }
 
 Table recommendation_pool_item {
-  request_id uuid [not null]
-  product_version_id uuid [not null]
+  request_id varchar(36) [not null]
+  product_version_id varchar(36) [not null]
   eligibility_policy_version varchar(50) [not null]
-  comparison_facts jsonb [not null]
-  eligible_at timestamptz [not null]
-  created_at timestamptz [not null]
+  comparison_facts text [not null]
+  eligible_at text [not null]
+  created_at text [not null]
 
   indexes {
     (request_id, product_version_id) [pk]
@@ -606,13 +606,13 @@ Table recommendation_pool_item {
 }
 
 Table recommendation_candidate {
-  id uuid [pk]
-  request_id uuid [not null]
-  product_version_id uuid [not null]
+  id varchar(36) [pk]
+  request_id varchar(36) [not null]
+  product_version_id varchar(36) [not null]
   rank int [not null]
   evidence_strength evidence_strength [not null]
-  evidence_snapshot jsonb [not null]
-  created_at timestamptz [not null]
+  evidence_snapshot text [not null]
+  created_at text [not null]
 
   indexes {
     (request_id, rank) [unique]
@@ -621,18 +621,18 @@ Table recommendation_candidate {
 }
 
 Table experiment_candidate {
-  id uuid [pk]
-  user_id uuid [not null]
-  routine_version_id uuid [not null]
-  product_version_id uuid [not null]
-  recommendation_candidate_id uuid
+  id varchar(36) [pk]
+  user_id varchar(36) [not null]
+  routine_version_id varchar(36) [not null]
+  product_version_id varchar(36) [not null]
+  recommendation_candidate_id varchar(36)
   source_type candidate_source_type [not null]
   goal_function_code varchar(50) [not null]
   change_intent change_intent [not null]
-  target_routine_item_id uuid
+  target_routine_item_id varchar(36)
   status candidate_status [not null]
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  created_at text [not null]
+  updated_at text [not null]
 
   indexes {
     (user_id, status, created_at)
@@ -641,17 +641,17 @@ Table experiment_candidate {
 }
 
 Table candidate_comparison {
-  id uuid [pk]
-  candidate_id uuid [not null]
+  id varchar(36) [pk]
+  candidate_id varchar(36) [not null]
   version_no int [not null]
   policy_version varchar(50) [not null]
   evidence_strength evidence_strength [not null]
-  product_diff jsonb [not null]
-  function_diff jsonb [not null]
-  observation_focus jsonb [not null]
-  invalidated_at timestamptz
+  product_diff text [not null]
+  function_diff text [not null]
+  observation_focus text [not null]
+  invalidated_at text
   invalidation_reason_code varchar(100)
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (candidate_id, version_no) [unique]
@@ -659,13 +659,13 @@ Table candidate_comparison {
 }
 
 Table candidate_ordering {
-  id uuid [pk]
-  user_id uuid [not null]
-  routine_version_id uuid [not null]
+  id varchar(36) [pk]
+  user_id varchar(36) [not null]
+  routine_version_id varchar(36) [not null]
   policy_version varchar(50) [not null]
   evidence_strength evidence_strength [not null]
-  explanation_ai_job_id uuid [unique]
-  created_at timestamptz [not null]
+  explanation_ai_job_id varchar(36) [unique]
+  created_at text [not null]
 
   indexes {
     (user_id, created_at)
@@ -673,11 +673,11 @@ Table candidate_ordering {
 }
 
 Table candidate_ordering_item {
-  ordering_id uuid [not null]
-  comparison_id uuid [not null]
+  ordering_id varchar(36) [not null]
+  comparison_id varchar(36) [not null]
   rank int [not null]
-  reason_snapshot jsonb [not null]
-  created_at timestamptz [not null]
+  reason_snapshot text [not null]
+  created_at text [not null]
 
   indexes {
     (ordering_id, comparison_id) [pk]
@@ -686,27 +686,27 @@ Table candidate_ordering_item {
 }
 
 Table experiment {
-  id uuid [pk]
-  user_id uuid [not null]
-  candidate_id uuid [not null, unique]
-  comparison_id uuid [not null, unique]
-  ordering_id uuid
-  baseline_routine_version_id uuid [not null]
-  parent_experiment_id uuid
+  id varchar(36) [pk]
+  user_id varchar(36) [not null]
+  candidate_id varchar(36) [not null, unique]
+  comparison_id varchar(36) [not null, unique]
+  ordering_id varchar(36)
+  baseline_routine_version_id varchar(36) [not null]
+  parent_experiment_id varchar(36)
   status experiment_status [not null]
   duration_days int [not null, default: 14]
-  planned_start_date date [not null]
-  planned_end_date date [not null]
-  planned_at timestamptz [not null]
-  actual_started_at timestamptz
-  expected_end_at timestamptz
-  completed_at timestamptz
+  planned_start_date varchar(10) [not null]
+  planned_end_date varchar(10) [not null]
+  planned_at text [not null]
+  actual_started_at text
+  expected_end_at text
+  completed_at text
   time_slot time_slot [not null]
   position int [not null]
-  retrial_stability_confirmed_at timestamptz
+  retrial_stability_confirmed_at text
   idempotency_key varchar(100) [not null]
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  created_at text [not null]
+  updated_at text [not null]
 
   indexes {
     (user_id, idempotency_key) [unique]
@@ -717,15 +717,15 @@ Table experiment {
 }
 
 Table experiment_transition {
-  id uuid [pk]
-  experiment_id uuid [not null]
+  id varchar(36) [pk]
+  experiment_id varchar(36) [not null]
   transition_no int [not null]
   from_status experiment_status
   to_status experiment_status [not null]
   reason_code varchar(100)
-  occurred_at timestamptz [not null]
+  occurred_at text [not null]
   idempotency_key varchar(100) [not null]
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (experiment_id, transition_no) [unique]
@@ -734,16 +734,16 @@ Table experiment_transition {
 }
 
 Table experiment_event {
-  id uuid [pk]
-  experiment_id uuid [not null]
+  id varchar(36) [pk]
+  experiment_id varchar(36) [not null]
   type experiment_event_type [not null]
-  product_version_id uuid
-  source_observation_id uuid
-  occurred_at timestamptz [not null]
-  recorded_at timestamptz [not null]
-  details jsonb [not null]
+  product_version_id varchar(36)
+  source_observation_id varchar(36)
+  occurred_at text [not null]
+  recorded_at text [not null]
+  details text [not null]
   idempotency_key varchar(100) [not null]
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (experiment_id, idempotency_key) [unique]
@@ -751,16 +751,16 @@ Table experiment_event {
 }
 
 Table observation_quest {
-  id uuid [pk]
-  experiment_id uuid [not null]
+  id varchar(36) [pk]
+  experiment_id varchar(36) [not null]
   type quest_type [not null]
   required boolean [not null]
-  due_at timestamptz [not null]
+  due_at text [not null]
   status quest_status [not null]
   skip_reason_code varchar(100)
-  resolved_at timestamptz
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  resolved_at text
+  created_at text [not null]
+  updated_at text [not null]
 
   indexes {
     (experiment_id, type) [unique]
@@ -769,14 +769,14 @@ Table observation_quest {
 }
 
 Table quest_schedule_change {
-  id uuid [pk]
-  quest_id uuid [not null]
+  id varchar(36) [pk]
+  quest_id varchar(36) [not null]
   change_no int [not null]
-  from_due_at timestamptz [not null]
-  to_due_at timestamptz [not null]
+  from_due_at text [not null]
+  to_due_at text [not null]
   reason_code schedule_change_reason [not null]
-  changed_at timestamptz [not null]
-  created_at timestamptz [not null]
+  changed_at text [not null]
+  created_at text [not null]
 
   indexes {
     (quest_id, change_no) [unique]
@@ -784,19 +784,19 @@ Table quest_schedule_change {
 }
 
 Table observation {
-  id uuid [pk]
-  experiment_id uuid [not null]
-  quest_id uuid [unique]
+  id varchar(36) [pk]
+  experiment_id varchar(36) [not null]
+  quest_id varchar(36) [unique]
   kind observation_kind [not null]
   condition observation_condition [not null]
   used_as_planned boolean
   uses_since_last_check int
   other_product_change_state answer_state
   memo text
-  structuring_ai_job_id uuid [unique]
-  observed_at timestamptz [not null]
-  recorded_at timestamptz [not null]
-  created_at timestamptz [not null]
+  structuring_ai_job_id varchar(36) [unique]
+  observed_at text [not null]
+  recorded_at text [not null]
+  created_at text [not null]
 
   indexes {
     (experiment_id, observed_at)
@@ -804,40 +804,40 @@ Table observation {
 }
 
 Table discomfort_detail {
-  observation_id uuid [pk]
+  observation_id varchar(36) [pk]
   severity discomfort_severity [not null]
-  first_noticed_at timestamptz
+  first_noticed_at text
   help_needed boolean [not null]
   spreading_or_worsening boolean [not null]
-  type_codes jsonb [not null]
-  area_codes jsonb [not null]
-  context_change_codes jsonb [not null]
+  type_codes text [not null]
+  area_codes text [not null]
+  context_change_codes text [not null]
   other_context text
-  created_at timestamptz [not null]
+  created_at text [not null]
 }
 
 Table rescue_case {
-  id uuid [pk]
-  experiment_id uuid [not null]
-  trigger_observation_id uuid [not null, unique]
-  baseline_routine_version_id uuid [not null]
+  id varchar(36) [pk]
+  experiment_id varchar(36) [not null]
+  trigger_observation_id varchar(36) [not null, unique]
+  baseline_routine_version_id varchar(36) [not null]
   policy_version varchar(50) [not null]
   evidence_strength evidence_strength [not null]
   safety_priority boolean [not null]
-  context_snapshot jsonb [not null]
-  missing_information jsonb [not null]
-  explanation_ai_job_id uuid [unique]
-  created_at timestamptz [not null]
+  context_snapshot text [not null]
+  missing_information text [not null]
+  explanation_ai_job_id varchar(36) [unique]
+  created_at text [not null]
 }
 
 Table rescue_item {
-  id uuid [pk]
-  rescue_case_id uuid [not null]
-  product_version_id uuid [not null]
+  id varchar(36) [pk]
+  rescue_case_id varchar(36) [not null]
+  product_version_id varchar(36) [not null]
   classification rescue_classification [not null]
   change_source rescue_change_source [not null]
-  evidence_snapshot jsonb [not null]
-  created_at timestamptz [not null]
+  evidence_snapshot text [not null]
+  created_at text [not null]
 
   indexes {
     (rescue_case_id, product_version_id) [unique]
@@ -845,37 +845,37 @@ Table rescue_item {
 }
 
 Table experiment_result {
-  id uuid [pk]
-  experiment_id uuid [not null, unique]
+  id varchar(36) [pk]
+  experiment_id varchar(36) [not null, unique]
   discomfort_outcome discomfort_outcome [not null]
   goal_outcome goal_outcome [not null]
   next_use_decision next_use_decision [not null]
   baseline_routine_use_state baseline_routine_use_state [not null]
   evidence_strength evidence_strength [not null]
-  record_completeness jsonb [not null]
+  record_completeness text [not null]
   summary text
-  resulting_routine_version_id uuid [unique]
-  completed_at timestamptz [not null]
+  resulting_routine_version_id varchar(36) [unique]
+  completed_at text [not null]
   idempotency_key varchar(100) [not null, unique]
-  created_at timestamptz [not null]
+  created_at text [not null]
 }
 
 Table lab_profile {
-  user_id uuid [pk]
+  user_id varchar(36) [pk]
   selected_character_code varchar(50)
   selected_theme_code varchar(50)
-  created_at timestamptz [not null]
-  updated_at timestamptz [not null]
+  created_at text [not null]
+  updated_at text [not null]
 }
 
 Table lab_record {
-  id uuid [pk]
-  user_id uuid [not null]
-  experiment_id uuid [not null, unique]
+  id varchar(36) [pk]
+  user_id varchar(36) [not null]
+  experiment_id varchar(36) [not null, unique]
   display_asset_code varchar(50) [not null]
-  observation_completion_snapshot jsonb [not null]
-  earned_at timestamptz [not null]
-  created_at timestamptz [not null]
+  observation_completion_snapshot text [not null]
+  earned_at text [not null]
+  created_at text [not null]
 }
 
 Table badge_definition {
@@ -886,7 +886,7 @@ Table badge_definition {
   rule_code varchar(100) [not null]
   reward_item_code varchar(50)
   active boolean [not null]
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (code, rule_version) [pk]
@@ -894,13 +894,13 @@ Table badge_definition {
 }
 
 Table user_badge {
-  user_id uuid [not null]
+  user_id varchar(36) [not null]
   badge_code varchar(50) [not null]
   rule_version int [not null]
-  source_experiment_id uuid
-  evidence_snapshot jsonb [not null]
-  earned_at timestamptz [not null]
-  created_at timestamptz [not null]
+  source_experiment_id varchar(36)
+  evidence_snapshot text [not null]
+  earned_at text [not null]
+  created_at text [not null]
 
   indexes {
     (user_id, badge_code) [pk]
@@ -914,18 +914,18 @@ Table lab_item_definition {
   asset_reference varchar(300) [not null]
   default_available boolean [not null]
   active boolean [not null]
-  created_at timestamptz [not null]
+  created_at text [not null]
 }
 
 Table user_lab_item {
-  user_id uuid [not null]
+  user_id varchar(36) [not null]
   item_code varchar(50) [not null]
   source_badge_code varchar(50)
-  source_experiment_id uuid
+  source_experiment_id varchar(36)
   rule_version int [not null]
-  evidence_snapshot jsonb [not null]
-  earned_at timestamptz [not null]
-  created_at timestamptz [not null]
+  evidence_snapshot text [not null]
+  earned_at text [not null]
+  created_at text [not null]
 
   indexes {
     (user_id, item_code) [pk]
@@ -933,15 +933,15 @@ Table user_lab_item {
 }
 
 Table notification_delivery {
-  id uuid [pk]
-  quest_id uuid [not null]
-  subscription_id uuid [not null]
+  id varchar(36) [pk]
+  quest_id varchar(36) [not null]
+  subscription_id varchar(36) [not null]
   type notification_type [not null]
   status notification_status [not null]
-  scheduled_at timestamptz [not null]
-  sent_at timestamptz
+  scheduled_at text [not null]
+  sent_at text
   error_code varchar(100)
-  created_at timestamptz [not null]
+  created_at text [not null]
 
   indexes {
     (quest_id, subscription_id, type) [unique]

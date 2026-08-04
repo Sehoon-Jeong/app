@@ -17,13 +17,13 @@
 | 백엔드 | Java 21, Spring Boot, Gradle | 팀의 기존 경험을 활용하고 인증·API·데이터 처리를 한 애플리케이션에서 관리한다. |
 | 프론트엔드 | React, TypeScript, Vite | 로그인 이후의 제품 흐름을 SPA로 빠르게 구현할 수 있다. |
 | UI | Tailwind CSS 4, Radix UI | LAB 브랜딩은 직접 표현하고, 접근성에 필요한 기본 동작은 재사용한다. |
-| 데이터 | PostgreSQL, Flyway | 관계가 많은 루틴·실험·관찰 이력과 스키마 변경을 일관되게 관리한다. |
+| 데이터 | SQLite, Spring JDBC, Flyway | 단일 API 인스턴스인 3주 MVP에서 별도 DB 서버 없이 관계형 제약과 버전 있는 스키마 변경을 유지한다. |
 | 인증 | Spring Security, JWT | 별도 인증 서비스를 추가하지 않고 Spring 안에서 사용자와 권한을 관리한다. |
 | 파일 | OCI Object Storage | 전성분·구매 이미지를 애플리케이션 서버와 분리해 비공개로 저장한다. |
 | API 계약 | OpenAPI | 사람·AI·프론트엔드·백엔드가 같은 요청·응답과 오류 규칙을 읽고 검증한다. |
 | AI | OpenAI API | 멋사의 지원을 활용하고 이미지·자유 입력의 구조화와 설명에 사용한다. |
 | 테스트 | JUnit 5, Vitest, Playwright | 도메인 규칙과 핵심 사용자 흐름이 실제로 이어지는지를 최소한으로 확인한다. |
-| 배포 | Vercel, OCI, GitHub Actions | 프론트엔드는 Vercel, API·DB·파일은 OCI에 두고 배포 검사는 자동화한다. |
+| 배포 | Vercel, OCI, GitHub Actions | 프론트엔드는 Vercel, 단일 API 인스턴스와 영속 SQLite 파일은 OCI에 두고 배포 검사는 자동화한다. |
 | 오류·분석 | 별도 제품을 도입하지 않음 | 3주 동안 구현에 집중한다. 오류는 애플리케이션·OCI 로그로 확인하고, MVP 지표는 저장된 실험 데이터로 계산한다. |
 
 정확한 버전은 빌드 파일과 lockfile을 기준으로 한다.
@@ -35,7 +35,7 @@ React Web (Vercel)
         │
         ▼
 Spring Boot API (OCI)
-  ├─ PostgreSQL: 사용자·루틴·실험·관찰 기록
+  ├─ SQLite: 사용자·루틴·실험·관찰 기록
   ├─ OCI Object Storage: 비공개 이미지
   └─ OpenAI API: 이미지와 자연어 구조화·설명
 ```
@@ -56,6 +56,18 @@ React는 Spring Boot API를 통해서만 사용자 데이터에 접근한다. �
 - 브라우저가 OCI 자격 증명을 갖지 않도록 서버가 업로드를 중계하거나 짧게 유효한 URL을 발급한다.
 - 사용자가 구조화 결과를 확인한 원본 이미지는 정해진 보존 기간에 따라 삭제한다.
 
+### SQLite
+
+- Spring Boot는 Xerial SQLite JDBC 드라이버와 Spring JDBC로 데이터에 접근한다. ORM의 자동 스키마 생성은 사용하지 않는다.
+- 모든 스키마 변경은 SQLite 문법의 Flyway migration으로 관리한다. 애플리케이션 시작 시 한 프로세스만 migration을 수행한다.
+- 데이터베이스 파일은 OCI의 영속 볼륨에 두고 경로는 환경변수로 주입한다. Git 저장소, 애플리케이션 이미지와 임시 디렉터리에 넣지 않는다.
+- MVP API는 단일 인스턴스로 실행한다. SQLite 파일을 여러 API 인스턴스나 네트워크 파일시스템이 동시에 공유하지 않는다.
+- 연결마다 foreign key 검사를 켜고, WAL mode와 busy timeout을 설정한다. 쓰기 트랜잭션 안에서 OpenAI·Object Storage 같은 외부 호출을 기다리지 않는다.
+- UUID는 애플리케이션이 생성해 TEXT로, 시각은 고정된 UTC RFC 3339 TEXT로 저장한다. JSON은 TEXT와 `json_valid` CHECK로, enum과 boolean은 CHECK 제약으로 허용값을 제한한다.
+- 배포 전에는 일관된 SQLite 백업을 만든다. DB 파일을 실행 중인 프로세스에서 임의로 복사하지 않는다.
+
+동시 쓰기 대기나 데이터 크기가 실제 사용에서 병목이 되거나 API를 여러 인스턴스로 늘려야 할 때는 PostgreSQL 같은 서버형 DB로 이전한다. 지금은 검증 전 확장성을 위해 운영 대상을 추가하지 않는다.
+
 ### API 계약
 
 API 계약의 원본은 [`docs/api/openapi.yaml`](./api/openapi.yaml)이다. 기능명세는 사용자의 행동과 제품 규칙을 설명하고, OpenAPI는 endpoint, 인증, 요청·응답 필드와 오류 코드를 정의한다.
@@ -75,8 +87,9 @@ AI 응답은 정해진 JSON 구조로 검증한다. 실패하면 입력을 잃�
 - PR과 `main`에서 GitHub Actions가 빌드와 테스트를 실행한다.
 - 백엔드의 핵심 규칙은 JUnit, 프론트엔드는 Vitest로 확인한다.
 - 로그인부터 실험 결과 저장까지의 핵심 흐름은 Playwright로 확인한다.
-- 웹은 Vercel, Spring Boot와 PostgreSQL은 OCI에 배포한다.
-- 별도 오류·분석 서비스를 붙이지 않는다. 운영 오류는 비민감 애플리케이션 로그로 확인하고, 완료율 같은 제품 지표는 PostgreSQL의 루틴·실험·관찰 기록으로 계산한다.
+- 웹은 Vercel, 단일 Spring Boot 인스턴스와 영속 SQLite 파일은 OCI에 배포한다.
+- 배포 전 Flyway 검증과 SQLite 백업을 수행하고, migration 실패 시 새 애플리케이션을 시작하지 않는다.
+- 별도 오류·분석 서비스를 붙이지 않는다. 운영 오류는 비민감 애플리케이션 로그로 확인하고, 완료율 같은 제품 지표는 SQLite의 루틴·실험·관찰 기록으로 계산한다.
 
 ## 이번에 도입하지 않는 것
 
