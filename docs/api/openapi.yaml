@@ -1,10 +1,11 @@
 openapi: 3.1.0
 info:
   title: SkinCause API
-  version: 3.1.0
+  version: 3.2.0
   description: |
     제품 카탈로그, 내 화장품, 제품 의견·추천, 버전 루틴, 7일 결과와 AI Rescue 계약이다.
     AI 결과는 제안이며 서버가 실제 제품·사용자 기록·상태 전이를 검증한다.
+    이 파일은 P0·P1·P2의 전체 계약이다. 실제 구현 우선순위는 요구사항과 기능 명세를 따른다.
 servers:
   - url: /api/v1
 security:
@@ -422,11 +423,17 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [action]
-              properties:
-                action: { type: string, enum: [CREATE_ROUTINE, RECORD_ONLY] }
-                editedRoutine: { $ref: '#/components/schemas/RoutineWrite' }
+              oneOf:
+                - type: object
+                  required: [action, rescuePlanId]
+                  properties:
+                    action: { type: string, const: CREATE_ROUTINE }
+                    rescuePlanId: { type: integer }
+                    editedRoutine: { $ref: '#/components/schemas/RoutineWrite' }
+                - type: object
+                  required: [action]
+                  properties:
+                    action: { type: string, const: RECORD_ONLY }
       responses:
         '201': { description: 적용됨, content: { application/json: { schema: { $ref: '#/components/schemas/RescueApplyResult' } } } }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -499,8 +506,8 @@ components:
         email: { type: string, format: email }
         timezone: { type: string, example: Asia/Seoul }
         onboardingComplete: { type: boolean }
-        currentRoutineId: { type: [integer, 'null'] }
-        stableRoutineId: { type: [integer, 'null'] }
+        currentRoutineId: { type: [integer, 'null'], description: routine_version의 유일한 ACTIVE 행에서 파생 }
+        stableRoutineId: { type: [integer, 'null'], description: 종료되지 않은 stable_routine_period에서 파생 }
     ProfileUpdate:
       type: object
       properties:
@@ -517,7 +524,7 @@ components:
       properties: { text: { type: string, minLength: 1, maxLength: 1000 } }
     ProductSummary:
       type: object
-      required: [productVersionId, brand, name, category, versionStatus]
+      required: [productVersionId, brand, name, category, verificationStatus, lifecycleStatus]
       properties:
         productVersionId: { type: integer }
         brand: { type: string }
@@ -525,7 +532,8 @@ components:
         category: { type: string, enum: [SKINCARE, CLEANSING, SUNCARE] }
         volumeOption: { type: [string, 'null'] }
         imageUrl: { type: [string, 'null'], format: uri }
-        versionStatus: { type: string, enum: [VERIFIED, UNCERTAIN, RETIRED] }
+        verificationStatus: { type: string, enum: [UNVERIFIED, VERIFIED, CONFLICTED] }
+        lifecycleStatus: { type: string, enum: [ACTIVE, DISCONTINUED, UNKNOWN] }
     Source:
       type: object
       required: [type, title, organization, url, checkedAt]
@@ -536,6 +544,8 @@ components:
         publishedAt: { type: [string, 'null'], format: date }
         url: { type: [string, 'null'], format: uri }
         checkedAt: { type: string, format: date-time }
+        snapshotId: { type: [integer, 'null'] }
+        contentHash: { type: [string, 'null'] }
     ProductDetail:
       allOf:
         - { $ref: '#/components/schemas/ProductSummary' }
@@ -552,18 +562,18 @@ components:
         - { type: object, required: [reason, owned], properties: { reason: { type: string }, owned: { type: boolean } } }
     MyProduct:
       type: object
-      required: [id, state, versionStatus, registeredAt]
+      required: [id, verificationStatus, lifecycleStatus, registeredAt]
       properties:
         id: { type: integer }
         product: { anyOf: [ { $ref: '#/components/schemas/ProductSummary' }, { type: 'null' } ] }
         enteredName: { type: [string, 'null'] }
-        state: { type: string, enum: [UNUSED, IN_CURRENT_ROUTINE, ONLY_IN_STABLE_ROUTINE] }
-        versionStatus: { type: string, enum: [VERIFIED, UNCERTAIN] }
+        verificationStatus: { type: string, enum: [UNVERIFIED, VERIFIED, CONFLICTED] }
+        lifecycleStatus: { type: string, enum: [ACTIVE, DISCONTINUED, UNKNOWN] }
         registeredAt: { type: string, format: date-time }
     MyProductDetail:
       allOf:
         - { $ref: '#/components/schemas/MyProduct' }
-        - { type: object, properties: { memo: { type: [string, 'null'] }, routineHistory: { type: array, items: { $ref: '#/components/schemas/RoutineSummary' } }, latestAnalysisId: { type: [integer, 'null'] } } }
+        - { type: object, properties: { memo: { type: [string, 'null'] }, routineHistory: { type: array, items: { $ref: '#/components/schemas/RoutineSummary' } }, latestAnalysisRequestId: { type: [integer, 'null'] } } }
     MyProductGroups:
       type: object
       required: [unused, currentRoutine, lastStableRoutine]
@@ -609,13 +619,19 @@ components:
         candidates: { type: array, maxItems: 5, items: { type: object, required: [rank, product, reason, evidence, uncertainties], properties: { rank: { type: integer, minimum: 1, maximum: 5 }, product: { $ref: '#/components/schemas/ProductSummary' }, reason: { type: string }, hesitation: { type: [string, 'null'] }, uncertainties: { type: array, items: { type: string } }, routineChange: { type: [string, 'null'] }, observationPoint: { type: [string, 'null'] }, evidence: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } } } } }
     RoutineItem:
       type: object
-      required: [myProductId, period, position]
+      required: [myProductId, period, position, frequency]
       properties:
         myProductId: { type: integer }
         period: { type: string, enum: [MORNING, EVENING] }
         position: { type: integer, minimum: 1 }
-        frequencyText: { type: [string, 'null'], maxLength: 100 }
+        frequency: { $ref: '#/components/schemas/RoutineFrequency' }
         aiNote: { type: [string, 'null'] }
+    RoutineFrequency:
+      oneOf:
+        - { type: object, required: [mode], properties: { mode: { type: string, const: DAILY }, displayText: { type: [string, 'null'], maxLength: 100 } } }
+        - { type: object, required: [mode, daysPerWeek], properties: { mode: { type: string, const: DAYS_PER_WEEK }, daysPerWeek: { type: integer, minimum: 1, maximum: 6 }, displayText: { type: [string, 'null'], maxLength: 100 } } }
+        - { type: object, required: [mode], properties: { mode: { type: string, const: AS_NEEDED }, displayText: { type: [string, 'null'], maxLength: 100 } } }
+        - { type: object, required: [mode, displayText], properties: { mode: { type: string, const: CUSTOM }, displayText: { type: string, minLength: 1, maxLength: 100 } } }
     RoutineWrite:
       type: object
       required: [items]
@@ -624,16 +640,18 @@ components:
         items: { type: array, minItems: 1, items: { $ref: '#/components/schemas/RoutineItem' } }
     RoutineSummary:
       type: object
-      required: [id, versionNo, sourceType, startedLocalDate, assessmentDueAt, isCurrent]
+      required: [id, versionNo, sourceType, status, startedLocalDate, isCurrent]
       properties:
         id: { type: integer }
         versionNo: { type: integer }
         sourceType: { type: string, enum: [USER_EDIT, RESCUE_PLAN] }
+        status: { type: string, enum: [ACTIVE, SUPERSEDED, CANCELLED] }
         startedLocalDate: { type: string, format: date }
-        assessmentDueAt: { type: string, format: date-time }
-        isCurrent: { type: boolean }
-        isStable: { type: boolean }
-        outcome: { type: [string, 'null'], enum: [NO_DISCOMFORT, DISCOMFORT, NEED_MORE_TIME, UNKNOWN, null] }
+        assessmentDueAt: { type: [string, 'null'], format: date-time, description: 열린 assessment schedule에서 파생 }
+        isCurrent: { type: boolean, description: status가 ACTIVE인지 파생 }
+        isStable: { type: boolean, description: 열린 stable period가 이 routine을 가리키는지 파생 }
+        outcome: { type: [string, 'null'], enum: [NO_DISCOMFORT, DISCOMFORT, UNKNOWN, null] }
+        assessmentDecision: { type: [string, 'null'], enum: [COMPLETE, EXTEND, UPDATE_ROUTINE, START_RESCUE, RECORD_ONLY, null] }
     Routine:
       allOf:
         - { $ref: '#/components/schemas/RoutineSummary' }
@@ -664,26 +682,35 @@ components:
       required: [type, description]
       properties: { type: { type: string, enum: [PRODUCT_ADDED, PRODUCT_REMOVED, ORDER_CHANGED, FREQUENCY_CHANGED, PERIOD_CHANGED] }, myProductId: { type: [integer, 'null'] }, description: { type: string } }
     AssessmentWrite:
-      type: object
-      required: [kind, roundNo, outcome]
-      properties:
-        kind: { type: string, enum: [FINAL, EARLY] }
-        roundNo: { type: integer, minimum: 0, description: "EARLY는 0, FINAL은 1부터 증가" }
-        actualUseMatched: { type: [boolean, 'null'] }
-        outcome: { type: string, enum: [NO_DISCOMFORT, DISCOMFORT, NEED_MORE_TIME, UNKNOWN] }
-        responseText: { type: [string, 'null'] }
-        extendDays: { type: [integer, 'null'], const: 7 }
+      oneOf:
+        - type: object
+          required: [kind, assessmentScheduleId, adherence, outcome, decision]
+          properties:
+            kind: { type: string, const: SCHEDULED_REVIEW }
+            assessmentScheduleId: { type: integer }
+            adherence: { type: string, enum: [MATCHED, PARTIAL, MISMATCHED, UNKNOWN] }
+            outcome: { type: string, enum: [NO_DISCOMFORT, DISCOMFORT, UNKNOWN] }
+            decision: { type: string, enum: [COMPLETE, EXTEND, UPDATE_ROUTINE, START_RESCUE, RECORD_ONLY] }
+            responseText: { type: [string, 'null'] }
+        - type: object
+          required: [kind, adherence, outcome, decision]
+          properties:
+            kind: { type: string, const: EARLY_CHECK }
+            adherence: { type: string, enum: [MATCHED, PARTIAL, MISMATCHED, UNKNOWN] }
+            outcome: { type: string, enum: [NO_DISCOMFORT, DISCOMFORT, UNKNOWN] }
+            decision: { type: string, const: RECORD_ONLY }
+            responseText: { type: [string, 'null'] }
     Assessment:
       allOf:
         - { $ref: '#/components/schemas/AssessmentWrite' }
-        - { type: object, required: [id, routineId, assessedAt, promotedToStable], properties: { id: { type: integer }, routineId: { type: integer }, assessedAt: { type: string, format: date-time }, promotedToStable: { type: boolean }, nextDueAt: { type: [string, 'null'], format: date-time } } }
+        - { type: object, required: [id, routineId, sequenceNo, assessedAt, promotedToStable], properties: { id: { type: integer }, routineId: { type: integer }, sequenceNo: { type: integer, minimum: 0 }, assessedAt: { type: string, format: date-time }, promotedToStable: { type: boolean }, nextAssessmentScheduleId: { type: [integer, 'null'] }, nextDueAt: { type: [string, 'null'], format: date-time } } }
     AssessmentState:
       type: object
-      required: [routine, kind, roundNo, dueAt, due, extensionCount]
+      required: [routine, assessmentScheduleId, sequenceNo, dueAt, due, extensionCount]
       properties:
         routine: { $ref: '#/components/schemas/Routine' }
-        kind: { type: string, const: FINAL }
-        roundNo: { type: integer, minimum: 1 }
+        assessmentScheduleId: { type: integer }
+        sequenceNo: { type: integer, minimum: 1 }
         dueAt: { type: string, format: date-time }
         due: { type: boolean }
         extensionCount: { type: integer, minimum: 0, maximum: 2 }
@@ -694,8 +721,12 @@ components:
       properties: { id: { type: integer }, role: { type: string, enum: [USER, ASSISTANT] }, content: { type: string }, choices: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }, createdAt: { type: string, format: date-time } }
     RescuePlan:
       type: object
-      required: [ranking, routine, basisStrength]
+      required: [id, versionNo, status, baseRoutineId, ranking, routine, basisStrength]
       properties:
+        id: { type: integer }
+        versionNo: { type: integer, minimum: 1 }
+        status: { type: string, enum: [GENERATED, VALIDATED, CONFIRMED, APPLIED, STALE, REJECTED] }
+        baseRoutineId: { type: [integer, 'null'] }
         ranking: { type: array, maxItems: 3, items: { type: object, required: [rank, label, support, opposition, uncertainty], properties: { rank: { type: integer, minimum: 1, maximum: 3 }, myProductId: { type: [integer, 'null'] }, label: { type: string }, support: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } }, opposition: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } }, uncertainty: { type: array, items: { type: string } } } } }
         routine: { $ref: '#/components/schemas/RoutineWrite' }
         basisStrength: { type: string, enum: [NORMAL, WEAK_NO_STABLE_ROUTINE, NONE_NO_ROUTINE] }
@@ -751,8 +782,8 @@ components:
       required: [id, type, status, createdAt]
       properties:
         id: { type: integer }
-        type: { type: string, enum: [RECEIPT_OCR, PRODUCT_OPINION, RECOMMENDATION, PRODUCT_RESEARCH, ROUTINE_ANALYSIS, ROUTINE_ORDER, RESCUE] }
-        status: { type: string, enum: [QUEUED, RUNNING, SUCCEEDED, FAILED] }
+        type: { type: string, enum: [RECEIPT_OCR, PRODUCT_OPINION, RECOMMENDATION, PRODUCT_RESEARCH, ROUTINE_ANALYSIS, ROUTINE_ORDER, RESCUE, ACCOUNT_DELETE] }
+        status: { type: string, enum: [QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED] }
         resultType: { type: [string, 'null'] }
         resultId: { type: [integer, 'null'] }
         errorCode: { type: [string, 'null'] }
@@ -764,7 +795,7 @@ components:
       required: [id, type, title, targetType, targetId, dueAt]
       properties:
         id: { type: integer }
-        type: { type: string, enum: [ASSESSMENT_DUE, EXTENDED_ASSESSMENT_DUE, AI_JOB_SUCCEEDED, AI_JOB_FAILED] }
+        type: { type: string, enum: [ASSESSMENT_DUE, AI_JOB_SUCCEEDED, AI_JOB_FAILED] }
         title: { type: string }
         body: { type: string }
         targetType: { type: string }

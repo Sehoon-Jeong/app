@@ -8,13 +8,26 @@ SkinCause는 신제품을 자주 탐색하는 사용자의 화장품 선택·루
 
 [프로토타입 사용하기](https://sksksksksksss.github.io/service/prototype/) · [전체 사용자 흐름](https://sksksksksksss.github.io/service/flow/) · [API 문서](https://sksksksksksss.github.io/service/api/) · [개발 작업판](https://github.com/orgs/sksksksksksss/projects/2)
 
+## 지금 만드는 P0
+
+외부에서 본 제품을 내 과거 기록으로 따져보고, 실제 루틴과 7일 결과를 남기며, 불편하면 AI Rescue가 다음 루틴까지 제안하는 **한 번의 학습 순환**만 먼저 만듭니다.
+
+```text
+이거 사볼까? → 내 화장품 → 현재 루틴 → 7일 결과
+→ 안정 루틴 또는 AI Rescue → 다음 루틴 → 다음 제품 판단
+```
+
+처음부터 제품을 찾아주는 추천, 영수증 OCR, 범용 AI 기억, AI 루틴 배치와 알림함은 P1·P2입니다. 우선순위와 착수 조건은 [요구사항](./docs/04-requirements.md)에서 확인합니다.
+
+실제 구현 순서와 GitHub Task는 [구현 우선순위와 태스크](./docs/03-delivery-plan.md)에서 한눈에 볼 수 있습니다.
+
 ## 문제
 
 코덕은 새로운 화장품을 계속 시도합니다. 하지만 무엇을 왜 선택했고, 어떤 제품과 어떤 순서로 썼으며, 그 결과가 어땠는지는 제대로 축적되지 않습니다.
 
 그래서 다음 제품을 고를 때도, 피부가 불편해졌을 때도 이전 경험을 쓰지 못하고 다시 후기와 감에 의존합니다.
 
-## SkinCause가 하는 일
+## 전체 제품 방향
 
 ### 사기 전에는 AI와 따져봅니다
 

@@ -1,26 +1,113 @@
-Enum product_version_status {
+// SQLite Flyway DDL의 사람이 읽는 관계 계약이다.
+// DBML enum은 실제 migration에서 TEXT + CHECK로 구현한다.
+
+Enum product_verification_status {
+  UNVERIFIED
   VERIFIED
-  UNCERTAIN
-  RETIRED
+  CONFLICTED
 }
 
-Enum job_status {
-  QUEUED
-  RUNNING
-  SUCCEEDED
+Enum product_lifecycle_status {
+  ACTIVE
+  DISCONTINUED
+  UNKNOWN
+}
+
+Enum ai_memory_source_type {
+  ONBOARDING
+  CONVERSATION
+  USER_EDIT
+}
+
+Enum product_category {
+  SKINCARE
+  CLEANSING
+  SUNCARE
+}
+
+Enum evidence_source_type {
+  BRAND
+  REGULATOR
+  OFFICIAL_DB
+  PAPER
+}
+
+Enum product_fact_type {
+  DIRECTIONS
+  CLAIM
+  TEXTURE
+  CAUTION
+}
+
+Enum ingredient_extraction_status {
+  PENDING
+  EXTRACTED
+  VERIFIED
   FAILED
 }
 
-Enum assessment_kind {
-  FINAL
-  EARLY
+Enum catalog_review_status {
+  RECEIVED
+  REVIEWING
+  RESOLVED
+  REJECTED
 }
 
-Enum assessment_outcome {
+Enum routine_status {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  CANCELLED
+}
+
+Enum routine_source_type {
+  USER_EDIT
+  RESCUE_PLAN
+}
+
+Enum routine_period {
+  MORNING
+  EVENING
+}
+
+Enum routine_frequency_mode {
+  DAILY
+  DAYS_PER_WEEK
+  AS_NEEDED
+  CUSTOM
+}
+
+Enum assessment_schedule_status {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  MISSED
+}
+
+Enum assessment_kind {
+  EARLY_CHECK
+  SCHEDULED_REVIEW
+}
+
+Enum adherence_status {
+  MATCHED
+  PARTIAL
+  MISMATCHED
+  UNKNOWN
+}
+
+Enum observed_outcome {
   NO_DISCOMFORT
   DISCOMFORT
-  NEED_MORE_TIME
   UNKNOWN
+}
+
+Enum assessment_decision {
+  COMPLETE
+  EXTEND
+  UPDATE_ROUTINE
+  START_RESCUE
+  RECORD_ONLY
 }
 
 Enum evidence_relation {
@@ -29,24 +116,176 @@ Enum evidence_relation {
   UNCERTAIN
 }
 
+Enum analysis_request_status {
+  PENDING
+  RUNNING
+  READY
+  FAILED
+  STALE
+}
+
+Enum analysis_run_status {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+Enum validation_status {
+  PENDING
+  VALID
+  INVALID
+}
+
+Enum job_status {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+Enum rescue_case_status {
+  CONVERSATION
+  ANALYZING
+  READY
+  CLOSED
+}
+
+Enum rescue_plan_status {
+  GENERATED
+  VALIDATED
+  CONFIRMED
+  APPLIED
+  STALE
+  REJECTED
+}
+
+Enum rescue_final_action {
+  APPLIED
+  APPLIED_EDITED
+  RECORD_ONLY
+}
+
+Enum routine_change_type {
+  PRODUCT_ADDED
+  PRODUCT_REMOVED
+  ORDER_CHANGED
+  FREQUENCY_CHANGED
+  PERIOD_CHANGED
+}
+
+Enum message_role {
+  USER
+  ASSISTANT
+}
+
+Enum safety_detector_type {
+  USER_SELF_REPORT
+  FIXED_RULE
+  AI_CLASSIFIER
+}
+
+Enum safety_action {
+  STOP_PRODUCT_RANKING_AND_GUIDE_TO_PROFESSIONAL
+}
+
+Enum analysis_type {
+  OPINION
+  RECOMMENDATION
+  PRODUCT_RESEARCH
+  ROUTINE_ORDER
+  ROUTINE_ANALYSIS
+  RESCUE
+  RECEIPT_OCR
+}
+
+Enum conversation_kind {
+  PRODUCT_OPINION
+  RECOMMENDATION
+  PRODUCT_RESEARCH
+}
+
+Enum conversation_status {
+  OPEN
+  CLOSED
+}
+
+Enum ai_job_type {
+  RECEIPT_OCR
+  PRODUCT_OPINION
+  RECOMMENDATION
+  PRODUCT_RESEARCH
+  ROUTINE_ANALYSIS
+  ROUTINE_ORDER
+  RESCUE
+  ACCOUNT_DELETE
+}
+
+Enum notification_status {
+  SCHEDULED
+  SENT
+  CANCELLED
+}
+
+Enum notification_type {
+  ASSESSMENT_DUE
+  AI_JOB_SUCCEEDED
+  AI_JOB_FAILED
+}
+
+Enum receipt_status {
+  QUEUED
+  RUNNING
+  NEEDS_CONFIRMATION
+  CONFIRMED
+  FAILED
+}
+
 Table app_user {
   id integer [pk, increment]
-  email text [not null, unique]
+  email text [not null, unique, note: 'trim 후 소문자로 정규화한 로그인 이메일']
   password_hash text [not null]
   timezone text [not null, default: 'Asia/Seoul']
-  current_routine_version_id integer
-  write_locked_at datetime
-  created_at datetime [not null]
+  onboarding_complete boolean [not null, default: false]
+  created_at text [not null, note: 'UTC ISO 8601']
+  deletion_requested_at text [note: 'UTC ISO 8601']
 }
 
 Table ai_memory {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
-  source_type text [not null]
+  source_type ai_memory_source_type [not null]
+  source_conversation_message_id integer
   original_text text [not null]
   summary_text text [not null]
-  deleted_at datetime
-  updated_at datetime [not null]
+  created_by_analysis_run_id integer
+  deleted_at text [note: 'UTC ISO 8601']
+  updated_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, updated_at)
+  }
+}
+
+Table idempotency_record {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  operation text [not null]
+  idempotency_key text [not null]
+  request_hash text [not null]
+  response_status integer [not null]
+  resource_type text
+  resource_id integer
+  created_at text [not null, note: 'UTC ISO 8601']
+  expires_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, operation, idempotency_key) [unique]
+    (expires_at)
+  }
 }
 
 Table brand {
@@ -59,7 +298,11 @@ Table product {
   id integer [pk, increment]
   brand_id integer [not null, ref: > brand.id]
   canonical_name text [not null]
-  category text [not null, note: 'SKINCARE, CLEANSING, SUNCARE']
+  category product_category [not null]
+
+  indexes {
+    (brand_id, canonical_name) [unique]
+  }
 }
 
 Table product_version {
@@ -69,29 +312,67 @@ Table product_version {
   volume_option text
   market text [not null, default: 'KR']
   package_clue text
-  sold_from date
-  sold_to date
-  status product_version_status [not null]
-  verified_at datetime
+  sold_from text [note: 'YYYY-MM-DD']
+  sold_to text [note: 'YYYY-MM-DD']
+  verification_status product_verification_status [not null, default: 'UNVERIFIED']
+  lifecycle_status product_lifecycle_status [not null, default: 'UNKNOWN']
+  catalog_revision integer [not null, default: 1]
+  verified_by text
+  verification_method text
+  verification_note text
+  verified_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (product_id, market, display_name)
+    (verification_status, lifecycle_status)
+  }
 }
 
 Table evidence_source {
   id integer [pk, increment]
-  source_type text [not null, note: 'BRAND, REGULATOR, OFFICIAL_DB, PAPER']
-  title text [not null]
+  source_type evidence_source_type [not null]
   organization text [not null]
-  published_at date
-  url text [not null]
-  checked_at datetime [not null]
+  canonical_url text [not null, unique]
+  created_at text [not null, note: 'UTC ISO 8601']
+}
+
+Table evidence_snapshot {
+  id integer [pk, increment]
+  source_id integer [not null, ref: > evidence_source.id]
+  title text [not null]
+  published_at text [note: 'YYYY-MM-DD']
+  retrieved_at text [not null, note: 'UTC ISO 8601']
+  content_hash text [not null]
+  object_key text [note: '보존 권한이 있는 원문 또는 추출물 객체']
+  excerpt_text text [note: '판단에 실제 사용한 최소 인용 범위']
+
+  indexes {
+    (source_id, content_hash) [unique]
+    (source_id, retrieved_at)
+  }
 }
 
 Table product_fact {
   id integer [pk, increment]
   product_version_id integer [not null, ref: > product_version.id]
-  fact_type text [not null, note: 'DIRECTIONS, CLAIM, TEXTURE, CAUTION']
+  fact_type product_fact_type [not null]
   value_text text [not null]
-  source_id integer [not null, ref: > evidence_source.id]
-  checked_at datetime [not null]
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (product_version_id, fact_type)
+  }
+}
+
+Table product_fact_evidence {
+  product_fact_id integer [not null, ref: > product_fact.id]
+  evidence_snapshot_id integer [not null, ref: > evidence_snapshot.id]
+  relation evidence_relation [not null, default: 'SUPPORT']
+
+  indexes {
+    (product_fact_id, evidence_snapshot_id) [pk]
+    (evidence_snapshot_id)
+  }
 }
 
 Table ingredient {
@@ -101,30 +382,47 @@ Table ingredient {
   korean_name text
 }
 
-Table ingredient_label {
+Table ingredient_list {
   id integer [pk, increment]
   product_version_id integer [not null, ref: > product_version.id]
-  ingredient_id integer [ref: > ingredient.id]
-  display_order integer [not null]
+  evidence_snapshot_id integer [not null, ref: > evidence_snapshot.id]
+  raw_text text [not null]
+  extraction_status ingredient_extraction_status [not null]
+  extraction_model text
+  extraction_schema_version text [not null]
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (product_version_id, created_at)
+    (evidence_snapshot_id)
+  }
+}
+
+Table ingredient_list_item {
+  id integer [pk, increment]
+  ingredient_list_id integer [not null, ref: > ingredient_list.id]
+  display_order integer [not null, note: '1 이상']
   label_text text [not null]
-  source_id integer [not null, ref: > evidence_source.id]
+  ingredient_id integer [ref: > ingredient.id]
+
+  indexes {
+    (ingredient_list_id, display_order) [unique]
+    (ingredient_id)
+  }
 }
 
 Table price_snapshot {
   id integer [pk, increment]
   product_version_id integer [not null, ref: > product_version.id]
   retailer text [not null]
-  price_krw integer [not null]
+  amount_minor integer [not null, note: '0 이상, KRW는 원 단위']
+  currency text [not null, default: 'KRW']
   url text
-  checked_at datetime [not null]
-}
+  checked_at text [not null, note: 'UTC ISO 8601']
 
-Table catalog_review_request {
-  id integer [pk, increment]
-  user_id integer [not null, ref: > app_user.id]
-  query_text text [not null]
-  status text [not null, default: 'RECEIVED']
-  created_at datetime [not null]
+  indexes {
+    (product_version_id, checked_at)
+  }
 }
 
 Table user_product {
@@ -132,185 +430,492 @@ Table user_product {
   user_id integer [not null, ref: > app_user.id]
   product_version_id integer [ref: > product_version.id]
   entered_name text
-  state text [not null, default: 'UNUSED']
-  registered_at datetime [not null]
-  deleted_at datetime
+  registered_at text [not null, note: 'UTC ISO 8601']
+  deleted_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (id, user_id, product_version_id) [unique]
+    (user_id, registered_at)
+    (product_version_id)
+  }
 }
 
 Table product_memo {
   id integer [pk, increment]
-  user_product_id integer [not null, ref: > user_product.id]
   user_id integer [not null, ref: > app_user.id]
+  user_product_id integer [not null]
+  revision_no integer [not null]
+  supersedes_memo_id integer
   text text [not null]
-  created_at datetime [not null]
-  superseded_at datetime
+  created_at text [not null, note: 'UTC ISO 8601']
+  superseded_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (id, user_id, user_product_id) [unique]
+    (user_product_id, revision_no) [unique]
+    (user_id, user_product_id, superseded_at)
+  }
 }
 
 Table wishlist_item {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
   product_version_id integer [not null, ref: > product_version.id]
-  converted_user_product_id integer [ref: > user_product.id]
-  created_at datetime [not null]
+  converted_user_product_id integer
+  created_at text [not null, note: 'UTC ISO 8601']
+  converted_at text [note: 'UTC ISO 8601']
+  removed_at text [note: 'UTC ISO 8601']
 
-  indexes { (user_id, product_version_id) [unique] }
+  indexes {
+    (id, user_id) [unique]
+    (user_id, product_version_id, created_at)
+  }
 }
 
 Table routine_version {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
   version_no integer [not null]
-  source_type text [not null, note: 'USER_EDIT, RESCUE_PLAN']
+  based_on_routine_version_id integer
+  source_type routine_source_type [not null]
   source_rescue_plan_id integer
-  is_current boolean [not null, default: false]
-  started_local_date date [not null]
+  status routine_status [not null]
+  started_local_date text [not null, note: 'YYYY-MM-DD']
   timezone text [not null]
-  assessment_due_at datetime [not null]
-  created_at datetime [not null]
+  activated_at text [note: 'UTC ISO 8601']
+  ended_at text [note: 'UTC ISO 8601']
+  created_at text [not null, note: 'UTC ISO 8601']
 
-  indexes { (user_id, version_no) [unique] }
+  indexes {
+    (id, user_id) [unique]
+    (user_id, version_no) [unique]
+    (user_id, status)
+  }
 }
 
 Table routine_item {
   id integer [pk, increment]
-  routine_version_id integer [not null, ref: > routine_version.id]
-  user_product_id integer [not null, ref: > user_product.id]
-  period text [not null, note: 'MORNING, EVENING']
-  position integer [not null]
-  frequency_text text
+  user_id integer [not null, ref: > app_user.id]
+  routine_version_id integer [not null]
+  user_product_id integer [not null]
+  period routine_period [not null]
+  position integer [not null, note: '1 이상']
+  frequency_mode routine_frequency_mode [not null]
+  frequency_days_per_week integer [note: 'DAYS_PER_WEEK일 때 1~6']
+  frequency_text text [note: '사용자 표시 원문, 최대 100자']
 
-  indexes { (routine_version_id, period, position) [unique] }
+  indexes {
+    (id, user_id) [unique]
+    (routine_version_id, period, position) [unique]
+    (routine_version_id, period, user_product_id) [unique]
+    (user_product_id)
+  }
+}
+
+Table routine_assessment_schedule {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  routine_version_id integer [not null]
+  sequence_no integer [not null, note: '최초 1, 연장마다 증가']
+  due_at text [not null, note: 'UTC ISO 8601']
+  status assessment_schedule_status [not null]
+  created_from_assessment_id integer
+  completed_at text [note: 'UTC ISO 8601']
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (id, user_id, routine_version_id) [unique]
+    (routine_version_id, sequence_no) [unique]
+    (user_id, status, due_at)
+  }
 }
 
 Table routine_assessment {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
-  routine_version_id integer [not null, ref: > routine_version.id]
+  routine_version_id integer [not null]
+  schedule_id integer [unique]
   kind assessment_kind [not null]
-  round_no integer [not null, note: 'EARLY=0, FINAL=1부터 증가']
-  actual_use_matched boolean
-  outcome assessment_outcome [not null]
+  sequence_no integer [not null, note: 'EARLY_CHECK=0, SCHEDULED_REVIEW는 schedule sequence']
+  adherence adherence_status [not null]
+  outcome observed_outcome [not null]
+  decision assessment_decision [not null]
   response_text text
-  confidence_weight real [not null]
-  assessed_at datetime [not null]
-  next_due_at datetime
+  assessed_at text [not null, note: 'UTC ISO 8601']
 
-  indexes { (routine_version_id, kind, round_no) [unique] }
+  indexes {
+    (id, user_id) [unique]
+    (id, user_id, routine_version_id) [unique]
+    (routine_version_id, kind, sequence_no) [unique]
+    (user_id, assessed_at)
+  }
 }
 
-Table stable_routine_pointer {
-  user_id integer [pk, ref: > app_user.id]
-  routine_version_id integer [not null, ref: > routine_version.id]
-  assessment_id integer [not null, ref: > routine_assessment.id]
-  promoted_at datetime [not null]
+Table stable_routine_period {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  routine_version_id integer [not null]
+  promoted_by_assessment_id integer [not null]
+  started_at text [not null, note: 'UTC ISO 8601']
+  ended_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, started_at)
+    (routine_version_id)
+  }
 }
 
 Table rescue_case {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
-  start_routine_version_id integer [ref: > routine_version.id]
-  stable_routine_version_id integer [ref: > routine_version.id]
-  status text [not null]
-  safety_boundary_reached boolean [not null, default: false]
-  final_action text
-  created_at datetime [not null]
-  closed_at datetime
+  start_routine_version_id integer
+  stable_routine_version_id integer
+  status rescue_case_status [not null]
+  final_action rescue_final_action
+  created_at text [not null, note: 'UTC ISO 8601']
+  closed_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, status, created_at)
+  }
 }
 
 Table rescue_message {
   id integer [pk, increment]
-  rescue_case_id integer [not null, ref: > rescue_case.id]
+  user_id integer [not null, ref: > app_user.id]
+  rescue_case_id integer [not null]
   sequence_no integer [not null]
-  role text [not null, note: 'USER, ASSISTANT']
+  role message_role [not null]
   content text [not null]
-  structured_json text
-  created_at datetime [not null]
+  structured_json text [note: 'SQLite JSON text']
+  structured_schema_version text
+  analysis_run_id integer
+  created_at text [not null, note: 'UTC ISO 8601']
 
-  indexes { (rescue_case_id, sequence_no) [unique] }
+  indexes {
+    (id, user_id) [unique]
+    (id, user_id, rescue_case_id) [unique]
+    (rescue_case_id, sequence_no) [unique]
+  }
 }
 
-Table rescue_change {
+Table rescue_safety_event {
   id integer [pk, increment]
-  rescue_case_id integer [not null, ref: > rescue_case.id]
-  change_type text [not null]
-  user_product_id integer [ref: > user_product.id]
-  before_json text
-  after_json text
-  user_confirmed boolean [not null, default: false]
+  user_id integer [not null, ref: > app_user.id]
+  rescue_case_id integer [not null]
+  source_message_id integer [not null]
+  boundary_code text [not null]
+  detector_type safety_detector_type [not null]
+  detector_version text [not null]
+  action safety_action [not null]
+  detail_json text [note: 'SQLite JSON text']
+  detail_schema_version text
+  detected_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (rescue_case_id, detected_at)
+  }
 }
 
 Table rescue_plan {
   id integer [pk, increment]
-  rescue_case_id integer [not null, unique, ref: > rescue_case.id]
-  plan_json text [not null]
-  validation_status text [not null]
-  applied_routine_version_id integer [ref: > routine_version.id]
-  created_at datetime [not null]
+  user_id integer [not null, ref: > app_user.id]
+  rescue_case_id integer [not null]
+  version_no integer [not null]
+  analysis_run_id integer [not null]
+  base_routine_version_id integer
+  plan_json text [not null, note: 'SQLite JSON text']
+  plan_schema_version text [not null]
+  validation_status validation_status [not null]
+  status rescue_plan_status [not null]
+  confirmed_at text [note: 'UTC ISO 8601']
+  applied_at text [note: 'UTC ISO 8601']
+  applied_routine_version_id integer
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (rescue_case_id, version_no) [unique]
+    (rescue_case_id, status)
+  }
 }
 
-Table analysis {
+Table rescue_change {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
-  type text [not null, note: 'OPINION, RECOMMENDATION, ROUTINE, RESCUE, PRODUCT']
-  subject_ref text
-  input_snapshot_json text [not null]
-  output_json text
-  model text
+  rescue_plan_id integer [not null]
+  sequence_no integer [not null]
+  change_type routine_change_type [not null]
+  user_product_id integer
+  before_json text [note: 'SQLite JSON text']
+  after_json text [note: 'SQLite JSON text']
+  change_schema_version text [not null]
+  user_confirmed boolean [not null, default: false]
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (rescue_plan_id, sequence_no) [unique]
+    (user_product_id)
+  }
+}
+
+Table analysis_request {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  type analysis_type [not null]
+  subject_type text
+  subject_id integer
+  input_snapshot_json text [not null, note: 'SQLite JSON text']
+  input_schema_version text [not null]
+  input_hash text [not null]
+  status analysis_request_status [not null]
+  selected_run_id integer
+  created_at text [not null, note: 'UTC ISO 8601']
+  completed_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, type, created_at)
+    (user_id, type, input_hash)
+  }
+}
+
+Table analysis_run {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  analysis_request_id integer [not null]
+  attempt_no integer [not null]
+  status analysis_run_status [not null]
+  model text [not null]
   prompt_version text [not null]
-  validation_status text [not null]
-  created_at datetime [not null]
+  output_json text [note: 'SQLite JSON text, 공급자 원본 envelope']
+  output_schema_version text [not null]
+  validation_status validation_status [not null]
+  validation_error_json text [note: 'SQLite JSON text']
+  error_code text
+  input_tokens integer
+  output_tokens integer
+  started_at text [note: 'UTC ISO 8601']
+  finished_at text [note: 'UTC ISO 8601']
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (id, user_id, analysis_request_id) [unique]
+    (analysis_request_id, attempt_no) [unique]
+    (user_id, created_at)
+  }
+}
+
+Table conversation {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  kind conversation_kind [not null]
+  root_analysis_request_id integer [not null]
+  status conversation_status [not null]
+  created_at text [not null, note: 'UTC ISO 8601']
+  closed_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, status, created_at)
+  }
+}
+
+Table conversation_message {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  conversation_id integer [not null]
+  sequence_no integer [not null]
+  role message_role [not null]
+  content text [not null]
+  analysis_run_id integer
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (id, user_id, conversation_id) [unique]
+    (conversation_id, sequence_no) [unique]
+  }
 }
 
 Table analysis_evidence {
   id integer [pk, increment]
-  analysis_id integer [not null, ref: > analysis.id]
+  user_id integer [not null, ref: > app_user.id]
+  analysis_run_id integer [not null]
   claim_key text [not null]
   relation evidence_relation [not null]
-  source_id integer [ref: > evidence_source.id]
-  personal_record_type text
-  personal_record_id integer
+  evidence_snapshot_id integer [ref: > evidence_snapshot.id]
+  routine_assessment_id integer
+  rescue_case_id integer
+  ai_memory_id integer
   summary text [not null]
+
+  indexes {
+    (analysis_run_id, claim_key)
+    (evidence_snapshot_id)
+    (routine_assessment_id)
+    (rescue_case_id)
+    (ai_memory_id)
+  }
 }
 
 Table ai_job {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
-  job_type text [not null]
+  job_type ai_job_type [not null]
   input_hash text [not null]
   status job_status [not null]
-  analysis_id integer [ref: > analysis.id]
-  retry_of_job_id integer [ref: > ai_job.id]
+  analysis_request_id integer
+  analysis_run_id integer
+  retry_of_job_id integer
+  attempt_no integer [not null, default: 1]
+  available_at text [not null, note: 'UTC ISO 8601']
+  locked_by text
+  locked_until text [note: 'UTC ISO 8601']
+  heartbeat_at text [note: 'UTC ISO 8601']
   error_code text
-  created_at datetime [not null]
-  finished_at datetime
+  created_at text [not null, note: 'UTC ISO 8601']
+  started_at text [note: 'UTC ISO 8601']
+  finished_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, job_type, input_hash)
+    (status, available_at)
+    (locked_until)
+  }
 }
 
 Table notification {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
-  type text [not null]
-  target_type text [not null]
-  target_id integer [not null]
-  dedupe_key text [not null, unique]
-  due_at datetime [not null]
-  read_at datetime
+  type notification_type [not null]
+  assessment_schedule_id integer
+  ai_job_id integer
+  title text [not null]
+  body text
+  dedupe_key text [not null]
+  due_at text [not null, note: 'UTC ISO 8601, 전달 예약 시각']
+  status notification_status [not null]
+  sent_at text [note: 'UTC ISO 8601']
+  read_at text [note: 'UTC ISO 8601']
+  cancelled_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, dedupe_key) [unique]
+    (status, due_at)
+  }
 }
 
 Table receipt_upload {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
   object_key text [not null]
-  status text [not null]
-  ai_job_id integer [ref: > ai_job.id]
-  created_at datetime [not null]
+  status receipt_status [not null]
+  ai_job_id integer
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, created_at)
+  }
 }
 
 Table receipt_item {
   id integer [pk, increment]
-  receipt_upload_id integer [not null, ref: > receipt_upload.id]
-  line_no integer [not null]
+  user_id integer [not null, ref: > app_user.id]
+  receipt_upload_id integer [not null]
+  line_no integer [not null, note: '1 이상']
   raw_text text [not null]
-  candidate_json text
+  candidate_json text [note: 'SQLite JSON text']
+  candidate_schema_version text [not null]
   confirmed_product_version_id integer [ref: > product_version.id]
-  created_user_product_id integer [ref: > user_product.id]
+  created_user_product_id integer
+
+  indexes {
+    (id, user_id) [unique]
+    (receipt_upload_id, line_no) [unique]
+    (confirmed_product_version_id)
+  }
 }
+
+Table catalog_review_request {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  query_text text [not null]
+  user_product_id integer
+  receipt_item_id integer
+  status catalog_review_status [not null]
+  resolved_product_version_id integer [ref: > product_version.id]
+  created_at text [not null, note: 'UTC ISO 8601']
+  handled_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, status, created_at)
+  }
+}
+
+// 개인 데이터 복합 FK: 존재뿐 아니라 같은 사용자 소유인지 확인한다.
+Ref: product_memo.(user_product_id, user_id) > user_product.(id, user_id)
+Ref: product_memo.(supersedes_memo_id, user_id, user_product_id) > product_memo.(id, user_id, user_product_id)
+Ref: wishlist_item.(converted_user_product_id, user_id, product_version_id) > user_product.(id, user_id, product_version_id)
+
+Ref: routine_version.(based_on_routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: routine_item.(routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: routine_item.(user_product_id, user_id) > user_product.(id, user_id)
+
+Ref: routine_assessment_schedule.(routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: routine_assessment_schedule.(created_from_assessment_id, user_id, routine_version_id) > routine_assessment.(id, user_id, routine_version_id)
+Ref: routine_assessment.(routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: routine_assessment.(schedule_id, user_id, routine_version_id) > routine_assessment_schedule.(id, user_id, routine_version_id)
+Ref: stable_routine_period.(routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: stable_routine_period.(promoted_by_assessment_id, user_id, routine_version_id) > routine_assessment.(id, user_id, routine_version_id)
+
+Ref: rescue_case.(start_routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: rescue_case.(stable_routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: rescue_message.(rescue_case_id, user_id) > rescue_case.(id, user_id)
+Ref: rescue_safety_event.(rescue_case_id, user_id) > rescue_case.(id, user_id)
+Ref: rescue_safety_event.(source_message_id, user_id, rescue_case_id) > rescue_message.(id, user_id, rescue_case_id)
+Ref: rescue_plan.(rescue_case_id, user_id) > rescue_case.(id, user_id)
+Ref: rescue_plan.(analysis_run_id, user_id) > analysis_run.(id, user_id)
+Ref: rescue_plan.(base_routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: rescue_plan.(applied_routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: rescue_change.(rescue_plan_id, user_id) > rescue_plan.(id, user_id)
+Ref: rescue_change.(user_product_id, user_id) > user_product.(id, user_id)
+Ref: routine_version.(source_rescue_plan_id, user_id) > rescue_plan.(id, user_id)
+
+Ref: analysis_run.(analysis_request_id, user_id) > analysis_request.(id, user_id)
+Ref: analysis_request.(selected_run_id, user_id, id) > analysis_run.(id, user_id, analysis_request_id)
+Ref: conversation.(root_analysis_request_id, user_id) > analysis_request.(id, user_id)
+Ref: conversation_message.(conversation_id, user_id) > conversation.(id, user_id)
+Ref: conversation_message.(analysis_run_id, user_id) > analysis_run.(id, user_id)
+Ref: ai_memory.(source_conversation_message_id, user_id) > conversation_message.(id, user_id)
+Ref: ai_memory.(created_by_analysis_run_id, user_id) > analysis_run.(id, user_id)
+Ref: rescue_message.(analysis_run_id, user_id) > analysis_run.(id, user_id)
+Ref: analysis_evidence.(analysis_run_id, user_id) > analysis_run.(id, user_id)
+Ref: analysis_evidence.(routine_assessment_id, user_id) > routine_assessment.(id, user_id)
+Ref: analysis_evidence.(rescue_case_id, user_id) > rescue_case.(id, user_id)
+Ref: analysis_evidence.(ai_memory_id, user_id) > ai_memory.(id, user_id)
+
+Ref: ai_job.(analysis_request_id, user_id) > analysis_request.(id, user_id)
+Ref: ai_job.(analysis_run_id, user_id) > analysis_run.(id, user_id)
+Ref: ai_job.(retry_of_job_id, user_id) > ai_job.(id, user_id)
+
+Ref: notification.(assessment_schedule_id, user_id) > routine_assessment_schedule.(id, user_id)
+Ref: notification.(ai_job_id, user_id) > ai_job.(id, user_id)
+
+Ref: receipt_upload.(ai_job_id, user_id) > ai_job.(id, user_id)
+Ref: receipt_item.(receipt_upload_id, user_id) > receipt_upload.(id, user_id)
+Ref: receipt_item.(created_user_product_id, user_id, confirmed_product_version_id) > user_product.(id, user_id, product_version_id)
+Ref: catalog_review_request.(user_product_id, user_id) > user_product.(id, user_id)
+Ref: catalog_review_request.(receipt_item_id, user_id) > receipt_item.(id, user_id)

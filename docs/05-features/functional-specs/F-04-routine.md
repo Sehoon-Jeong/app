@@ -4,14 +4,26 @@
 
 사용자는 실제로 쓰는 화장품 조합을 아침·저녁, 바르는 순서와 빈도로 저장한다. AI 제안을 한 번에 편집안에 적용할 수 있고, 저장된 모든 변경은 과거를 덮지 않는 새 루틴 버전과 새 7일 관찰이 된다.
 
+## 우선순위 범위
+
+| 우선순위 | 이번 단계의 결과 | 요구사항 |
+| --- | --- | --- |
+| P0 | 제품·아침/저녁·순서·빈도의 직접 편집과 불변 버전 저장 | RTN-01~04 |
+| P1 | AI 순서·빈도 제안과 저장 후 루틴·제품별 설명 | RTN-05~08 |
+| P2 | 없음 | - |
+
+P0에서는 AI 배치가 없어도 루틴 생성·편집·7일 시작을 끝낼 수 있어야 한다.
+
 ## 2. 루틴 불변 규칙
 
 - 루틴의 단위는 `routine_version`이다.
 - 한 사용자에게 현재 루틴은 0개 또는 1개다.
+- 현재 루틴의 단일 원본은 `routine_version.status=ACTIVE`다. 사용자 포인터나 `is_current` boolean을 따로 저장하지 않는다.
+- 한 버전은 한 번의 실제 사용기간이다. 과거 루틴으로 돌아가도 새 버전으로 복사한다.
 - 저장된 과거 버전의 item은 수정·삭제하지 않는다.
 - 제품·시간대·순서·빈도 중 하나라도 달라진 편집안을 저장하면 새 버전을 만든다.
 - 같은 내용으로 저장 요청을 반복하면 멱등 키 기준으로 같은 버전을 반환한다.
-- 삭제되지 않은 내 화장품만 새 루틴에 넣을 수 있다. `UNCERTAIN`도 실제 사용 기록을 위해 허용하되 AI 제품 사실은 사용할 수 없다.
+- 삭제되지 않은 내 화장품만 새 루틴에 넣을 수 있다. `UNVERIFIED`, `CONFLICTED`도 실제 사용 기록을 위해 허용하되 AI 제품 사실은 사용할 수 없다.
 - 제품 하나만 있어도 저장 가능하고 빈 루틴은 저장할 수 없다.
 - 클렌징 제품도 같은 item 규칙을 사용한다.
 
@@ -22,7 +34,9 @@
 | `myProductId` | 필수 | 인증 사용자의 활성 내 화장품 |
 | `period` | 필수 | `MORNING` 또는 `EVENING` |
 | `position` | 필수 | 시간대 안에서 1부터 빈틈 없이 유일 |
-| `frequencyText` | 선택 | 100자 이하 자연어. 미입력 허용 |
+| `frequency.mode` | 필수 | `DAILY`, `DAYS_PER_WEEK`, `AS_NEEDED`, `CUSTOM` |
+| `frequency.daysPerWeek` | 조건부 | `DAYS_PER_WEEK`일 때 1~6 |
+| `frequency.displayText` | 조건부 | `CUSTOM`이면 필수, 그 외에는 100자 이하 선택 원문 |
 
 같은 내 화장품은 아침과 저녁에 각각 한 번 포함할 수 있지만 같은 시간대에 두 번 넣을 수 없다.
 
@@ -35,9 +49,12 @@
 5. 사용자는 drag 또는 위·아래 이동 버튼으로 순서를 정하고 빈도를 입력한다.
 6. 직접 저장하거나 `AI 추천 순서로 배치`를 요청한다.
 7. 저장 직전 서버가 item과 최신 현재 버전 충돌을 검증한다.
-8. 성공하면 기존 current를 해제하고 새 버전을 current로 만든다.
-9. 사용자 시간대의 저장 날짜를 DAY 1로, DAY 7 00:00을 `assessmentDueAt`으로 고정한다.
-10. 루틴 저장과 AI 분석 job 생성을 같은 로컬 트랜잭션에서 커밋한 뒤 외부 AI 호출을 시작한다.
+8. 같은 트랜잭션에서 새 버전을 `DRAFT`로 만들고 item·최초 assessment schedule을 검증한다.
+9. 기존 `ACTIVE`를 `SUPERSEDED`, 새 버전을 `ACTIVE`로 전환한다. 사용자당 ACTIVE 한 건은 partial unique index로 보장한다.
+10. 사용자 시간대의 저장 날짜를 DAY 1로, DAY 7 00:00을 최초 schedule의 `dueAt`으로 고정한다.
+11. 루틴·schedule·AI job 생성을 같은 로컬 트랜잭션에서 커밋한 뒤 외부 AI 호출을 시작한다.
+
+`ACTIVE`, `SUPERSEDED`, `CANCELLED` 버전의 item과 시작 기준은 수정·삭제할 수 없다. 서비스 계층과 SQLite trigger가 함께 막는다.
 
 사용자에게 `실제 사용 변경`과 `기록 정정`을 구분해 묻지 않는다. 저장하면 항상 새 버전이다.
 
@@ -64,7 +81,7 @@
 7. 각 이동 또는 빈도 제안은 제품 ID, 이전 값, 제안 값, 이유와 출처를 반환한다.
 8. 서버는 item 집합 보존, 위치 유일성·연속성, 허용된 시간대와 출처 참조를 검증한다.
 
-`UNCERTAIN` 제품은 이름과 사용자가 정한 위치·빈도만 유지한다. AI는 해당 제품의 공식 사용법을 추정하지 않고 `정보 부족`으로 표시한다.
+`UNVERIFIED`, `CONFLICTED` 제품은 이름과 사용자가 정한 위치·빈도만 유지한다. AI는 해당 제품의 공식 사용법을 추정하지 않고 `정보 부족` 또는 `공식 정보 충돌`로 표시한다.
 
 ### 5.3 적용
 
@@ -108,7 +125,7 @@ DAY 1~6의 현재 루틴에서 편집을 시작하면 F-05의 조기 결과 바�
 | `expectedCurrentRoutineId`가 최신과 다름 | `409 ROUTINE_VERSION_CONFLICT`, 최신 버전과 기존 편집안 유지 |
 | 빈 item 목록 | `422 ROUTINE_EMPTY` |
 | 다른 사용자·삭제 제품 | 항목별 `422 INVALID_MY_PRODUCT` |
-| 불확실 버전 제품 | 저장은 허용, AI 제안에서 해당 제품 사실을 추정하지 않고 정보 부족 표시 |
+| 미검증·충돌 버전 제품 | 저장은 허용, AI 제안에서 해당 제품 사실을 추정하지 않고 정보 부족 표시 |
 | 같은 시간대 중복 제품·위치 | `422 ROUTINE_ITEM_DUPLICATE` 또는 `POSITION_INVALID` |
 | AI 순서 작업 실패 | 편집안 유지, 직접 저장·재시도 제공 |
 | AI가 item을 누락·추가 | 결과 전체 거절, 원래 편집안 유지 |
@@ -119,8 +136,8 @@ DAY 1~6의 현재 루틴에서 편집을 시작하면 F-05의 조기 결과 바�
 | 행동 | API | 데이터 변화 |
 | --- | --- | --- |
 | 현재 루틴 조회 | `GET /me/routines/current` | 없음 |
-| 루틴 저장 | `POST /me/routines` | routine version/items, current pointer, notification, job |
-| AI 순서 제안 | `POST /routine-order-proposals` | job·analysis, 루틴 미변경 |
+| 루틴 저장 | `POST /me/routines` | routine version/items, assessment schedule, notification, job |
+| AI 순서 제안 | `POST /routine-order-proposals` | analysis request·run·job, 루틴 미변경 |
 | 버전 상세·이력 | `GET /me/routines/{routineId}`, `GET /me/routines/history` | 없음 |
 
 ## 10. 수용 시나리오

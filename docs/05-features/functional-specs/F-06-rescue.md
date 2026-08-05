@@ -4,6 +4,16 @@
 
 사용자는 피부가 불편해진 순간 자연어 대화를 시작하고, 저장된 루틴 변화와 검증된 외부 근거를 바탕으로 무엇부터 확인할지와 다음에 사용할 루틴 하나를 제안받는다. AI는 진단하거나 범인을 확정하지 않고, 실제 루틴 변경은 사용자가 선택한다.
 
+## 우선순위 범위
+
+| 우선순위 | 이번 단계의 결과 | 요구사항 |
+| --- | --- | --- |
+| P0 | 대화, 안정 대비 변경, 변경 중심 순위, 다음 루틴, 승인 적용과 안전 중단 | RSC-01~08, RSC-12~13 |
+| P1 | 기록만 남기기, 반복 Rescue 학습, 안정 루틴 없음 최소 제안, 정교한 외부 근거 | RSC-09~11, AI-03 |
+| P2 | 없음 | - |
+
+P0 Rescue는 먼저 변경점 정리 엔진이다. 공식 제품 사실은 큐레이션 데이터가 있을 때만 보조하고 완제품·원료 웹 연구를 P0 완료 조건으로 두지 않는다.
+
 ## 2. 진입점과 시작 기준
 
 진입점:
@@ -13,7 +23,7 @@
 - 현재 루틴·내 화장품의 동일 버튼
 - 기존 Rescue 대화 이어가기
 
-새 Rescue는 시작 시점의 current routine ID와 stable routine ID를 고정한다. 분석 도중 루틴이 바뀌면 기존 case에는 소급 반영하지 않고 `현재 루틴이 바뀜`을 표시한다.
+새 Rescue는 시작 시점의 `ACTIVE` routine ID와 열린 stable period의 routine ID를 고정한다. 분석 도중 루틴이 바뀌면 기존 case에는 소급 반영하지 않고 `현재 루틴이 바뀜`을 표시한다.
 
 한 사용자는 `CONVERSATION`, `ANALYZING`, `READY` 상태의 Rescue를 한 개만 가진다. 열린 case가 있으면 새 case 대신 기존 대화를 연다. `처음부터 다시 말하기`를 선택하면 기존 case를 `CLOSED`로 만들고 새 case를 시작한다.
 
@@ -47,6 +57,8 @@ AI는 다음 정보 중 분석에 필요한 빈칸만 한 번에 하나씩 묻�
 ## 5. 안전 경계
 
 AI는 응급도를 판정하지 않는다. 사용자가 직접 `심하다` 또는 `빠르게 악화된다`고 답한 경우에만 `safetyBoundaryReached=true`로 둔다.
+
+이 경우 `rescue_safety_event`에 근거 사용자 메시지, 경계 코드, 탐지 방식·버전, 고정 조치와 시각을 저장한다. `safetyBoundaryReached`는 이 사건의 존재 여부에서 파생한다.
 
 이 경우:
 
@@ -111,7 +123,7 @@ AI는 변경 목록을 자연어로 설명하고 사용자가 실제 사용과 �
 - 각 순위에는 먼저 보는 이유, 반대 근거, 모르는 점과 출처가 반드시 함께 있다.
 - 순위는 원인 확률이 아니라 확인 범위를 줄이기 위한 행동 순서라고 표시한다.
 
-## 8. 권장 루틴 생성
+## 8. 권장 루틴과 계획 버전
 
 AI는 검증된 순위와 stable routine을 입력으로 다음 루틴 하나를 제안한다.
 
@@ -126,6 +138,12 @@ AI는 검증된 순위와 stable routine을 입력으로 다음 루틴 하나를
 
 AI 제안에는 `빼는 것`, `유지하는 것`, `바뀐 순서`, `왜 이렇게 제안하는지`, `정보 부족`을 표시한다.
 
+- plan은 case당 한 건이 아니라 `versionNo`가 증가하는 불변 버전이다.
+- 사용자가 실제 사용 사실을 정정하거나 새 근거가 반영되면 기존 plan을 덮지 않고 새 plan을 만든다.
+- 각 plan은 생성한 `analysisRunId`, `baseRoutineId`, plan schema version과 검증 상태를 가진다.
+- plan의 변경 목록은 case가 아니라 해당 `rescuePlanId`를 참조한다.
+- 한 case에서 `APPLIED` plan은 최대 하나다.
+
 ## 9. 사용자 선택과 상태 전이
 
 | 선택 | Rescue | 루틴 | 7일 |
@@ -137,26 +155,30 @@ AI 제안에는 `빼는 것`, `유지하는 것`, `바뀐 순서`, `왜 이렇�
 
 AI는 사용자의 선택 전에 제품을 내 화장품에서 삭제하거나 루틴을 바꾸지 않는다. Rescue 적용 루틴도 `복구 중` 같은 별도 상태를 갖지 않는 일반 current routine이다.
 
+`CREATE_ROUTINE` 요청은 화면에 표시된 정확한 `rescuePlanId`를 필수로 보낸다. 사용자가 직접 고친 루틴도 이 plan의 `baseRoutineId`를 기준으로 적용한다. `RECORD_ONLY`는 plan 없이 가능하다.
+
+적용 직전 서버는 현재 `ACTIVE` routine이 plan의 `baseRoutineId`와 같은지 비교한다. 다르면 plan을 `STALE`로 만들고 `409 ROUTINE_VERSION_CONFLICT`를 반환한다. 같으면 짧은 트랜잭션 안에서 기존 ACTIVE를 `SUPERSEDED`, 새 Rescue 루틴을 `ACTIVE`, plan을 `APPLIED`로 바꾼다. AI 호출 동안 사용자 쓰기나 DB 트랜잭션을 잠그지 않는다.
+
 ## 10. 실패·예외 계약
 
 | 상황 | 결과 |
 | --- | --- |
 | AI 분석 실패 | 메시지·확인된 변경 보존, 재시도; 현재 루틴 유지 |
 | 일부 출처 검증 실패 | 해당 신호 제거, 남은 근거로 재계산; 모두 제거되면 정보 부족 |
-| 분석 중 current 변경 | 기존 시작 기준을 표시하고 새 루틴으로 새 Rescue 시작 선택 제공 |
+| 분석·확인 중 current 변경 | 기존 plan을 `STALE`로 만들고 새 루틴 기준으로 다시 분석하는 선택 제공 |
 | 제안에 보유하지 않은 제품 | plan 전체 거절, 재생성 |
-| apply 중 current 충돌 | `409 ROUTINE_VERSION_CONFLICT`, 제안과 사용자 수정안 보존 |
+| apply 중 current 충돌 | `409 ROUTINE_VERSION_CONFLICT`, plan은 `STALE`, 제안과 사용자 수정안 보존 |
 | 동일 apply 재시도 | 같은 routine ID 반환 |
-| 안전 경계 도달 | 제품 순위·plan 없음, 전문가 안내와 기록만 제공 |
+| 안전 경계 도달 | safety event 저장, 제품 순위·plan 없음, 전문가 안내와 기록만 제공 |
 
 ## 11. 상태·API·데이터 변화
 
 | 행동 | API | 주요 데이터 |
 | --- | --- | --- |
 | 시작 | `POST /rescues` | case, 첫 message, 시작·안정 routine 참조 |
-| 전체 조회 | `GET /rescues/{rescueId}` | 메시지·변경·plan read |
-| 대화 이어가기 | `POST /rescues/{rescueId}/messages` | message, change 정정, job |
-| 적용·기록만 | `POST /rescues/{rescueId}/apply` | plan action, 선택 시 새 routine |
+| 전체 조회 | `GET /rescues/{rescueId}` | 메시지·안전 사건·최신 plan·변경 read |
+| 대화 이어가기 | `POST /rescues/{rescueId}/messages` | message, 새 analysis run·plan version |
+| 적용·기록만 | `POST /rescues/{rescueId}/apply` | plan status, 선택 시 새 routine |
 
 ## 12. 수용 시나리오
 
