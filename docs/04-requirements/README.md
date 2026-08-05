@@ -6,14 +6,14 @@
 
 | 기능 | 요구사항 파일 | Feature 명세 |
 | --- | --- | --- |
-| 계정·개인화 | [F-01](./F-01-account.md) | [#157](https://github.com/sksksksksksss/service/issues/157) |
-| 카탈로그·내 화장품 | [F-02](./F-02-products.md) | [#158](https://github.com/sksksksksksss/service/issues/158) |
+| 계정·인증·개인화 | [F-01](./F-01-account.md) | [#157](https://github.com/sksksksksksss/service/issues/157) |
+| 제품 카탈로그·내 화장품 | [F-02](./F-02-products.md) | [#158](https://github.com/sksksksksksss/service/issues/158) |
 | 제품 의견·추천 | [F-03](./F-03-product-decisions.md) | [#159](https://github.com/sksksksksksss/service/issues/159) |
-| 루틴 | [F-04](./F-04-routine.md) | [#160](https://github.com/sksksksksksss/service/issues/160) |
-| DAY 7 결과 | [F-05](./F-05-observation.md) | [#161](https://github.com/sksksksksksss/service/issues/161) |
+| 루틴 관리·AI 배치 | [F-04](./F-04-routine.md) | [#160](https://github.com/sksksksksksss/service/issues/160) |
+| DAY 7 결과·안정 루틴 | [F-05](./F-05-observation.md) | [#161](https://github.com/sksksksksksss/service/issues/161) |
 | AI Rescue | [F-06](./F-06-rescue.md) | [#162](https://github.com/sksksksksksss/service/issues/162) |
-| 홈·기록·알림 | [F-07](./F-07-home-history.md) | [#163](https://github.com/sksksksksksss/service/issues/163) |
-| AI·보안·운영 | [F-08](./F-08-ai-operations.md) | [#164](https://github.com/sksksksksksss/service/issues/164) |
+| 홈·사용 기록·알림 | [F-07](./F-07-home-history.md) | [#163](https://github.com/sksksksksksss/service/issues/163) |
+| AI·보안·비동기 작업 | [F-08](./F-08-ai-operations.md) | [#164](https://github.com/sksksksksksss/service/issues/164) |
 
 제품 전체 검증은 [수용 시나리오](./acceptance.md), 요구사항과 API·데이터 연결은 [추적표](./traceability.md)를 본다.
 
