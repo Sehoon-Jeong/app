@@ -17,7 +17,7 @@ SkinCause는 신제품을 자주 탐색하는 사용자의 화장품 선택·루
 → 안정 루틴 또는 AI Rescue → 다음 루틴 → 다음 제품 판단
 ```
 
-처음부터 제품을 찾아주는 추천, 영수증 OCR, 범용 AI 기억, AI 루틴 배치와 알림함은 P1·P2입니다. 우선순위와 착수 조건은 [요구사항](./docs/04-requirements.md)에서 확인합니다.
+처음부터 제품을 찾아주는 추천, 영수증 OCR, 범용 AI 기억, AI 루틴 배치와 알림함은 P1·P2입니다. 우선순위와 착수 조건은 [요구사항](./docs/04-requirements/README.md)에서 확인합니다.
 
 실제 구현 순서와 GitHub Task는 [구현 우선순위와 태스크](./docs/03-delivery-plan.md)에서 한눈에 볼 수 있습니다.
 
@@ -96,9 +96,9 @@ AI는 모든 피부 상태를 미리 만든 선택지에 끼워 맞추지 않습
 | 순서 | 문서 | 무엇을 알 수 있나 |
 | --- | --- | --- |
 | 0 | [제품 브리프](./docs/01-product-brief.md) | 누구의 어떤 문제를 풀고 무엇을 검증하는가 |
-| 1 | [요구사항](./docs/04-requirements.md) | 사용자가 할 수 있어야 하는 일과 이유 |
-| 2 | [기능 명세](./docs/05-features/functional-specification.md) | 모든 정상 흐름, 분기와 예외 |
+| 1 | [요구사항](./docs/04-requirements/README.md) | 기능별로 나눈 의무와 이유 |
+| 2 | [GitHub Feature](https://github.com/orgs/sksksksksksss/projects/2) | 모든 정상 흐름, 분기·실패와 수용 조건의 원본 |
 | 3 | [OpenAPI](./docs/api/openapi.yaml) | 프론트엔드와 서버의 계약 |
 | 4 | [데이터 모델](./docs/06-data-model/README.md) | 개인 경험과 AI 근거가 쌓이는 구조 |
 
-개발을 시작할 때는 [AGENTS.md](./AGENTS.md)를 먼저 읽습니다. 제품 의미가 바뀌면 요구사항, 기능 명세, OpenAPI와 데이터 모델을 같은 PR에서 함께 수정합니다.
+개발을 시작할 때는 [AGENTS.md](./AGENTS.md)를 먼저 읽습니다. 제품 의미가 바뀌면 Feature 이슈와 요구사항을 먼저 고치고, API·데이터 의미가 바뀌면 OpenAPI와 데이터 모델을 같은 PR에서 함께 수정합니다.

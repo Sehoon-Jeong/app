@@ -5,9 +5,9 @@
 | 순서 | 문서 | 내용 |
 | --- | --- | --- |
 | 0 | [제품 브리프](./01-product-brief.md) | 누구의 어떤 문제를 풀고 무엇을 검증하는가 |
-| 1 | [요구사항](./04-requirements.md) | 사용자가 할 수 있어야 하는 일과 제품 근거 |
+| 1 | [요구사항](./04-requirements/README.md) | 기능별 사용자·시스템 의무와 제품 근거 |
 | 2 | [구현 우선순위와 태스크](./03-delivery-plan.md) | P0·P1·P2와 실제 GitHub Task |
-| 3 | [기능 명세](./05-features/functional-specification.md) | 각 흐름의 입력, 분기, 결과와 예외 |
+| 3 | [GitHub Feature](https://github.com/orgs/sksksksksksss/projects/2) | 각 흐름의 입력, 분기, 결과와 예외의 원본 |
 | 4 | [OpenAPI](./api/openapi.yaml) | 프론트엔드와 서버 사이의 계약 |
 | 5 | [데이터 모델](./06-data-model/README.md) | 무엇을 어떤 관계로 저장하는가 |
 
@@ -16,8 +16,8 @@
 - [제품 규칙과 AI 경계](./product/product-rules.md)
 - [결정한 질문과 답변](./product/prototype-product-definition.md)
 - [근거와 가정](./evidence/README.md)
-- [요구사항 추적표](./05-features/traceability.md)
+- [요구사항 추적표](./04-requirements/traceability.md)
 
 ## 문서가 충돌할 때
 
-사용자가 실제로 보는 흐름은 [프로토타입](https://sksksksksksss.github.io/service/prototype/)을 우선한다. 제품 의미는 제품 브리프와 요구사항, 처리 규칙은 기능 명세, 필드는 OpenAPI, 저장 방식은 데이터 모델을 따른다. 충돌을 발견하면 한 문서만 고치지 말고 관련 문서를 같은 PR에서 함께 수정한다.
+사용자가 실제로 보는 흐름은 [프로토타입](https://sksksksksksss.github.io/service/prototype/)을 우선한다. 제품 의미는 제품 브리프와 요구사항, 처리 규칙은 GitHub Feature 이슈, 필드는 OpenAPI, 저장 방식은 데이터 모델을 따른다. 충돌을 발견하면 Feature 이슈에 결정 기록을 남기고 관련 계약을 함께 수정한다.

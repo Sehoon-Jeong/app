@@ -2,12 +2,13 @@
 
 구현 전에 아래 순서대로 읽는다.
 
-1. 담당 GitHub Feature와 Task
-2. [통합 기능명세서](./docs/05-features/functional-specification.md)의 담당 기능
+1. 담당 GitHub Task와 부모 Feature 이슈 본문
+2. Feature 이슈에서 연결한 [기능별 요구사항](./docs/04-requirements/README.md)
 3. [제품 규칙과 AI 경계](./docs/product/product-rules.md)
-4. [요구사항 추적표](./docs/05-features/traceability.md)
-5. [OpenAPI](./docs/api/openapi.yaml)
-6. [데이터 모델](./docs/06-data-model/README.md)
+4. [OpenAPI](./docs/api/openapi.yaml)
+5. [데이터 모델](./docs/06-data-model/README.md)
+
+GitHub Feature 이슈가 사용자 흐름·분기·실패·수용 조건의 유일한 기능명세다. 저장소에 별도 기능명세 문서를 만들거나 같은 내용을 복사하지 않는다.
 
 ## 작업 원칙
 
