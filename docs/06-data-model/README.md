@@ -61,7 +61,7 @@ erDiagram
 | `routine_version` | 특정 시점의 루틴 스냅샷 | 과거 행을 수정하지 않는다. 변경마다 새 `version_no`를 만든다. |
 | `routine_item` | 아침/저녁 제품, 순서와 빈도 | 클렌징을 포함한다. 같은 시간대 순서는 유일하다. |
 | `stable_routine_pointer` | 사용자의 마지막 안정 루틴 | 7일 결과 `NO_DISCOMFORT`이고 실제 사용 일치일 때만 이동한다. |
-| `routine_assessment` | 7일 또는 조기 결과 | 결과 범위는 루틴 전체다. `EARLY`는 낮은 신뢰도다. |
+| `routine_assessment` | 7일 round 또는 조기 결과 | 결과 범위는 루틴 전체다. `EARLY`는 낮은 신뢰도고, 연장하면 같은 루틴에 다음 round를 추가한다. |
 
 ### Rescue와 AI
 
@@ -105,7 +105,7 @@ stateDiagram-v2
 - `routine_version(user_id, version_no)`와 `routine_item(routine_version_id, period, position)`는 유일하다.
 - 사용자당 `is_current = 1`인 루틴은 하나다. partial unique index로 보장한다.
 - 사용자당 stable pointer는 하나다.
-- 한 루틴 버전의 FINAL assessment는 하나, EARLY assessment도 하나다.
+- 한 루틴 버전의 FINAL assessment는 round별 하나다. FINAL round는 1부터 증가하고 EARLY는 round 0으로 하나만 둔다.
 - AI job의 상태는 `QUEUED`, `RUNNING`, `SUCCEEDED`, `FAILED`만 사용한다.
 - DB 쓰기 트랜잭션 안에서 OpenAI·웹·Object Storage 응답을 기다리지 않는다.
 

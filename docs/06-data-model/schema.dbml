@@ -1,8 +1,33 @@
-Enum product_version_status { VERIFIED UNCERTAIN RETIRED }
-Enum job_status { QUEUED RUNNING SUCCEEDED FAILED }
-Enum assessment_kind { FINAL EARLY }
-Enum assessment_outcome { NO_DISCOMFORT DISCOMFORT NEED_MORE_TIME UNKNOWN }
-Enum evidence_relation { SUPPORT OPPOSE UNCERTAIN }
+Enum product_version_status {
+  VERIFIED
+  UNCERTAIN
+  RETIRED
+}
+
+Enum job_status {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+Enum assessment_kind {
+  FINAL
+  EARLY
+}
+
+Enum assessment_outcome {
+  NO_DISCOMFORT
+  DISCOMFORT
+  NEED_MORE_TIME
+  UNKNOWN
+}
+
+Enum evidence_relation {
+  SUPPORT
+  OPPOSE
+  UNCERTAIN
+}
 
 Table app_user {
   id integer [pk, increment]
@@ -162,6 +187,7 @@ Table routine_assessment {
   user_id integer [not null, ref: > app_user.id]
   routine_version_id integer [not null, ref: > routine_version.id]
   kind assessment_kind [not null]
+  round_no integer [not null, note: 'EARLY=0, FINAL=1부터 증가']
   actual_use_matched boolean
   outcome assessment_outcome [not null]
   response_text text
@@ -169,7 +195,7 @@ Table routine_assessment {
   assessed_at datetime [not null]
   next_due_at datetime
 
-  indexes { (routine_version_id, kind) [unique] }
+  indexes { (routine_version_id, kind, round_no) [unique] }
 }
 
 Table stable_routine_pointer {
