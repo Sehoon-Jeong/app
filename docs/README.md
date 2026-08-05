@@ -1,42 +1,22 @@
-# SkinCause 문서 안내
+# 문서 안내
 
-이 저장소가 제품·기술·일정의 기준점이다. Notion이나 메신저에는 원본을 복사하지 않고 이곳의 링크를 공유한다.
+처음 보는 사람도 아래 다섯 문서만 순서대로 읽으면 제품과 구현 범위를 알 수 있다.
 
-멘토링을 위해 처음 방문했다면 [기술 멘토링 안내](./mentor-review.md)부터 읽는다.
-AI와 구현 작업을 시작할 때는 루트의 [작업 안내](../AGENTS.md)에서 읽는 순서와 변경 원칙을 먼저 확인한다.
-
-## 제품을 이해할 때
-
-| 순서 | 문서 | 답하는 질문 |
+| 순서 | 문서 | 내용 |
 | --- | --- | --- |
-| 1 | [제품 소개](./01-product-brief.md) | 누구의 어떤 문제를 해결하는가? |
-| 2 | [MVP 정의](./02-mvp-definition.md) | 3주 동안 무엇을 검증하는가? |
-| 3 | [User Story Map](./product/story-map.md) | 전체 기능과 P0·P1·Pn의 경계는 무엇인가? |
-| 4 | [핵심 사용자 흐름](./product/user-flows.md) | 정상 완료·불편 발생·다음 추천이 어떻게 이어지는가? |
-| 5 | [제품 규칙](./product/product-rules.md) | 추천·실험·Rescue·AI가 지켜야 할 규칙은 무엇인가? |
+| 0 | [제품 설명](./01-product-brief.md) | 왜 만들며 무엇을 검증하는가 |
+| 1 | [요구사항](./04-requirements.md) | 사용자가 할 수 있어야 하는 일과 제품 근거 |
+| 2 | [기능 명세](./05-features/functional-specification.md) | 각 흐름의 입력, 분기, 결과와 예외 |
+| 3 | [OpenAPI](./api/openapi.yaml) | 프론트엔드와 서버 사이의 계약 |
+| 4 | [데이터 모델](./06-data-model/README.md) | 무엇을 어떤 관계로 저장하는가 |
 
-## 구현을 준비할 때
+## 보조 문서
 
-| 기준 | 원본 | 역할 |
-| --- | --- | --- |
-| 요구사항 | [요구사항 명세](./04-requirements.md) | 제품이 반드시 만족해야 할 조건과 요구사항 ID |
-| 기능명세 | [통합 기능명세서](./05-features/functional-specification.md) | MVP 기능별 시작 조건·입력·처리·결과·규칙·예외·완료 기준 |
-| API | [웹 API 문서](https://sksksksksksss.github.io/service/) · [계약 원본](./api/README.md) | 인증, endpoint, 요청·응답과 오류 계약 |
-| 데이터 | [ERD와 데이터 사전](./06-data-model/README.md) | 엔터티 관계, 상태, 소유권과 제약 |
-| 기술 | [기술 스택](./03-technology-stack.md) | 무엇으로 만들며 왜 선택했는가? |
-| 작업 | [GitHub Project](https://github.com/orgs/sksksksksksss/projects/1) | Priority, 담당자, 상태, 일정과 Sub-task |
-| 협업 | [협업 방식](./07-collaboration-guide.md) | Story를 어떻게 시작하고 완료하는가? |
-| 일정 | [3주 Roadmap](./08-project-roadmap.md) | 무엇을 언제 연결하는가? |
+- [제품 규칙과 AI 경계](./product/product-rules.md)
+- [결정한 질문과 답변](./product/prototype-product-definition.md)
+- [근거와 가정](./evidence/README.md)
+- [요구사항 추적표](./05-features/traceability.md)
 
-## 원본이 충돌할 때
+## 문서가 충돌할 때
 
-| 질문 | 우선하는 원본 |
-| --- | --- |
-| 왜 만드는가, 무엇을 하지 않는가? | 제품 소개·MVP 정의 |
-| 사용자가 무엇을 할 수 있어야 하는가? | 통합 기능명세서·GitHub Story와 요구사항 |
-| 공통 제품 규칙은 무엇인가? | 제품 규칙 |
-| API 필드와 오류 코드는 무엇인가? | OpenAPI |
-| 무엇을 어떻게 저장하는가? | ERD·데이터 사전 |
-| 이번 주 누가 무엇을 하는가? | GitHub Project |
-
-구현 중 결정이 바뀌면 코드만 고치지 않는다. 영향을 받는 Story, OpenAPI, 데이터 모델과 요구사항을 같은 PR에서 함께 수정한다.
+사용자가 실제로 보는 흐름은 [프로토타입](https://sksksksksksss.github.io/service/prototype/)을 우선한다. 제품 의미는 제품 설명과 요구사항, 처리 규칙은 기능 명세, 필드는 OpenAPI, 저장 방식은 데이터 모델을 따른다. 충돌을 발견하면 한 문서만 고치지 말고 관련 문서를 같은 PR에서 함께 수정한다.

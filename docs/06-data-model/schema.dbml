@@ -1,1112 +1,290 @@
-Project SkinCauseMVP {
-  database_type: "SQLite"
-  Note: "SkinCause P0·P1 SQLite schema. Enums and booleans are logical ERD types; Flyway maps them to TEXT/INTEGER with CHECK constraints."
-}
-
-Enum concern_input_state {
-  UNSET
-  UNKNOWN
-  SPECIFIED
-}
-
-Enum deletion_job_status {
-  REQUESTED
-  RUNNING
-  COMPLETED
-  FAILED
-}
-
-Enum brand_status {
-  ACTIVE
-  MERGED
-  INACTIVE
-}
-
-Enum product_status {
-  ACTIVE
-  MERGED
-  ARCHIVED
-}
-
-Enum product_source_type {
-  CATALOG
-  USER_DRAFT
-}
-
-Enum verification_status {
-  DRAFT
-  USER_CONFIRMED
-  OPERATOR_VERIFIED
-}
-
-Enum ingredient_status {
-  VERIFIED
-  ARCHIVED
-}
-
-Enum product_function_source {
-  CLAIM
-  INGREDIENT_RULE
-  OPERATOR
-}
-
-Enum product_identifier_type {
-  BARCODE
-}
-
-Enum product_ingredient_source {
-  CATALOG
-  IMAGE
-  MANUAL
-}
-
-Enum upload_purpose {
-  INGREDIENT_LABEL
-  PURCHASE_IMAGE
-}
-
-Enum upload_status {
-  UPLOADED
-  PROCESSING
-  DELETE_PENDING
-  DELETED
-  FAILED
-}
-
-Enum ai_invocation_source {
-  USER_REQUEST
-  SERVICE_ASSIST
-}
-
-Enum ai_job_status {
-  QUEUED
-  RUNNING
-  SUCCEEDED
-  FAILED
-  TIMED_OUT
-}
-
-Enum ai_task_type {
-  INGREDIENT_EXTRACTION
-  PURCHASE_ITEM_EXTRACTION
-  GOAL_CLASSIFICATION
-  OBSERVATION_STRUCTURING
-  FOLLOW_UP_QUESTIONS
-  EXPLANATION
-}
-
-Enum extraction_review_status {
-  PENDING
-  ACCEPTED
-  CORRECTED
-  REJECTED
-}
-
-Enum routine_version_status {
-  DRAFT
-  CONFIRMED
-}
-
-Enum routine_version_source {
-  INITIAL
-  MANUAL_UPDATE
-  EXPERIMENT_RESULT
-}
-
-Enum time_slot {
-  AM
-  PM
-}
-
-Enum routine_frequency_type {
-  DAILY
-  SPECIFIC_DAYS
-  WEEKLY_COUNT
-  AS_NEEDED
-  UNKNOWN
-}
-
-Enum date_precision {
-  EXACT
-  APPROXIMATE
-  UNKNOWN
-}
-
-Enum answer_state {
-  YES
-  NO
-  UNKNOWN
-}
-
-Enum change_intent {
-  ADD
-  REPLACE
-}
-
-Enum recommendation_status {
-  RUNNING
-  COMPLETED
-  FAILED
-}
-
-Enum ranking_source {
-  SERVER_RULES
-  NO_ELIGIBLE_CANDIDATE
-}
-
-Enum evidence_strength {
-  SUFFICIENT
-  LIMITED
-  INSUFFICIENT
-}
-
-Enum candidate_source_type {
-  RECOMMENDATION
-  SEARCH
-  DIRECT
-}
-
-Enum candidate_status {
-  SAVED
-  STALE
-  STARTED
-  ARCHIVED
-}
-
-Enum experiment_status {
-  PLANNED
-  ACTIVE
-  PAUSED
-  COMPLETED
-  CANCELLED
-}
-
-Enum experiment_event_type {
-  FIRST_USE
-  PRODUCT_STOPPED
-  PRODUCT_RESTARTED
-  PLAN_DEVIATION
-  UNPLANNED_PRODUCT_CHANGE
-}
-
-Enum quest_type {
-  FIRST_USE
-  EARLY_CHECK
-  MID_CHECK
-  FINAL_CHECK
-}
-
-Enum quest_status {
-  SCHEDULED
-  COMPLETED
-  SKIPPED
-  CANCELLED
-}
-
-Enum schedule_change_reason {
-  FIRST_USE_RECALC
-  PLAN_EDIT
-  PAUSE_RESUME
-  TIMEZONE_BEFORE_START
-}
-
-Enum observation_kind {
-  QUEST
-  CHANGE
-  STOP
-  RESTART
-  FOLLOW_UP
-}
-
-Enum observation_condition {
-  NO_CHANGE
-  COMFORTABLE_OR_BETTER
-  DISCOMFORT
-  UNSURE
-  NOT_USED
-}
-
-Enum discomfort_severity {
-  MILD
-  MODERATE
-  SEVERE
-}
-
-Enum rescue_classification {
-  RECENT_CHANGE
-  CHANGED_TOGETHER
-  NO_RECORDED_CHANGE
-  INSUFFICIENT_INFORMATION
-}
-
-Enum rescue_change_source {
-  EXPERIMENT
-  UNPLANNED
-  STABLE
-  UNKNOWN
-}
-
-Enum discomfort_outcome {
-  NONE
-  PRESENT
-  UNSURE
-}
-
-Enum goal_outcome {
-  HELPED
-  NO_CHANGE
-  UNSURE
-}
-
-Enum next_use_decision {
-  PROMOTE_TO_STABLE
-  STOP
-  HOLD
-  RETRY
-}
-
-Enum baseline_routine_use_state {
-  NOT_APPLICABLE
-  ALL_CONTINUED
-  SOME_STOPPED
-  ALL_STOPPED
-  UNKNOWN
-}
-
-Enum lab_item_type {
-  CHARACTER
-  THEME
-  DECORATION
-  RESEARCH_SAMPLE
-}
-
-Enum notification_type {
-  DUE
-  OVERDUE
-}
-
-Enum notification_status {
-  PENDING
-  SENT
-  FAILED
-  SUPPRESSED
-}
+Enum product_version_status { VERIFIED UNCERTAIN RETIRED }
+Enum job_status { QUEUED RUNNING SUCCEEDED FAILED }
+Enum assessment_kind { FINAL EARLY }
+Enum assessment_outcome { NO_DISCOMFORT DISCOMFORT NEED_MORE_TIME UNKNOWN }
+Enum evidence_relation { SUPPORT OPPOSE UNCERTAIN }
 
 Table app_user {
-  id varchar(36) [pk]
-  email varchar(320) [not null, unique, note: "Normalized login email"]
-  password_hash varchar(255) [not null]
-  timezone varchar(64) [not null, note: "IANA timezone"]
-  concern_input_state concern_input_state [not null, default: 'UNSET']
-  write_locked_at text
-  created_at text [not null]
-  updated_at text [not null]
+  id integer [pk, increment]
+  email text [not null, unique]
+  password_hash text [not null]
+  timezone text [not null, default: 'Asia/Seoul']
+  current_routine_version_id integer
+  write_locked_at datetime
+  created_at datetime [not null]
 }
 
-Table user_concern {
-  user_id varchar(36) [not null]
-  concern_code varchar(50) [not null]
-  recorded_at text [not null]
-  created_at text [not null]
-
-  indexes {
-    (user_id, concern_code) [pk]
-  }
-}
-
-Table web_push_subscription {
-  id varchar(36) [pk]
-  user_id varchar(36) [not null]
-  endpoint_hash varchar(255) [not null, unique]
-  endpoint_ciphertext text [not null]
-  public_key_ciphertext text [not null]
-  auth_secret_ciphertext text [not null]
-  expires_at text
-  revoked_at text
-  created_at text [not null]
-  updated_at text [not null]
-}
-
-Table privacy_deletion_job {
-  id varchar(36) [pk]
-  user_id varchar(36) [unique]
-  operation_reference varchar(100) [not null, unique]
-  status deletion_job_status [not null]
-  current_step varchar(100)
-  error_code varchar(100)
-  completed_at text
-  purge_at text
-  created_at text [not null]
-  updated_at text [not null]
+Table ai_memory {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  source_type text [not null]
+  original_text text [not null]
+  summary_text text [not null]
+  deleted_at datetime
+  updated_at datetime [not null]
 }
 
 Table brand {
-  id varchar(36) [pk]
-  name varchar(200) [not null]
-  normalized_name varchar(200) [not null]
-  merged_into_brand_id varchar(36)
-  status brand_status [not null]
-  created_at text [not null]
-  updated_at text [not null]
-
-  indexes {
-    normalized_name
-  }
+  id integer [pk, increment]
+  name_ko text [not null, unique]
+  official_url text
 }
 
 Table product {
-  id varchar(36) [pk]
-  brand_id varchar(36)
-  owner_user_id varchar(36)
-  latest_version_id varchar(36)
-  merged_into_product_id varchar(36)
-  source_type product_source_type [not null]
-  status product_status [not null]
-  created_at text [not null]
-  updated_at text [not null]
+  id integer [pk, increment]
+  brand_id integer [not null, ref: > brand.id]
+  canonical_name text [not null]
+  category text [not null, note: 'SKINCARE, CLEANSING, SUNCARE']
 }
 
 Table product_version {
-  id varchar(36) [pk]
-  product_id varchar(36) [not null]
-  version_no int [not null]
-  name varchar(300) [not null]
-  normalized_name varchar(300) [not null]
-  brand_display_name varchar(200) [not null]
-  category_code varchar(50) [not null]
-  verification_status verification_status [not null]
-  source_reference text
-  confirmed_at text
-  created_at text [not null]
-
-  indexes {
-    (product_id, version_no) [unique]
-    normalized_name
-  }
+  id integer [pk, increment]
+  product_id integer [not null, ref: > product.id]
+  display_name text [not null]
+  volume_option text
+  market text [not null, default: 'KR']
+  package_clue text
+  sold_from date
+  sold_to date
+  status product_version_status [not null]
+  verified_at datetime
 }
 
-Table product_identifier {
-  id varchar(36) [pk]
-  product_version_id varchar(36) [not null]
-  type product_identifier_type [not null]
-  value varchar(200) [not null]
-  verification_status verification_status [not null]
-  created_at text [not null]
+Table evidence_source {
+  id integer [pk, increment]
+  source_type text [not null, note: 'BRAND, REGULATOR, OFFICIAL_DB, PAPER']
+  title text [not null]
+  organization text [not null]
+  published_at date
+  url text [not null]
+  checked_at datetime [not null]
+}
 
-  indexes {
-    (product_version_id, type, value) [unique]
-    (type, value)
-  }
+Table product_fact {
+  id integer [pk, increment]
+  product_version_id integer [not null, ref: > product_version.id]
+  fact_type text [not null, note: 'DIRECTIONS, CLAIM, TEXTURE, CAUTION']
+  value_text text [not null]
+  source_id integer [not null, ref: > evidence_source.id]
+  checked_at datetime [not null]
 }
 
 Table ingredient {
-  id varchar(36) [pk]
-  canonical_name varchar(300) [not null, unique]
-  status ingredient_status [not null]
-  created_at text [not null]
+  id integer [pk, increment]
+  canonical_name text [not null, unique]
+  inci_name text
+  korean_name text
 }
 
-Table ingredient_alias {
-  ingredient_id varchar(36) [not null]
-  locale varchar(20) [not null]
-  normalized_alias varchar(300) [not null]
-  created_at text [not null]
-
-  indexes {
-    (ingredient_id, locale, normalized_alias) [pk]
-    (locale, normalized_alias)
-  }
+Table ingredient_label {
+  id integer [pk, increment]
+  product_version_id integer [not null, ref: > product_version.id]
+  ingredient_id integer [ref: > ingredient.id]
+  display_order integer [not null]
+  label_text text [not null]
+  source_id integer [not null, ref: > evidence_source.id]
 }
 
-Table product_ingredient {
-  product_version_id varchar(36) [not null]
-  position int [not null]
-  raw_name varchar(500) [not null]
-  ingredient_id varchar(36)
-  verification_status verification_status [not null]
-  source_type product_ingredient_source [not null]
-  created_at text [not null]
-
-  indexes {
-    (product_version_id, position) [pk]
-  }
+Table price_snapshot {
+  id integer [pk, increment]
+  product_version_id integer [not null, ref: > product_version.id]
+  retailer text [not null]
+  price_krw integer [not null]
+  url text
+  checked_at datetime [not null]
 }
 
-Table function_type {
-  code varchar(50) [pk]
-  display_name varchar(100) [not null]
-  description text [not null]
-  active boolean [not null]
-  created_at text [not null]
+Table catalog_review_request {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  query_text text [not null]
+  status text [not null, default: 'RECEIVED']
+  created_at datetime [not null]
 }
 
-Table product_function {
-  product_version_id varchar(36) [not null]
-  function_code varchar(50) [not null]
-  source_type product_function_source [not null]
-  source_reference text [not null]
-  verification_status verification_status [not null]
-  observation_note text
-  created_at text [not null]
-
-  indexes {
-    (product_version_id, function_code) [pk]
-  }
+Table user_product {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  product_version_id integer [ref: > product_version.id]
+  entered_name text
+  state text [not null, default: 'UNUSED']
+  registered_at datetime [not null]
+  deleted_at datetime
 }
 
-Table upload_asset {
-  id varchar(36) [pk]
-  user_id varchar(36) [not null]
-  purpose upload_purpose [not null]
-  object_key varchar(500) [not null, unique]
-  content_type varchar(100) [not null]
-  byte_size integer [not null]
-  status upload_status [not null]
-  delete_after text [not null]
-  delete_requested_at text
-  deletion_error_code varchar(100)
-  deleted_at text
-  created_at text [not null]
-  updated_at text [not null]
-
-  indexes {
-    (status, delete_after)
-  }
+Table product_memo {
+  id integer [pk, increment]
+  user_product_id integer [not null, ref: > user_product.id]
+  user_id integer [not null, ref: > app_user.id]
+  text text [not null]
+  created_at datetime [not null]
+  superseded_at datetime
 }
 
-Table ai_job {
-  id varchar(36) [pk]
-  user_id varchar(36) [not null]
-  task_type ai_task_type [not null]
-  invocation_source ai_invocation_source [not null]
-  input_asset_id varchar(36)
-  model varchar(100) [not null]
-  prompt_version varchar(50) [not null]
-  schema_version varchar(50) [not null]
-  status ai_job_status [not null]
-  input_fingerprint varchar(255) [not null]
-  structured_output text
-  error_code varchar(100)
-  requested_at text [not null]
-  started_at text
-  completed_at text
-  created_at text [not null]
+Table wishlist_item {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  product_version_id integer [not null, ref: > product_version.id]
+  converted_user_product_id integer [ref: > user_product.id]
+  created_at datetime [not null]
 
-  indexes {
-    (status, requested_at)
-  }
-}
-
-Table ingredient_extraction_item {
-  id varchar(36) [pk]
-  ai_job_id varchar(36) [not null]
-  position int [not null]
-  raw_text varchar(500) [not null]
-  suggested_ingredient_id varchar(36)
-  review_status extraction_review_status [not null]
-  confirmed_ingredient_id varchar(36)
-  created_at text [not null]
-
-  indexes {
-    (ai_job_id, position) [unique]
-  }
-}
-
-Table purchase_extraction_item {
-  id varchar(36) [pk]
-  ai_job_id varchar(36) [not null]
-  raw_brand varchar(300)
-  raw_product_name varchar(500)
-  suggested_product_version_id varchar(36)
-  review_status extraction_review_status [not null]
-  confirmed_product_version_id varchar(36)
-  created_draft_product_id varchar(36)
-  created_at text [not null]
-}
-
-Table routine {
-  id varchar(36) [pk]
-  user_id varchar(36) [not null, unique]
-  name varchar(100) [not null]
-  current_stable_version_id varchar(36)
-  created_at text [not null]
-  updated_at text [not null]
+  indexes { (user_id, product_version_id) [unique] }
 }
 
 Table routine_version {
-  id varchar(36) [pk]
-  routine_id varchar(36) [not null]
-  version_no int [not null]
-  status routine_version_status [not null]
-  confirmed_at text
-  source_type routine_version_source [not null]
-  routine_started_on varchar(10)
-  routine_started_on_precision date_precision [not null, default: 'UNKNOWN']
-  last_product_change_on varchar(10)
-  last_product_change_precision date_precision [not null, default: 'UNKNOWN']
-  current_discomfort_state answer_state [not null, default: 'UNKNOWN']
-  evidence_strength evidence_strength [not null, default: 'INSUFFICIENT']
-  created_at text [not null]
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  version_no integer [not null]
+  source_type text [not null, note: 'USER_EDIT, RESCUE_PLAN']
+  source_rescue_plan_id integer
+  is_current boolean [not null, default: false]
+  started_local_date date [not null]
+  timezone text [not null]
+  assessment_due_at datetime [not null]
+  created_at datetime [not null]
 
-  indexes {
-    (routine_id, version_no) [unique]
-  }
+  indexes { (user_id, version_no) [unique] }
 }
 
 Table routine_item {
-  id varchar(36) [pk]
-  routine_version_id varchar(36) [not null]
-  time_slot time_slot [not null]
-  position int [not null]
-  product_version_id varchar(36) [not null]
-  frequency_type routine_frequency_type [not null]
-  weekly_count int
-  days_of_week text [not null, default: '[]']
-  created_at text [not null]
+  id integer [pk, increment]
+  routine_version_id integer [not null, ref: > routine_version.id]
+  user_product_id integer [not null, ref: > user_product.id]
+  period text [not null, note: 'MORNING, EVENING']
+  position integer [not null]
+  frequency_text text
 
-  indexes {
-    (routine_version_id, time_slot, position) [unique]
-    (routine_version_id, time_slot, product_version_id) [unique]
-  }
+  indexes { (routine_version_id, period, position) [unique] }
 }
 
-Table recommendation_request {
-  id varchar(36) [pk]
-  user_id varchar(36) [not null]
-  routine_version_id varchar(36) [not null]
-  goal_function_code varchar(50) [not null]
-  change_intent change_intent [not null]
-  target_routine_item_id varchar(36)
-  preference_snapshot text [not null]
-  policy_version varchar(50) [not null]
-  status recommendation_status [not null]
-  goal_classification_ai_job_id varchar(36) [unique]
-  explanation_ai_job_id varchar(36) [unique]
-  ranking_source ranking_source
-  fallback_reason_code varchar(100)
-  created_at text [not null]
-  completed_at text
+Table routine_assessment {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  routine_version_id integer [not null, ref: > routine_version.id]
+  kind assessment_kind [not null]
+  actual_use_matched boolean
+  outcome assessment_outcome [not null]
+  response_text text
+  confidence_weight real [not null]
+  assessed_at datetime [not null]
+  next_due_at datetime
 
-  indexes {
-    (user_id, created_at)
-  }
+  indexes { (routine_version_id, kind) [unique] }
 }
 
-Table recommendation_pool_item {
-  request_id varchar(36) [not null]
-  product_version_id varchar(36) [not null]
-  eligibility_policy_version varchar(50) [not null]
-  comparison_facts text [not null]
-  eligible_at text [not null]
-  created_at text [not null]
-
-  indexes {
-    (request_id, product_version_id) [pk]
-  }
-}
-
-Table recommendation_candidate {
-  id varchar(36) [pk]
-  request_id varchar(36) [not null]
-  product_version_id varchar(36) [not null]
-  rank int [not null]
-  evidence_strength evidence_strength [not null]
-  evidence_snapshot text [not null]
-  created_at text [not null]
-
-  indexes {
-    (request_id, rank) [unique]
-    (request_id, product_version_id) [unique]
-  }
-}
-
-Table experiment_candidate {
-  id varchar(36) [pk]
-  user_id varchar(36) [not null]
-  routine_version_id varchar(36) [not null]
-  product_version_id varchar(36) [not null]
-  recommendation_candidate_id varchar(36)
-  source_type candidate_source_type [not null]
-  goal_function_code varchar(50) [not null]
-  change_intent change_intent [not null]
-  target_routine_item_id varchar(36)
-  status candidate_status [not null]
-  created_at text [not null]
-  updated_at text [not null]
-
-  indexes {
-    (user_id, status, created_at)
-    (user_id, routine_version_id, product_version_id, change_intent, target_routine_item_id) [note: "Flyway: UNIQUE NULLS NOT DISTINCT for unfinished candidates"]
-  }
-}
-
-Table candidate_comparison {
-  id varchar(36) [pk]
-  candidate_id varchar(36) [not null]
-  version_no int [not null]
-  policy_version varchar(50) [not null]
-  evidence_strength evidence_strength [not null]
-  product_diff text [not null]
-  function_diff text [not null]
-  observation_focus text [not null]
-  invalidated_at text
-  invalidation_reason_code varchar(100)
-  created_at text [not null]
-
-  indexes {
-    (candidate_id, version_no) [unique]
-  }
-}
-
-Table candidate_ordering {
-  id varchar(36) [pk]
-  user_id varchar(36) [not null]
-  routine_version_id varchar(36) [not null]
-  policy_version varchar(50) [not null]
-  evidence_strength evidence_strength [not null]
-  explanation_ai_job_id varchar(36) [unique]
-  created_at text [not null]
-
-  indexes {
-    (user_id, created_at)
-  }
-}
-
-Table candidate_ordering_item {
-  ordering_id varchar(36) [not null]
-  comparison_id varchar(36) [not null]
-  rank int [not null]
-  reason_snapshot text [not null]
-  created_at text [not null]
-
-  indexes {
-    (ordering_id, comparison_id) [pk]
-    (ordering_id, rank) [unique]
-  }
-}
-
-Table experiment {
-  id varchar(36) [pk]
-  user_id varchar(36) [not null]
-  candidate_id varchar(36) [not null, unique]
-  comparison_id varchar(36) [not null, unique]
-  ordering_id varchar(36)
-  baseline_routine_version_id varchar(36) [not null]
-  parent_experiment_id varchar(36)
-  status experiment_status [not null]
-  duration_days int [not null, default: 14]
-  planned_start_date varchar(10) [not null]
-  planned_end_date varchar(10) [not null]
-  planned_at text [not null]
-  actual_started_at text
-  expected_end_at text
-  completed_at text
-  time_slot time_slot [not null]
-  position int [not null]
-  retrial_stability_confirmed_at text
-  idempotency_key varchar(100) [not null]
-  created_at text [not null]
-  updated_at text [not null]
-
-  indexes {
-    (user_id, idempotency_key) [unique]
-    (user_id, status, created_at)
-    (user_id) [note: "Flyway: partial unique index where status is PLANNED, ACTIVE, or PAUSED"]
-    (ordering_id, comparison_id)
-  }
-}
-
-Table experiment_transition {
-  id varchar(36) [pk]
-  experiment_id varchar(36) [not null]
-  transition_no int [not null]
-  from_status experiment_status
-  to_status experiment_status [not null]
-  reason_code varchar(100)
-  occurred_at text [not null]
-  idempotency_key varchar(100) [not null]
-  created_at text [not null]
-
-  indexes {
-    (experiment_id, transition_no) [unique]
-    (experiment_id, idempotency_key) [unique]
-  }
-}
-
-Table experiment_event {
-  id varchar(36) [pk]
-  experiment_id varchar(36) [not null]
-  type experiment_event_type [not null]
-  product_version_id varchar(36)
-  source_observation_id varchar(36)
-  occurred_at text [not null]
-  recorded_at text [not null]
-  details text [not null]
-  idempotency_key varchar(100) [not null]
-  created_at text [not null]
-
-  indexes {
-    (experiment_id, idempotency_key) [unique]
-  }
-}
-
-Table observation_quest {
-  id varchar(36) [pk]
-  experiment_id varchar(36) [not null]
-  type quest_type [not null]
-  required boolean [not null]
-  due_at text [not null]
-  status quest_status [not null]
-  skip_reason_code varchar(100)
-  resolved_at text
-  created_at text [not null]
-  updated_at text [not null]
-
-  indexes {
-    (experiment_id, type) [unique]
-    (experiment_id, due_at, status)
-  }
-}
-
-Table quest_schedule_change {
-  id varchar(36) [pk]
-  quest_id varchar(36) [not null]
-  change_no int [not null]
-  from_due_at text [not null]
-  to_due_at text [not null]
-  reason_code schedule_change_reason [not null]
-  changed_at text [not null]
-  created_at text [not null]
-
-  indexes {
-    (quest_id, change_no) [unique]
-  }
-}
-
-Table observation {
-  id varchar(36) [pk]
-  experiment_id varchar(36) [not null]
-  quest_id varchar(36) [unique]
-  kind observation_kind [not null]
-  condition observation_condition [not null]
-  used_as_planned boolean
-  uses_since_last_check int
-  other_product_change_state answer_state
-  memo text
-  structuring_ai_job_id varchar(36) [unique]
-  observed_at text [not null]
-  recorded_at text [not null]
-  created_at text [not null]
-
-  indexes {
-    (experiment_id, observed_at)
-  }
-}
-
-Table discomfort_detail {
-  observation_id varchar(36) [pk]
-  severity discomfort_severity [not null]
-  first_noticed_at text
-  help_needed boolean [not null]
-  spreading_or_worsening boolean [not null]
-  type_codes text [not null]
-  area_codes text [not null]
-  context_change_codes text [not null]
-  other_context text
-  created_at text [not null]
+Table stable_routine_pointer {
+  user_id integer [pk, ref: > app_user.id]
+  routine_version_id integer [not null, ref: > routine_version.id]
+  assessment_id integer [not null, ref: > routine_assessment.id]
+  promoted_at datetime [not null]
 }
 
 Table rescue_case {
-  id varchar(36) [pk]
-  experiment_id varchar(36) [not null]
-  trigger_observation_id varchar(36) [not null, unique]
-  baseline_routine_version_id varchar(36) [not null]
-  policy_version varchar(50) [not null]
-  evidence_strength evidence_strength [not null]
-  safety_priority boolean [not null]
-  context_snapshot text [not null]
-  missing_information text [not null]
-  explanation_ai_job_id varchar(36) [unique]
-  created_at text [not null]
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  start_routine_version_id integer [ref: > routine_version.id]
+  stable_routine_version_id integer [ref: > routine_version.id]
+  status text [not null]
+  safety_boundary_reached boolean [not null, default: false]
+  final_action text
+  created_at datetime [not null]
+  closed_at datetime
 }
 
-Table rescue_item {
-  id varchar(36) [pk]
-  rescue_case_id varchar(36) [not null]
-  product_version_id varchar(36) [not null]
-  classification rescue_classification [not null]
-  change_source rescue_change_source [not null]
-  evidence_snapshot text [not null]
-  created_at text [not null]
+Table rescue_message {
+  id integer [pk, increment]
+  rescue_case_id integer [not null, ref: > rescue_case.id]
+  sequence_no integer [not null]
+  role text [not null, note: 'USER, ASSISTANT']
+  content text [not null]
+  structured_json text
+  created_at datetime [not null]
 
-  indexes {
-    (rescue_case_id, product_version_id) [unique]
-  }
+  indexes { (rescue_case_id, sequence_no) [unique] }
 }
 
-Table experiment_result {
-  id varchar(36) [pk]
-  experiment_id varchar(36) [not null, unique]
-  discomfort_outcome discomfort_outcome [not null]
-  goal_outcome goal_outcome [not null]
-  next_use_decision next_use_decision [not null]
-  baseline_routine_use_state baseline_routine_use_state [not null]
-  evidence_strength evidence_strength [not null]
-  record_completeness text [not null]
-  summary text
-  resulting_routine_version_id varchar(36) [unique]
-  completed_at text [not null]
-  idempotency_key varchar(100) [not null, unique]
-  created_at text [not null]
+Table rescue_change {
+  id integer [pk, increment]
+  rescue_case_id integer [not null, ref: > rescue_case.id]
+  change_type text [not null]
+  user_product_id integer [ref: > user_product.id]
+  before_json text
+  after_json text
+  user_confirmed boolean [not null, default: false]
 }
 
-Table lab_profile {
-  user_id varchar(36) [pk]
-  selected_character_code varchar(50)
-  selected_theme_code varchar(50)
-  created_at text [not null]
-  updated_at text [not null]
+Table rescue_plan {
+  id integer [pk, increment]
+  rescue_case_id integer [not null, unique, ref: > rescue_case.id]
+  plan_json text [not null]
+  validation_status text [not null]
+  applied_routine_version_id integer [ref: > routine_version.id]
+  created_at datetime [not null]
 }
 
-Table lab_record {
-  id varchar(36) [pk]
-  user_id varchar(36) [not null]
-  experiment_id varchar(36) [not null, unique]
-  display_asset_code varchar(50) [not null]
-  observation_completion_snapshot text [not null]
-  earned_at text [not null]
-  created_at text [not null]
+Table analysis {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  type text [not null, note: 'OPINION, RECOMMENDATION, ROUTINE, RESCUE, PRODUCT']
+  subject_ref text
+  input_snapshot_json text [not null]
+  output_json text
+  model text
+  prompt_version text [not null]
+  validation_status text [not null]
+  created_at datetime [not null]
 }
 
-Table badge_definition {
-  code varchar(50) [not null]
-  rule_version int [not null]
-  name varchar(100) [not null]
-  description text [not null]
-  rule_code varchar(100) [not null]
-  reward_item_code varchar(50)
-  active boolean [not null]
-  created_at text [not null]
-
-  indexes {
-    (code, rule_version) [pk]
-  }
+Table analysis_evidence {
+  id integer [pk, increment]
+  analysis_id integer [not null, ref: > analysis.id]
+  claim_key text [not null]
+  relation evidence_relation [not null]
+  source_id integer [ref: > evidence_source.id]
+  personal_record_type text
+  personal_record_id integer
+  summary text [not null]
 }
 
-Table user_badge {
-  user_id varchar(36) [not null]
-  badge_code varchar(50) [not null]
-  rule_version int [not null]
-  source_experiment_id varchar(36)
-  evidence_snapshot text [not null]
-  earned_at text [not null]
-  created_at text [not null]
-
-  indexes {
-    (user_id, badge_code) [pk]
-  }
+Table ai_job {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  job_type text [not null]
+  input_hash text [not null]
+  status job_status [not null]
+  analysis_id integer [ref: > analysis.id]
+  retry_of_job_id integer [ref: > ai_job.id]
+  error_code text
+  created_at datetime [not null]
+  finished_at datetime
 }
 
-Table lab_item_definition {
-  code varchar(50) [pk]
-  type lab_item_type [not null]
-  name varchar(100) [not null]
-  asset_reference varchar(300) [not null]
-  default_available boolean [not null]
-  active boolean [not null]
-  created_at text [not null]
+Table notification {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  type text [not null]
+  target_type text [not null]
+  target_id integer [not null]
+  dedupe_key text [not null, unique]
+  due_at datetime [not null]
+  read_at datetime
 }
 
-Table user_lab_item {
-  user_id varchar(36) [not null]
-  item_code varchar(50) [not null]
-  source_badge_code varchar(50)
-  source_experiment_id varchar(36)
-  rule_version int [not null]
-  evidence_snapshot text [not null]
-  earned_at text [not null]
-  created_at text [not null]
-
-  indexes {
-    (user_id, item_code) [pk]
-  }
+Table receipt_upload {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  object_key text [not null]
+  status text [not null]
+  ai_job_id integer [ref: > ai_job.id]
+  created_at datetime [not null]
 }
 
-Table notification_delivery {
-  id varchar(36) [pk]
-  quest_id varchar(36) [not null]
-  subscription_id varchar(36) [not null]
-  type notification_type [not null]
-  status notification_status [not null]
-  scheduled_at text [not null]
-  sent_at text
-  error_code varchar(100)
-  created_at text [not null]
-
-  indexes {
-    (quest_id, subscription_id, type) [unique]
-    (status, scheduled_at)
-  }
-}
-
-Ref: user_concern.user_id > app_user.id [delete: cascade]
-Ref: web_push_subscription.user_id > app_user.id [delete: cascade]
-Ref: privacy_deletion_job.user_id > app_user.id [delete: set null]
-
-Ref: brand.merged_into_brand_id > brand.id
-Ref: product.brand_id > brand.id
-Ref: product.owner_user_id > app_user.id
-Ref: product.latest_version_id > product_version.id
-Ref: product.merged_into_product_id > product.id
-Ref: product_version.product_id > product.id
-Ref: product_identifier.product_version_id > product_version.id
-Ref: ingredient_alias.ingredient_id > ingredient.id
-Ref: product_ingredient.product_version_id > product_version.id
-Ref: product_ingredient.ingredient_id > ingredient.id
-Ref: product_function.product_version_id > product_version.id
-Ref: product_function.function_code > function_type.code
-
-Ref: upload_asset.user_id > app_user.id
-Ref: ai_job.user_id > app_user.id
-Ref: ai_job.input_asset_id > upload_asset.id [delete: set null]
-Ref: ingredient_extraction_item.ai_job_id > ai_job.id
-Ref: ingredient_extraction_item.suggested_ingredient_id > ingredient.id
-Ref: ingredient_extraction_item.confirmed_ingredient_id > ingredient.id
-Ref: purchase_extraction_item.ai_job_id > ai_job.id
-Ref: purchase_extraction_item.suggested_product_version_id > product_version.id
-Ref: purchase_extraction_item.confirmed_product_version_id > product_version.id
-Ref: purchase_extraction_item.created_draft_product_id > product.id
-
-Ref: routine.user_id > app_user.id
-Ref: routine.current_stable_version_id > routine_version.id
-Ref: routine_version.routine_id > routine.id [delete: cascade]
-Ref: routine_item.routine_version_id > routine_version.id [delete: cascade]
-Ref: routine_item.product_version_id > product_version.id
-
-Ref: recommendation_request.user_id > app_user.id
-Ref: recommendation_request.routine_version_id > routine_version.id
-Ref: recommendation_request.goal_function_code > function_type.code
-Ref: recommendation_request.target_routine_item_id > routine_item.id
-Ref: recommendation_request.goal_classification_ai_job_id > ai_job.id
-Ref: recommendation_request.explanation_ai_job_id > ai_job.id
-Ref: recommendation_pool_item.request_id > recommendation_request.id [delete: cascade]
-Ref: recommendation_pool_item.product_version_id > product_version.id
-Ref: recommendation_candidate.(request_id, product_version_id) > recommendation_pool_item.(request_id, product_version_id)
-Ref: experiment_candidate.user_id > app_user.id
-Ref: experiment_candidate.routine_version_id > routine_version.id
-Ref: experiment_candidate.product_version_id > product_version.id
-Ref: experiment_candidate.recommendation_candidate_id > recommendation_candidate.id
-Ref: experiment_candidate.goal_function_code > function_type.code
-Ref: experiment_candidate.target_routine_item_id > routine_item.id
-Ref: candidate_comparison.candidate_id > experiment_candidate.id
-Ref: candidate_ordering.user_id > app_user.id
-Ref: candidate_ordering.routine_version_id > routine_version.id
-Ref: candidate_ordering.explanation_ai_job_id > ai_job.id
-Ref: candidate_ordering_item.ordering_id > candidate_ordering.id [delete: cascade]
-Ref: candidate_ordering_item.comparison_id > candidate_comparison.id
-
-Ref: experiment.user_id > app_user.id
-Ref: experiment.candidate_id > experiment_candidate.id
-Ref: experiment.comparison_id > candidate_comparison.id
-Ref: experiment.ordering_id > candidate_ordering.id
-Ref: experiment.(ordering_id, comparison_id) > candidate_ordering_item.(ordering_id, comparison_id)
-Ref: experiment.baseline_routine_version_id > routine_version.id
-Ref: experiment.parent_experiment_id > experiment.id
-Ref: experiment_transition.experiment_id > experiment.id [delete: cascade]
-Ref: experiment_event.experiment_id > experiment.id [delete: cascade]
-Ref: experiment_event.product_version_id > product_version.id
-Ref: experiment_event.source_observation_id > observation.id
-Ref: observation_quest.experiment_id > experiment.id [delete: cascade]
-Ref: quest_schedule_change.quest_id > observation_quest.id [delete: cascade]
-Ref: observation.experiment_id > experiment.id [delete: cascade]
-Ref: observation.quest_id > observation_quest.id
-Ref: observation.structuring_ai_job_id > ai_job.id
-Ref: discomfort_detail.observation_id > observation.id [delete: cascade]
-
-Ref: rescue_case.experiment_id > experiment.id [delete: cascade]
-Ref: rescue_case.trigger_observation_id > observation.id
-Ref: rescue_case.baseline_routine_version_id > routine_version.id
-Ref: rescue_case.explanation_ai_job_id > ai_job.id
-Ref: rescue_item.rescue_case_id > rescue_case.id [delete: cascade]
-Ref: rescue_item.product_version_id > product_version.id
-Ref: experiment_result.experiment_id > experiment.id [delete: cascade]
-Ref: experiment_result.resulting_routine_version_id > routine_version.id
-
-Ref: lab_profile.user_id > app_user.id [delete: cascade]
-Ref: lab_profile.selected_character_code > lab_item_definition.code
-Ref: lab_profile.selected_theme_code > lab_item_definition.code
-Ref: lab_record.user_id > app_user.id [delete: cascade]
-Ref: lab_record.experiment_id > experiment.id [delete: cascade]
-Ref: lab_record.display_asset_code > lab_item_definition.code
-Ref: badge_definition.reward_item_code > lab_item_definition.code
-Ref: user_badge.user_id > app_user.id [delete: cascade]
-Ref: user_badge.(badge_code, rule_version) > badge_definition.(code, rule_version)
-Ref: user_badge.source_experiment_id > experiment.id
-Ref: user_lab_item.user_id > app_user.id [delete: cascade]
-Ref: user_lab_item.item_code > lab_item_definition.code
-Ref: user_lab_item.(source_badge_code, rule_version) > badge_definition.(code, rule_version)
-Ref: user_lab_item.source_experiment_id > experiment.id
-Ref: notification_delivery.quest_id > observation_quest.id [delete: cascade]
-Ref: notification_delivery.subscription_id > web_push_subscription.id [delete: cascade]
-
-TableGroup identity_and_privacy {
-  app_user
-  user_concern
-  web_push_subscription
-  privacy_deletion_job
-}
-
-TableGroup catalog {
-  brand
-  product
-  product_version
-  product_identifier
-  ingredient
-  ingredient_alias
-  product_ingredient
-  function_type
-  product_function
-}
-
-TableGroup ai_and_uploads {
-  upload_asset
-  ai_job
-  ingredient_extraction_item
-  purchase_extraction_item
-}
-
-TableGroup routine_and_discovery {
-  routine
-  routine_version
-  routine_item
-  recommendation_request
-  recommendation_pool_item
-  recommendation_candidate
-  experiment_candidate
-  candidate_comparison
-  candidate_ordering
-  candidate_ordering_item
-}
-
-TableGroup experiment_and_rescue {
-  experiment
-  experiment_transition
-  experiment_event
-  observation_quest
-  quest_schedule_change
-  observation
-  discomfort_detail
-  rescue_case
-  rescue_item
-  experiment_result
-}
-
-TableGroup lab_and_notifications {
-  lab_profile
-  lab_record
-  badge_definition
-  user_badge
-  lab_item_definition
-  user_lab_item
-  notification_delivery
+Table receipt_item {
+  id integer [pk, increment]
+  receipt_upload_id integer [not null, ref: > receipt_upload.id]
+  line_no integer [not null]
+  raw_text text [not null]
+  candidate_json text
+  confirmed_product_version_id integer [ref: > product_version.id]
+  created_user_product_id integer [ref: > user_product.id]
 }

@@ -4,5 +4,8 @@
     "MD024": {
       "siblings_only": true
     }
-  }
+  },
+  "ignores": [
+    "docs/product/prototype-product-definition.md"
+  ]
 }

@@ -1,11 +1,14 @@
-name: Deploy API documentation
+name: Deploy product pages
 
 on:
   push:
     branches:
       - main
     paths:
+      - prototype/index.html
+      - site/**
       - docs/api/openapi.yaml
+      - redocly.yaml
       - .github/workflows/api-docs.yml
   workflow_dispatch:
 
@@ -35,11 +38,13 @@ jobs:
       - name: Validate OpenAPI contract
         run: npx --yes @redocly/cli@2.43.3 lint docs/api/openapi.yaml
 
-      - name: Build static Redoc site
+      - name: Build Pages site
         run: |
-          mkdir -p _site
+          mkdir -p _site/prototype _site/api
+          cp -R site/. _site/
+          cp prototype/index.html _site/prototype/index.html
           npx --yes @redocly/cli@2.43.3 build-docs docs/api/openapi.yaml \
-            --output _site/index.html \
+            --output _site/api/index.html \
             --title "SkinCause MVP API"
 
       - name: Configure GitHub Pages

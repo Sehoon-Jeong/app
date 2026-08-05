@@ -1,4571 +1,711 @@
 openapi: 3.1.0
 info:
-  title: SkinCause MVP API
-  version: 1.0.0
-  summary: 안정 루틴을 기준으로 한 제품 추천·실험·관찰 API
+  title: SkinCause API
+  version: 3.0.0
   description: |
-    SkinCause P0·P1 웹과 Spring Boot 서버 사이의 계약이다.
-    서버의 버전이 있는 일반 규칙이 제품 자격·다음 실험 우선순위·루틴 차이·실험 상태와 Rescue 사실 분류를 결정한다.
-    AI는 목적·이미지·자유 입력 구조화, 빠진 정보 질문과 서버가 계산한 결과 설명을 맡으며 순위·제품 ID·Rescue 분류·권한·상태를 만들거나 바꾸지 않는다.
-    모든 개인 리소스는 JWT의 사용자 소유권을 확인한다. 다른 사용자의 리소스는 존재 여부를 감추기 위해 404로 응답한다.
-  contact:
-    name: SkinCause team
-    url: https://github.com/sksksksksksss/service
-  license:
-    name: Unlicensed
-    identifier: LicenseRef-Unlicensed
-jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+    제품 카탈로그, 내 화장품, 제품 의견·추천, 버전 루틴, 7일 결과와 AI Rescue 계약이다.
+    AI 결과는 제안이며 서버가 실제 제품·사용자 기록·상태 전이를 검증한다.
 servers:
   - url: /api/v1
-    description: 현재 호스트의 API
-tags:
-  - name: Auth
-    description: 이메일·비밀번호 인증과 30일 단일 access JWT 발급
-  - name: Profile
-    description: 내 프로필, 피부 고민과 계정 삭제
-  - name: Routines
-    description: 사용자가 확인하는 안정 루틴과 불변 버전
-  - name: Products
-    description: 카탈로그 검색과 개인 제품
-  - name: Imports
-    description: 전성분·구매 이미지와 AI 구조화 초안
-  - name: Recommendations
-    description: 현재 안정 루틴과 목적에 따른 실제 제품 후보
-  - name: Candidates
-    description: 추천·검색에서 보관한 실험 후보와 비교
-  - name: Experiments
-    description: 한 제품 실험 계획과 상태 전이
-  - name: Observations
-    description: 필요한 시점의 퀘스트와 실제 관찰
-  - name: Rescue
-    description: 불편 발생 시 변경점 복원과 규칙 기반 분류
-  - name: Archive
-    description: 원본 실험 이력과 개인 근거 조회
-  - name: Lab
-    description: 실험 완료에 연결된 진행도·연구 기록·보상
-  - name: Notifications
-    description: 선택적인 브라우저 푸시 구독
 security:
   - bearerAuth: []
+tags:
+  - { name: Auth, description: 계정과 세션 }
+  - { name: Profile, description: 온보딩과 AI 기억 }
+  - { name: Catalog, description: 국내 제품 카탈로그 }
+  - { name: MyProducts, description: 내 화장품과 찜 }
+  - { name: Receipts, description: 영수증 OCR 등록 }
+  - { name: Decisions, description: 제품 의견과 추천 }
+  - { name: Routines, description: 현재·안정 루틴과 버전 }
+  - { name: Assessments, description: 7일·조기 결과 }
+  - { name: Rescue, description: 불편 대화와 다음 루틴 }
+  - { name: Jobs, description: 비동기 AI 작업 }
+  - { name: Notifications, description: 앱 안 알림 }
+
 paths:
   /auth/sign-up:
     post:
-      security: []
       tags: [Auth]
-      summary: 이메일과 비밀번호로 가입
-      description: 계정을 만들고 바로 사용할 JWT를 발급한다. 이메일 존재 여부는 다른 인증 오류와 구분해 노출하지 않는다.
+      summary: 가입한다
       operationId: signUp
-      x-priority: P0
-      x-github-issue: 45
-      x-requirements: [FR-AUTH-001, NFR-SEC-001]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SignUpRequest'
-            examples:
-              default:
-                $ref: '#/components/examples/SignUpRequest'
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Credentials' } } } }
       responses:
-        '201':
-          description: 가입과 인증 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessToken'
-              examples:
-                default:
-                  $ref: '#/components/examples/AccessToken'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
+        '201': { description: 가입됨, content: { application/json: { schema: { $ref: '#/components/schemas/AuthSession' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
   /auth/login:
     post:
-      security: []
       tags: [Auth]
-      summary: 이메일과 비밀번호로 로그인
-      description: 자격 증명을 확인하고 JWT를 발급한다. 실패 응답은 이메일 존재 여부를 드러내지 않는다.
+      summary: 로그인한다
       operationId: login
-      x-priority: P0
-      x-github-issue: 45
-      x-requirements: [FR-AUTH-001, NFR-SEC-001]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-            examples:
-              default:
-                value:
-                  email: user@example.com
-                  password: correct-horse-battery-staple
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Credentials' } } } }
       responses:
-        '200':
-          description: 로그인 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccessToken'
-              examples:
-                default:
-                  $ref: '#/components/examples/AccessToken'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        '200': { description: 로그인됨, content: { application/json: { schema: { $ref: '#/components/schemas/AuthSession' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /me:
     get:
       tags: [Profile]
-      summary: 내 프로필 조회
-      description: JWT의 사용자 프로필과 초기 진입에 필요한 현재 안정 루틴·열린 실험 여부를 반환한다.
-      operationId: getMyProfile
-      x-priority: P0
-      x-github-issue: 45
-      x-requirements: [FR-AUTH-001, FR-AUTH-002, NFR-SEC-001]
+      summary: 내 계정과 온보딩 상태를 본다
+      operationId: getMe
       responses:
-        '200':
-          description: 내 프로필
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MyProfile'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        '200': { description: 내 계정, content: { application/json: { schema: { $ref: '#/components/schemas/Profile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     patch:
       tags: [Profile]
-      summary: 내 시간대 수정
-      description: 앞으로 생성할 퀘스트 표시와 계획 계산에 사용할 IANA 시간대를 바꾼다. 이미 확정된 절대 시각은 변경하지 않는다.
-      operationId: updateMyProfile
-      x-priority: P0
-      x-github-issue: 45
-      x-requirements: [FR-AUTH-002, FR-OBS-005, NFR-SEC-001]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateProfileRequest'
+      summary: 시간대와 온보딩 답을 고친다
+      operationId: updateMe
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProfileUpdate' } } } }
       responses:
-        '200':
-          description: 수정된 프로필
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MyProfile'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '423':
-          $ref: '#/components/responses/Locked'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
+        '200': { description: 수정됨, content: { application/json: { schema: { $ref: '#/components/schemas/Profile' } } } }
+        '422': { $ref: '#/components/responses/Validation' }
     delete:
       tags: [Profile]
-      summary: 계정과 SkinCause 기록 삭제 시작
-      description: 현재 사용자만 대상으로 쓰기를 잠그고 파일·알림·개인 도메인·인증 정보 삭제를 시작한다. 공용 카탈로그는 삭제하지 않는다.
-      operationId: deleteMyAccount
-      x-priority: P0
-      x-github-issue: 46
-      x-requirements: [FR-AUTH-003, NFR-PRV-003, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+      summary: 계정과 연결 데이터를 영구 삭제한다
+      operationId: deleteMe
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeleteAccountRequest'
+              type: object
+              required: [confirmation]
+              properties: { confirmation: { type: string, const: DELETE } }
       responses:
-        '202':
-          description: 삭제 작업 시작. 이 응답 뒤 현재 JWT는 사용할 수 없다.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeletionAccepted'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /me/concerns:
+        '202': { description: 삭제 시작, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /me/ai-memories:
     get:
       tags: [Profile]
-      summary: 내 피부 고민 조회
-      description: 사용자가 직접 고른 통제 코드와 잘 모르겠음 상태를 조회한다. 질환이나 피부 타입 판정 결과가 아니다.
-      operationId: getMyConcerns
-      x-priority: P0
-      x-github-issue: 7
-      x-requirements: [FR-REC-001, NFR-SEC-001]
+      summary: AI가 기억하는 자연어 맥락을 본다
+      operationId: listAiMemories
       responses:
-        '200':
-          description: 피부 고민 선택
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserConcerns'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-    put:
-      tags: [Profile]
-      summary: 내 피부 고민 저장
-      description: 선택한 고민 코드 또는 잘 모르겠음을 저장한다. 두 상태는 동시에 저장할 수 없다.
-      operationId: replaceMyConcerns
-      x-priority: P0
-      x-github-issue: 7
-      x-requirements: [FR-REC-001, NFR-SEC-001]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReplaceConcernsRequest'
-      responses:
-        '200':
-          description: 저장된 피부 고민
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserConcerns'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '423':
-          $ref: '#/components/responses/Locked'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /routines/current:
-    get:
-      tags: [Routines]
-      summary: 현재 안정 루틴과 초안 조회
-      description: 사용자가 직접 확정한 현재 안정 버전과 작성 중 초안을 함께 반환한다. 안정 버전이 없으면 null로 반환한다.
-      operationId: getCurrentRoutine
-      x-priority: P0
-      x-github-issue: 7
-      x-requirements: [FR-RTN-001, FR-RTN-002, FR-RTN-003, NFR-SEC-001]
-      responses:
-        '200':
-          description: 현재 루틴
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CurrentRoutine'
-              examples:
-                default:
-                  $ref: '#/components/examples/CurrentRoutine'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /routines/draft:
-    put:
-      tags: [Routines]
-      summary: 안정 루틴 초안 저장
-      description: 아침·저녁 제품과 순서를 초안으로 저장한다. 이 작업만으로 안정 루틴이 되거나 추천 기준으로 쓰이지 않는다.
-      operationId: saveRoutineDraft
-      x-priority: P0
-      x-github-issue: 7
-      x-requirements: [FR-RTN-001, FR-RTN-004, NFR-REL-001, NFR-SEC-001]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SaveRoutineDraftRequest'
-            examples:
-              default:
-                $ref: '#/components/examples/SaveRoutineDraftRequest'
-      responses:
-        '200':
-          description: 저장된 초안
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoutineVersion'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '423':
-          $ref: '#/components/responses/Locked'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /routines/draft/confirm:
+        '200': { description: 기억 목록, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AiMemory' } } } } }
     post:
-      tags: [Routines]
-      summary: 초안을 현재 안정 루틴으로 확정
-      description: 사용자의 명시적 확인을 기록하고 불변 루틴 버전을 현재 기준점으로 만든다. AI는 안정 여부를 판단하지 않는다.
-      operationId: confirmRoutineDraft
-      x-priority: P0
-      x-github-issue: 7
-      x-requirements: [FR-RTN-002, FR-RTN-003, FR-RTN-004, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConfirmRoutineRequest'
+      tags: [Profile]
+      summary: AI 기억을 직접 추가한다
+      operationId: createAiMemory
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AiMemoryWrite' } } } }
       responses:
-        '201':
-          description: 새로 확정된 안정 루틴 버전
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoutineVersion'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '423':
-          $ref: '#/components/responses/Locked'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /routine-versions/{routineVersionId}:
-    get:
-      tags: [Routines]
-      summary: 특정 루틴 버전 조회
-      description: 과거 실험·Rescue가 참조한 불변 루틴 버전을 조회한다. 다른 사용자의 버전은 404로 응답한다.
-      operationId: getRoutineVersion
-      x-priority: P0
-      x-github-issue: 7
-      x-requirements: [FR-RTN-003, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/RoutineVersionId'
+        '201': { description: 추가됨, content: { application/json: { schema: { $ref: '#/components/schemas/AiMemory' } } } }
+  /me/ai-memories/{memoryId}:
+    parameters: [ { $ref: '#/components/parameters/MemoryId' } ]
+    patch:
+      tags: [Profile]
+      summary: AI 기억을 고친다
+      operationId: updateAiMemory
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AiMemoryWrite' } } } }
       responses:
-        '200':
-          description: 루틴 버전
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoutineVersion'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '200': { description: 수정됨, content: { application/json: { schema: { $ref: '#/components/schemas/AiMemory' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Profile]
+      summary: AI 기억을 삭제한다
+      operationId: deleteAiMemory
+      responses:
+        '204': { description: 삭제됨 }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /products:
     get:
-      tags: [Products]
-      summary: 제품명·브랜드명으로 제품 검색
-      description: 공용 카탈로그와 현재 사용자의 개인 제품을 부분 일치 검색한다. 다른 사용자의 개인 제품은 절대 반환하지 않는다.
+      tags: [Catalog]
+      summary: 국내 제품 버전을 제목으로 검색한다
       operationId: searchProducts
-      x-priority: P0
-      x-github-issue: 154
-      x-requirements: [FR-PRD-001, FR-PRD-006, NFR-SEC-001]
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-            minLength: 1
-            maxLength: 100
-          description: 제품명 또는 브랜드명
-        - name: categoryCode
-          in: query
-          schema:
-            type: string
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
+        - { name: query, in: query, required: true, schema: { type: string, minLength: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 20, default: 10 } }
       responses:
-        '200':
-          description: 안정적으로 정렬된 제품 검색 결과
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductSearchPage'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /products/by-barcode/{barcode}:
+        '200': { description: 검색 결과, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProductSummary' } } } } }
+  /products/{productVersionId}:
     get:
-      tags: [Products]
-      summary: 바코드 정확 일치 제품 찾기
-      description: 운영 확인된 바코드와 정확히 일치하는 제품 하나만 반환한다. 유사값을 추측하지 않고, 미일치나 중복 데이터는 제품을 반환하지 않는다.
-      operationId: findProductByBarcode
-      x-priority: P1
-      x-github-issue: 49
-      x-requirements: [FR-PRD-004, FR-PRD-006, NFR-REL-001]
-      parameters:
-        - name: barcode
-          in: path
-          required: true
-          schema:
-            type: string
-            minLength: 6
-            maxLength: 32
+      tags: [Catalog]
+      summary: 제품 버전과 확인된 사실을 본다
+      operationId: getProduct
+      parameters: [ { $ref: '#/components/parameters/ProductVersionId' } ]
       responses:
-        '200':
-          description: 정확히 일치하는 제품
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductVersionSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-  /product-versions/{productVersionId}:
+        '200': { description: 제품 상세, content: { application/json: { schema: { $ref: '#/components/schemas/ProductDetail' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /products/{productVersionId}/similar:
     get:
-      tags: [Products]
-      summary: 제품 버전 상세 조회
-      description: 당시 이름·종류·성분·기능·출처와 확인 상태를 조회한다. 개인 제품은 소유자만 볼 수 있다.
-      operationId: getProductVersion
-      x-priority: P0
-      x-github-issue: 33
-      x-requirements: [FR-PRD-006, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ProductVersionId'
+      tags: [Catalog]
+      summary: 비슷한 제품을 최대 5개 본다
+      operationId: listSimilarProducts
+      parameters: [ { $ref: '#/components/parameters/ProductVersionId' } ]
       responses:
-        '200':
-          description: 제품 버전 상세
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductVersionDetail'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /personal-products:
+        '200': { description: 비슷한 제품, content: { application/json: { schema: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/SimilarProduct' } } } } }
+  /catalog-review-requests:
     post:
-      tags: [Products]
-      summary: 개인 제품 초안 만들기
-      description: 카탈로그에 없는 제품을 본인 전용 초안으로 만든다. 운영 확인 전 공용 검색과 자동 추천에는 쓰지 않는다.
-      operationId: createPersonalProduct
-      x-priority: P1
-      x-github-issue: 10
-      x-requirements: [FR-PRD-002, FR-PRD-006, NFR-REL-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+      tags: [Catalog]
+      summary: 검색되지 않거나 버전이 불확실한 제품 검수를 요청한다
+      operationId: requestCatalogReview
       requestBody:
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreatePersonalProductRequest'
+        content: { application/json: { schema: { type: object, required: [query], properties: { query: { type: string }, purchaseDate: { type: string, format: date }, volumeOption: { type: string }, packageImageObjectKey: { type: string } } } } }
       responses:
-        '201':
-          description: 생성된 개인 제품과 첫 버전
+        '202':
+          description: 접수됨
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PersonalProduct'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '423':
-          $ref: '#/components/responses/Locked'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /personal-products/{productId}:
-    patch:
-      tags: [Products]
-      summary: 개인 제품 초안 정보 수정
-      description: 소유한 개인 제품에 새 제품 버전을 만들고 최신 포인터를 갱신한다. 과거 루틴과 실험이 참조한 버전은 바꾸지 않는다.
-      operationId: updatePersonalProduct
-      x-priority: P1
-      x-github-issue: 10
-      x-requirements: [FR-PRD-002, FR-PRD-006, NFR-REL-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ProductId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdatePersonalProductRequest'
+                type: object
+                required: [requestId, status]
+                properties:
+                  requestId: { type: integer }
+                  status: { type: string, const: RECEIVED }
+
+  /me/products:
+    get:
+      tags: [MyProducts]
+      summary: 미사용·현재 루틴·안정 루틴 기준 내 화장품을 본다
+      operationId: listMyProducts
       responses:
-        '200':
-          description: 새로 생성된 제품 버전
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PersonalProduct'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '423':
-          $ref: '#/components/responses/Locked'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /uploads:
+        '200': { description: 내 화장품, content: { application/json: { schema: { $ref: '#/components/schemas/MyProductGroups' } } } }
     post:
-      tags: [Imports]
-      summary: 비공개 이미지 업로드 준비
-      description: 전성분 또는 구매 이미지용 비공개 OCI 객체와 1회성 업로드 정보를 만든다. 객체는 공개 URL이 아니며 7일 안에 삭제된다.
-      operationId: preparePrivateUpload
-      x-priority: P1
-      x-github-issue: 10
-      x-requirements: [FR-PRD-003, FR-PRD-005, NFR-PRV-002, NFR-REL-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+      tags: [MyProducts]
+      summary: 제품을 미사용 화장품으로 추가한다
+      operationId: createMyProduct
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody:
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PrepareUploadRequest'
+        content: { application/json: { schema: { type: object, properties: { productVersionId: { type: integer }, enteredName: { type: string } }, anyOf: [ { required: [productVersionId] }, { required: [enteredName] } ] } } }
       responses:
-        '201':
-          description: 업로드할 비공개 객체 정보
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PreparedUpload'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '423':
-          $ref: '#/components/responses/Locked'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /uploads/{uploadAssetId}:
+        '201': { description: 추가됨, content: { application/json: { schema: { $ref: '#/components/schemas/MyProduct' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /me/products/{myProductId}:
+    parameters: [ { $ref: '#/components/parameters/MyProductId' } ]
+    get:
+      tags: [MyProducts]
+      summary: 제품별 정보·메모·연결 루틴을 본다
+      operationId: getMyProduct
+      responses:
+        '200': { description: 내 제품 상세, content: { application/json: { schema: { $ref: '#/components/schemas/MyProductDetail' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
     delete:
-      tags: [Imports]
-      summary: 업로드한 원본 이미지 삭제 요청
-      description: 소유한 비공개 객체를 삭제 예약한다. 이미 삭제됐거나 같은 요청을 반복해도 최종 상태는 같다.
-      operationId: deleteUploadAsset
-      x-priority: P1
-      x-github-issue: 10
-      x-requirements: [FR-PRD-003, FR-PRD-005, NFR-PRV-002, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/UploadAssetId'
+      tags: [MyProducts]
+      summary: 내 화장품에서 제품을 삭제한다
+      operationId: deleteMyProduct
       responses:
-        '202':
-          description: 삭제 예약 완료
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /personal-products/{productId}/ingredient-extractions:
-    post:
-      tags: [Imports]
-      summary: 전성분 이미지 구조화 시작
-      description: 사용자가 이 이미지의 AI 처리를 명시적으로 요청한 경우에만 전성분 이미지 최소 원문을 전송해 구조화 초안을 만든다. 이메일·사용자 ID·JWT·프로필·다른 실험은 전송하지 않는다. AI는 원문과 정규화 후보만 제안하며 확인되지 않은 성분 ID를 확정하지 않는다.
-      operationId: startIngredientExtraction
-      x-priority: P1
-      x-github-issue: 10
-      x-requirements: [FR-PRD-003, FR-PRD-006, NFR-AI-001, NFR-AI-002, NFR-PRV-001, NFR-PERF-002, NFR-REL-001]
-      parameters:
-        - $ref: '#/components/parameters/ProductId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StartExtractionRequest'
+        '204': { description: 삭제됨 }
+        '409': { description: 현재 루틴에 있어 먼저 루틴 편집 필요, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+  /me/products/{myProductId}/memo:
+    put:
+      tags: [MyProducts]
+      summary: 제품 메모를 저장한다
+      operationId: putProductMemo
+      parameters: [ { $ref: '#/components/parameters/MyProductId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string, maxLength: 1000 } } } } } }
       responses:
-        '202':
-          description: 구조화 작업 시작
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AiJobAccepted'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /ai-jobs/{aiJobId}:
+        '200': { description: 저장됨, content: { application/json: { schema: { type: object, required: [text, updatedAt], properties: { text: { type: string }, updatedAt: { type: string, format: date-time } } } } } }
+  /me/wishlist:
     get:
-      tags: [Imports]
-      summary: AI 구조화 작업 상태 조회
-      description: 작업 상태와 비민감 실패 코드를 반환한다. 30초를 넘긴 작업은 TIMED_OUT이며 직접 입력 또는 재시도 경로를 사용한다.
-      operationId: getAiJob
-      x-priority: P1
-      x-github-issue: 34
-      x-requirements: [NFR-AI-001, NFR-AI-002, NFR-PERF-002, NFR-REL-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/AiJobId'
+      tags: [MyProducts]
+      summary: 찜한 제품을 본다
+      operationId: listWishlist
       responses:
-        '200':
-          description: AI 작업 상태
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AiJob'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /ingredient-extractions/{aiJobId}:
+        '200': { description: 찜 목록, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProductSummary' } } } } }
+    post:
+      tags: [MyProducts]
+      summary: 제품을 찜한다
+      operationId: addWishlist
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [productVersionId], properties: { productVersionId: { type: integer } } } } } }
+      responses:
+        '201': { description: 찜함 }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /receipts:
+    post:
+      tags: [Receipts]
+      summary: 영수증 원본을 올리고 OCR을 시작한다
+      operationId: createReceipt
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties: { image: { type: string, format: binary } }
+      responses:
+        '202': { description: OCR 시작, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/JobAccepted' }, { type: object, required: [receiptId], properties: { receiptId: { type: integer } } } ] } } } }
+  /receipts/{receiptId}:
     get:
-      tags: [Imports]
-      summary: 전성분 구조화 초안 조회
-      description: 이미지의 원문 행, 정규화 후보와 사용자 검토 상태를 반환한다. PENDING 항목은 비교·추천의 확정 근거가 아니다.
-      operationId: getIngredientExtraction
-      x-priority: P1
-      x-github-issue: 10
-      x-requirements: [FR-PRD-003, FR-PRD-006, NFR-AI-002, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/AiJobId'
+      tags: [Receipts]
+      summary: OCR 후보와 확인 상태를 본다
+      operationId: getReceipt
+      parameters: [ { $ref: '#/components/parameters/ReceiptId' } ]
       responses:
-        '200':
-          description: 전성분 구조화 초안
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IngredientExtraction'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-  /ingredient-extractions/{aiJobId}/confirm:
+        '200': { description: OCR 결과, content: { application/json: { schema: { $ref: '#/components/schemas/Receipt' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /receipts/{receiptId}/confirm:
     post:
-      tags: [Imports]
-      summary: 검토한 전성분 확정
-      description: 사용자가 항목별로 수락·수정·제외한 결과를 새 개인 제품 버전에 반영하고 원본 이미지 삭제를 예약한다.
-      operationId: confirmIngredientExtraction
-      x-priority: P1
-      x-github-issue: 10
-      x-requirements: [FR-PRD-003, FR-PRD-006, NFR-AI-002, NFR-PRV-002, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/AiJobId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConfirmIngredientExtractionRequest'
+      tags: [Receipts]
+      summary: 확인한 영수증 제품을 모두 미사용 화장품으로 넣는다
+      operationId: confirmReceipt
+      parameters: [ { $ref: '#/components/parameters/ReceiptId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { type: object, required: [receiptItemId, include], properties: { receiptItemId: { type: integer }, include: { type: boolean }, productVersionId: { type: integer } } } } } } } } }
       responses:
-        '201':
-          description: 사용자 확인 성분을 가진 새 제품 버전
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PersonalProduct'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /purchase-extractions:
+        '201': { description: 등록됨, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/MyProduct' } } } } }
+
+  /product-opinions:
     post:
-      tags: [Imports]
-      summary: 구매 내역 이미지 구조화 시작
-      description: 사용자가 이 이미지의 AI 처리를 명시적으로 요청한 경우에만 구매 이미지에서 브랜드·제품명 최소 원문 후보를 구조화한다. 이메일·사용자 ID·JWT·프로필·다른 실험과 금액·주소·주문번호는 전송·저장하지 않으며 제품 ID 연결은 서버 검색과 사용자 확인으로만 이뤄진다.
-      operationId: startPurchaseExtraction
-      x-priority: P1
-      x-github-issue: 50
-      x-requirements: [FR-PRD-005, FR-PRD-006, NFR-AI-001, NFR-AI-002, NFR-PRV-001, NFR-PERF-002, NFR-REL-001]
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StartExtractionRequest'
+      tags: [Decisions]
+      summary: 한 제품의 구매 의견 조사를 시작한다
+      operationId: createProductOpinion
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [productVersionId], properties: { productVersionId: { type: integer }, goalText: { type: string }, includeMemo: { type: boolean, default: false } } } } } }
       responses:
-        '202':
-          description: 구조화 작업 시작
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AiJobAccepted'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /purchase-extractions/{aiJobId}:
+        '202': { description: 조사 시작, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+  /product-opinions/{opinionId}:
     get:
-      tags: [Imports]
-      summary: 구매 내역 제품명 초안 조회
-      description: AI가 읽은 최소 원문과 서버가 정확 검색한 카탈로그 후보를 분리해 반환한다. AI 출력 자체에는 제품 ID 결정 권한이 없다.
-      operationId: getPurchaseExtraction
-      x-priority: P1
-      x-github-issue: 50
-      x-requirements: [FR-PRD-005, FR-PRD-006, NFR-AI-002, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/AiJobId'
+      tags: [Decisions]
+      summary: 제품 의견과 근거를 본다
+      operationId: getProductOpinion
+      parameters: [ { name: opinionId, in: path, required: true, schema: { type: integer } } ]
       responses:
-        '200':
-          description: 구매 제품명 구조화 초안
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PurchaseExtraction'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-  /purchase-extractions/{aiJobId}/confirm:
-    post:
-      tags: [Imports]
-      summary: 선택한 구매 제품 확정
-      description: 사용자가 선택한 항목만 기존 카탈로그 제품 또는 개인 제품 초안으로 확정한다. 자동으로 루틴이나 후보에 추가하지 않는다.
-      operationId: confirmPurchaseExtraction
-      x-priority: P1
-      x-github-issue: 50
-      x-requirements: [FR-PRD-005, FR-PRD-006, NFR-PRV-002, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/AiJobId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConfirmPurchaseExtractionRequest'
-      responses:
-        '201':
-          description: 사용자가 확인한 제품 목록
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConfirmedPurchaseProducts'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
+        '200': { description: 제품 의견, content: { application/json: { schema: { $ref: '#/components/schemas/ProductOpinion' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
   /recommendations:
     post:
-      tags: [Recommendations]
-      summary: 현재 루틴에 맞는 다음 실험 제품 추천
-      description: |
-        서버가 운영 확인 카탈로그에서 목적 관련성, 목적과 무관한 중복·변수 수, 정보 확인, 개인 경험·기록 완성도와 안정 정렬을 차례로 적용한다.
-        AI는 사용 목적을 구조화하고 서버가 계산한 실제 후보·우선순위·근거를 설명한다. AI가 실패하거나 사용자가 원하지 않아도 같은 순위와 고정 설명을 반환한다.
-        카탈로그 밖 제품을 만들거나 현재 루틴의 기능이 충분하다고 판정하거나 피부 적합성을 보장하지 않는다.
+      tags: [Decisions]
+      summary: 자연어 조건으로 제품 추천 조사를 시작한다
       operationId: createRecommendation
-      x-priority: P0
-      x-github-issue: 8
-      x-requirements: [FR-REC-001, FR-REC-002, FR-REC-003, FR-REC-005, FR-REC-006, FR-REC-007, NFR-AI-002, NFR-PRV-001, NFR-SAF-001, NFR-SAF-002]
-      parameters:
-        - $ref: '#/components/parameters/OptionalIdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateRecommendationRequest'
-            examples:
-              moisturizer:
-                $ref: '#/components/examples/CreateRecommendationRequest'
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [requestText], properties: { requestText: { type: string, minLength: 2 }, confirmedContext: { type: array, items: { type: string } } } } } } }
       responses:
-        '201':
-          description: 최대 3개의 실제 제품 후보. 적격 후보가 없으면 candidates가 빈 배열이고 emptyReason이 있다.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Recommendation'
-              examples:
-                default:
-                  $ref: '#/components/examples/Recommendation'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
+        '202': { description: 조사 또는 추가 질문 시작, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
   /recommendations/{recommendationId}:
     get:
-      tags: [Recommendations]
-      summary: 당시 추천과 근거 다시 조회
-      description: 요청 당시 안정 루틴, 정책·AI 설명 버전, 실제 후보·순위와 근거 스냅샷을 그대로 반환한다.
+      tags: [Decisions]
+      summary: 추가 질문 또는 최대 5개 추천 결과를 본다
       operationId: getRecommendation
-      x-priority: P0
-      x-github-issue: 8
-      x-requirements: [FR-REC-002, FR-REC-003, FR-REC-005, FR-REC-006, FR-REC-007, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/RecommendationId'
+      parameters: [ { name: recommendationId, in: path, required: true, schema: { type: integer } } ]
       responses:
-        '200':
-          description: 추천 결과
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Recommendation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /experiment-candidates:
+        '200': { description: 추천, content: { application/json: { schema: { $ref: '#/components/schemas/Recommendation' } } } }
+  /conversations/{conversationId}/messages:
+    post:
+      tags: [Decisions]
+      summary: 제품 의견·추천의 후속 질문을 이어간다
+      operationId: createConversationMessage
+      parameters: [ { name: conversationId, in: path, required: true, schema: { type: integer } }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string }, remember: { type: boolean, default: false } } } } } }
+      responses:
+        '202': { description: 답변 생성 중, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+
+  /me/routines/current:
     get:
-      tags: [Candidates]
-      summary: 저장한 실험 후보 목록 조회
-      description: 추천·검색·직접 등록 후보를 같은 목록으로 반환하며 기준 루틴이 바뀐 후보는 STALE로 구분한다.
-      operationId: listExperimentCandidates
-      x-priority: P0
-      x-github-issue: 9
-      x-requirements: [FR-REC-004, NFR-SEC-001]
-      parameters:
-        - name: status
-          in: query
-          schema:
-            $ref: '#/components/schemas/CandidateStatus'
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
+      tags: [Routines]
+      summary: 현재 루틴과 7일 상태를 본다
+      operationId: getCurrentRoutine
       responses:
-        '200':
-          description: 저장 후보 페이지
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentCandidatePage'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        '200': { description: 현재 루틴, content: { application/json: { schema: { $ref: '#/components/schemas/Routine' } } } }
+        '404': { description: 아직 루틴 없음, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+  /me/routines:
     post:
-      tags: [Candidates]
-      summary: 제품을 실험 후보로 저장
-      description: 추천 후보 또는 사용자가 직접 찾은 제품을 현재 안정 루틴·목적·추가/교체 의도와 함께 저장한다.
-      operationId: saveExperimentCandidate
-      x-priority: P0
-      x-github-issue: 9
-      x-requirements: [FR-REC-004, FR-CMP-003, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/OptionalIdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SaveExperimentCandidateRequest'
+      tags: [Routines]
+      summary: 새 현재 루틴 버전과 7일 일정을 만든다
+      operationId: createRoutine
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RoutineWrite' } } } }
       responses:
-        '201':
-          description: 저장한 실험 후보
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentCandidate'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '423':
-          $ref: '#/components/responses/Locked'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /experiment-candidates/{candidateId}:
+        '202': { description: 루틴 저장·AI 분석 시작, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/JobAccepted' }, { type: object, required: [routineId], properties: { routineId: { type: integer } } } ] } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /me/routines/history:
     get:
-      tags: [Candidates]
-      summary: 실험 후보 상세 조회
-      description: 저장 당시 제품·안정 루틴·목적·변경 의도와 추천 출처를 복원한다.
-      operationId: getExperimentCandidate
-      x-priority: P0
-      x-github-issue: 9
-      x-requirements: [FR-REC-004, FR-CMP-003, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/CandidateId'
+      tags: [Routines]
+      summary: 루틴 버전 이력을 본다
+      operationId: listRoutineHistory
       responses:
-        '200':
-          description: 실험 후보 상세
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentCandidate'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /experiment-candidates/{candidateId}/archive:
-    post:
-      tags: [Candidates]
-      summary: 미시작 후보 보관 처리
-      description: 후보를 ARCHIVED로 바꾸되 이 후보에서 이미 시작한 과거 실험과 비교 이력은 삭제하지 않는다.
-      operationId: archiveExperimentCandidate
-      x-priority: P0
-      x-github-issue: 9
-      x-requirements: [FR-REC-004, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/CandidateId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      responses:
-        '200':
-          description: 보관된 후보
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentCandidate'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-  /experiment-candidates/{candidateId}/comparisons:
-    post:
-      tags: [Candidates]
-      summary: 후보와 안정 루틴 차이 계산
-      description: 안정 루틴 원본을 바꾸지 않고 추가·제거·유지 제품과 새로 생김·중복·사라짐 기능을 서버 규칙으로 계산한다. AI는 계산된 ID나 코드를 바꿀 수 없다.
-      operationId: compareExperimentCandidate
-      x-priority: P0
-      x-github-issue: 13
-      x-requirements: [FR-CMP-001, FR-CMP-002, FR-CMP-003, FR-ARC-004, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/CandidateId'
-        - $ref: '#/components/parameters/OptionalIdempotencyKey'
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateComparisonRequest'
-      responses:
-        '201':
-          description: 새 비교 버전
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CandidateComparison'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /experiment-candidate-rankings:
-    post:
-      tags: [Candidates]
-      summary: 저장한 후보의 시험 순서 계산
-      description: 추천과 같은 서버 결정표로 저장 후보를 정렬하고 하나의 다음 실험 우선순위와 이유를 반환한다. AI 설명은 순서와 제품 ID를 바꿀 수 없다.
-      operationId: rankExperimentCandidates
-      x-priority: P0
-      x-github-issue: 14
-      x-requirements: [FR-EXP-001, FR-REC-005, FR-REC-006, NFR-AI-002, NFR-SAF-001]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RankCandidatesRequest'
-      responses:
-        '200':
-          description: 먼저 시험할 순서와 근거
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CandidateRanking'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /experiments:
-    post:
-      tags: [Experiments]
-      summary: 후보 하나로 실험 계획 확정
-      description: 후보·비교·기준 루틴을 고정하고 7~28일 계획과 FIRST_USE 퀘스트를 한 트랜잭션으로 만든다. 열린 실험은 사용자당 하나뿐이다.
-      operationId: createExperimentPlan
-      x-priority: P0
-      x-github-issue: 15
-      x-requirements: [FR-EXP-002, FR-EXP-003, FR-OBS-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateExperimentRequest'
-            examples:
-              default:
-                $ref: '#/components/examples/CreateExperimentRequest'
-      responses:
-        '201':
-          description: PLANNED 실험과 초기 퀘스트
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '423':
-          $ref: '#/components/responses/Locked'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /experiments/current:
+        '200': { description: 루틴 이력, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/RoutineSummary' } } } } }
+  /me/routines/{routineId}:
     get:
-      tags: [Experiments]
-      summary: 현재 열린 실험 조회
-      description: PLANNED·ACTIVE·PAUSED 중 현재 사용자의 유일한 실험을 반환한다. 없으면 204로 응답한다.
-      operationId: getCurrentExperiment
-      x-priority: P0
-      x-github-issue: 15
-      x-requirements: [FR-EXP-002, FR-EXP-003, FR-LAB-001, NFR-SEC-001]
+      tags: [Routines]
+      summary: 과거 루틴 버전과 결과를 본다
+      operationId: getRoutine
+      parameters: [ { $ref: '#/components/parameters/RoutineId' } ]
       responses:
-        '200':
-          description: 현재 열린 실험
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentDetail'
-        '204':
-          description: 열린 실험 없음
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /experiments/{experimentId}:
+        '200': { description: 루틴 상세, content: { application/json: { schema: { $ref: '#/components/schemas/Routine' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /me/routines/compare:
     get:
-      tags: [Experiments]
-      summary: 실험 상세 조회
-      description: 고정된 기준 루틴·후보·비교, 계획과 실제 상태 이력, 진행도와 결과를 조회한다.
-      operationId: getExperiment
-      x-priority: P0
-      x-github-issue: 15
-      x-requirements: [FR-EXP-003, FR-EXP-004, FR-LAB-001, NFR-SEC-001]
+      tags: [Routines]
+      summary: 두 루틴 버전의 제품·순서·빈도를 비교한다
+      operationId: compareRoutines
       parameters:
-        - $ref: '#/components/parameters/ExperimentId'
+        - { name: from, in: query, required: true, schema: { type: integer } }
+        - { name: to, in: query, required: true, schema: { type: integer } }
       responses:
-        '200':
-          description: 실험 상세
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentDetail'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    patch:
-      tags: [Experiments]
-      summary: 시작 전 실험 계획 수정
-      description: PLANNED 상태에서 제품을 제외한 날짜·시간대·순서·관찰 항목을 수정한다. 첫 사용 뒤 기준 루틴과 제품은 바꿀 수 없다.
-      operationId: updateExperimentPlan
-      x-priority: P0
-      x-github-issue: 15
-      x-requirements: [FR-EXP-003, FR-EXP-004, FR-OBS-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateExperimentPlanRequest'
-      responses:
-        '200':
-          description: 수정된 계획
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /experiments/{experimentId}/pause:
+        '200': { description: 변경 목록, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/RoutineChange' } } } } }
+  /routine-order-proposals:
     post:
-      tags: [Experiments]
-      summary: 실험 일시 보류
-      description: ACTIVE 실험을 PAUSED로 전환하고 이유와 시각을 남긴다. 피부 불편 사유는 같은 실험 재개 대상이 아니며 최종 결과 뒤 재시험을 만든다.
-      operationId: pauseExperiment
-      x-priority: P0
-      x-github-issue: 15
-      x-requirements: [FR-EXP-004, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PauseExperimentRequest'
+      tags: [Routines]
+      summary: 편집 중인 루틴의 AI 순서·빈도 제안을 시작한다
+      operationId: createRoutineOrderProposal
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RoutineWrite' } } } }
       responses:
-        '200':
-          description: PAUSED 실험
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-  /experiments/{experimentId}/resume:
-    post:
-      tags: [Experiments]
-      summary: 일반 사유로 보류한 실험 재개
-      description: 여행·제품 분실 같은 피부 불편 외 사유만 같은 실험으로 재개하고 미완료 퀘스트를 보류 기간만큼 이동한다.
-      operationId: resumeExperiment
-      x-priority: P0
-      x-github-issue: 15
-      x-requirements: [FR-EXP-004, FR-OBS-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      responses:
-        '200':
-          description: ACTIVE 실험과 이동한 퀘스트
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentDetail'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-  /experiments/{experimentId}/cancel:
-    post:
-      tags: [Experiments]
-      summary: 실험 취소
-      description: PLANNED·ACTIVE·PAUSED 실험을 CANCELLED로 전환하고 이유를 남긴다. 취소 이력은 Archive에 남지만 LAB 완료 기록은 만들지 않는다.
-      operationId: cancelExperiment
-      x-priority: P0
-      x-github-issue: 15
-      x-requirements: [FR-EXP-004, FR-ARC-003, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CancelExperimentRequest'
-      responses:
-        '200':
-          description: CANCELLED 실험
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-  /experiments/{experimentId}/retrials:
-    post:
-      tags: [Experiments]
-      summary: 보류·재시험 결정에서 새 재시험 계획 생성
-      description: 사용자가 현재 안정 상태를 직접 확인하면 원본을 덮지 않고 현재 안정 루틴으로 다시 비교한 연결 실험을 만든다. 열린 실험이 있으면 거부한다.
-      operationId: createRetrialExperiment
-      x-priority: P1
-      x-github-issue: 28
-      x-requirements: [FR-EXP-005, FR-ARC-003, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateRetrialRequest'
-      responses:
-        '201':
-          description: 원본에 연결된 새 PLANNED 실험
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /quests:
+        '202': { description: 제안 생성 중, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+
+  /me/routines/{routineId}/assessment:
     get:
-      tags: [Observations]
-      summary: 내 관찰 퀘스트 조회
-      description: 사용자 현지 날짜를 기준으로 예정·오늘·놓침·완료·중지 상태를 계산해 반환한다. 외부 알림이 없어도 이 목록이 원본이다.
-      operationId: listMyObservationQuests
-      x-priority: P0
-      x-github-issue: 18
-      x-requirements: [FR-OBS-005, NFR-SEC-001]
-      parameters:
-        - name: view
-          in: query
-          schema:
-            type: string
-            enum: [ALL, TODAY, UPCOMING, MISSED, COMPLETED]
-            default: TODAY
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
+      tags: [Assessments]
+      summary: 7일 결과 질문 상태를 본다
+      operationId: getRoutineAssessment
+      parameters: [ { $ref: '#/components/parameters/RoutineId' } ]
       responses:
-        '200':
-          description: 퀘스트 페이지
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QuestPage'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /experiments/{experimentId}/quests:
-    get:
-      tags: [Observations]
-      summary: 실험의 관찰 퀘스트와 진행도 조회
-      description: 필수 퀘스트 4종, 상태, 예정 시각과 완료 수/전체 수를 반환한다. 선택 관찰은 필수 진행도에 넣지 않는다.
-      operationId: listExperimentQuests
-      x-priority: P0
-      x-github-issue: 17
-      x-requirements: [FR-OBS-001, FR-OBS-005, FR-LAB-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
-      responses:
-        '200':
-          description: 실험 퀘스트와 진행도
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentQuests'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /quests/{questId}/observations:
+        '200': { description: 결과 질문 상태, content: { application/json: { schema: { $ref: '#/components/schemas/Assessment' } } } }
     post:
-      tags: [Observations]
-      summary: 예정 퀘스트에 관찰 기록
-      description: 퀘스트 하나에 관찰 하나를 저장한다. FIRST_USE이면 ACTIVE 전환과 실제 일정을 확정한다. FIRST_USE·MID_CHECK·FINAL_CHECK에는 실제 사용 횟수와 다른 화장품 변경 여부를 함께 받고, 변경이 있으면 사건으로 남긴다. 불편함이면 Rescue를 만들며 메모 AI 처리는 작업별 동의가 있을 때만 실행한다.
-      operationId: answerObservationQuest
-      x-priority: P0
-      x-github-issue: 17
-      x-requirements: [FR-OBS-001, FR-OBS-002, FR-OBS-004, FR-OBS-007, FR-RSC-001, FR-LAB-001, NFR-PRV-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/QuestId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubmitObservationRequest'
-            examples:
-              noChange:
-                $ref: '#/components/examples/SubmitObservationRequest'
-              discomfort:
-                $ref: '#/components/examples/SubmitDiscomfortObservationRequest'
+      tags: [Assessments]
+      summary: 7일 또는 조기 결과를 남긴다
+      operationId: createRoutineAssessment
+      parameters: [ { $ref: '#/components/parameters/RoutineId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AssessmentWrite' } } } }
       responses:
-        '201':
-          description: 저장된 관찰과 선택적으로 생성된 Rescue
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ObservationReceipt'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /quests/{questId}/skip:
+        '201': { description: 저장됨, content: { application/json: { schema: { $ref: '#/components/schemas/Assessment' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /rescues:
     post:
-      tags: [Observations]
-      summary: 기억나지 않는 퀘스트 건너뛰기
-      description: 이유를 남기고 SKIPPED로 바꾼다. 건너뜀은 완료나 LAB 보상으로 계산하지 않는다.
-      operationId: skipObservationQuest
-      x-priority: P0
-      x-github-issue: 18
-      x-requirements: [FR-OBS-005, FR-LAB-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/QuestId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SkipQuestRequest'
+      tags: [Rescue]
+      summary: 현재 기록을 연결해 Rescue 대화를 시작한다
+      operationId: createRescue
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [message], properties: { message: { type: string, minLength: 1 }, routineId: { type: integer } } } } } }
       responses:
-        '200':
-          description: 건너뛴 퀘스트
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ObservationQuest'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-  /experiments/{experimentId}/observations:
-    post:
-      tags: [Observations]
-      summary: 예정 밖 변화·중단·재사용 관찰 기록
-      description: 진행·보류 실험에는 CHANGE·STOP·RESTART, 완료 실험에는 FOLLOW_UP 관찰을 남긴다. 완료 후 불편도 Rescue와 안전 안내에 연결할 수 있지만 기존 결과·완료 상태는 바꾸지 않는다. 메모 AI 처리는 작업별 동의가 있을 때만 수행한다.
-      operationId: createAdHocObservation
-      x-priority: P0
-      x-github-issue: 22
-      x-requirements: [FR-OBS-003, FR-OBS-004, FR-OBS-008, FR-RSC-001, FR-RSC-005, NFR-PRV-001, NFR-SAF-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAdHocObservationRequest'
-      responses:
-        '201':
-          description: 저장된 관찰과 선택적으로 생성된 Rescue
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ObservationReceipt'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /observations/{observationId}:
-    patch:
-      tags: [Observations]
-      summary: 관찰 내용 수정
-      description: 같은 관찰의 사용자 입력을 수정하고 수정 시각을 남긴다. 퀘스트 보상과 Rescue 식별자는 중복 생성하지 않으며 분류에 영향을 주면 서버 규칙으로 다시 계산한다. 수정 메모도 별도 요청·동의 없이는 AI로 전송하지 않는다.
-      operationId: updateObservation
-      x-priority: P0
-      x-github-issue: 17
-      x-requirements: [FR-OBS-002, FR-OBS-004, FR-RSC-001, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ObservationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateObservationRequest'
-      responses:
-        '200':
-          description: 수정된 관찰
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ObservationReceipt'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /experiments/{experimentId}/events:
-    post:
-      tags: [Observations]
-      summary: 계획 밖 제품 변경이나 사용 방식 이탈 기록
-      description: 다른 화장품 동시 변경, 계획과 다른 시간대·순서, 중단·재사용 시점을 구조화해 남긴다. 이 사실은 Rescue의 확신을 낮출 수 있지만 원인을 판정하지 않는다.
-      operationId: createExperimentEvent
-      x-priority: P0
-      x-github-issue: 23
-      x-requirements: [FR-OBS-003, FR-RSC-001, FR-RSC-004, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateExperimentEventRequest'
-      responses:
-        '201':
-          description: 저장된 실험 사건
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentEvent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /rescue-cases/{rescueCaseId}:
+        '201': { description: 대화 시작, content: { application/json: { schema: { $ref: '#/components/schemas/Rescue' } } } }
+  /rescues/{rescueId}:
     get:
       tags: [Rescue]
-      summary: Rescue 변경 사실과 확인 순서 조회
-      description: |
-        당시 안정 루틴과 실제 변경 이력을 복원해 최근 추가·교체, 함께 변경, 변경 기록 없음, 정보 부족으로 사실을 분류한다.
-        어떤 분류도 원인 확률·안전성·계속 사용 권고가 아니다. 안전 우선이면 일반 제품별 행동 제안을 중단하고 안내 확인 뒤 변경 이력만 반환한다.
-        AI는 계산된 사실과 부족 정보를 설명할 뿐 값을 바꾸지 않으며 실패 시 고정 템플릿을 사용한다.
-      operationId: getRescueCase
-      x-priority: P0
-      x-github-issue: 24
-      x-requirements: [FR-RSC-001, FR-RSC-002, FR-RSC-003, FR-RSC-004, FR-RSC-005, NFR-SAF-001, NFR-SAF-002, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/RescueCaseId'
+      summary: 전체 Rescue 대화와 현재 제안을 본다
+      operationId: getRescue
+      parameters: [ { $ref: '#/components/parameters/RescueId' } ]
       responses:
-        '200':
-          description: Rescue 스냅샷
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RescueCase'
-              examples:
-                default:
-                  $ref: '#/components/examples/RescueCase'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /experiments/{experimentId}/result:
+        '200': { description: Rescue, content: { application/json: { schema: { $ref: '#/components/schemas/Rescue' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /rescues/{rescueId}/messages:
     post:
-      tags: [Archive]
-      summary: 세 결과 확정과 선택적 안정 루틴 갱신
-      description: ACTIVE·PAUSED 실험의 불편 여부·목적 체감·다음 사용 결정을 각각 저장하고 실제 기간·횟수·관찰·다른 변경으로 기록 완성도를 계산한다. Rescue가 있었다면 기존 안정 루틴 사용 상태도 받는다. 불편 없음과 안정 루틴 추가를 모두 선택한 경우에만 새 루틴 버전을 만들며 결과·전환·LAB 기록을 함께 저장한다.
-      operationId: completeExperiment
-      x-priority: P0
-      x-github-issue: 25
-      x-requirements: [FR-ARC-001, FR-ARC-002, FR-LAB-002, FR-LAB-003, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+      tags: [Rescue]
+      summary: Rescue 대화를 아래로 이어간다
+      operationId: createRescueMessage
+      parameters: [ { $ref: '#/components/parameters/RescueId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string }, structuredAnswer: { type: object, additionalProperties: true } } } } } }
+      responses:
+        '202': { description: 답변·분석 생성 중, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+  /rescues/{rescueId}/apply:
+    post:
+      tags: [Rescue]
+      summary: 제안 루틴을 적용하거나 기록만 남긴다
+      operationId: applyRescue
+      parameters: [ { $ref: '#/components/parameters/RescueId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CompleteExperimentRequest'
-            examples:
-              toleratedAndPromoted:
-                $ref: '#/components/examples/CompleteExperimentRequest'
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [CREATE_ROUTINE, RECORD_ONLY] }
+                editedRoutine: { $ref: '#/components/schemas/RoutineWrite' }
       responses:
-        '201':
-          description: 확정 결과, 선택적 새 안정 루틴과 LAB 기록
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExperimentCompletion'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /archive/experiments:
+        '201': { description: 적용됨, content: { application/json: { schema: { $ref: '#/components/schemas/RescueApplyResult' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /ai-jobs/{jobId}:
     get:
-      tags: [Archive]
-      summary: Beauty Archive 실험 목록 조회
-      description: 별도 복사본이 아니라 원본 실험·세 결과·기록 완성도·후속 관찰을 최근 종료순으로 조회한다. 완료와 취소를 구분하며 현재 PAUSED인 열린 실험은 포함하지 않는다.
-      operationId: listArchivedExperiments
-      x-priority: P0
-      x-github-issue: 47
-      x-requirements: [FR-ARC-003, NFR-SEC-001]
-      parameters:
-        - name: discomfortOutcome
-          in: query
-          schema:
-            $ref: '#/components/schemas/DiscomfortOutcome'
-        - name: goalOutcome
-          in: query
-          schema:
-            $ref: '#/components/schemas/GoalOutcome'
-        - name: nextUseDecision
-          in: query
-          schema:
-            $ref: '#/components/schemas/NextUseDecision'
-        - name: categoryCode
-          in: query
-          schema:
-            type: string
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
+      tags: [Jobs]
+      summary: 비동기 AI 작업 상태와 결과 참조를 본다
+      operationId: getAiJob
+      parameters: [ { $ref: '#/components/parameters/JobId' } ]
       responses:
-        '200':
-          description: Archive 실험 페이지
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ArchiveExperimentPage'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /archive/experiments/{experimentId}:
-    get:
-      tags: [Archive]
-      summary: Beauty Archive 실험 상세 조회
-      description: 당시 안정 루틴·제품 버전·비교·상태 이력·관찰·Rescue·결과와 연결 재시험을 복원하며 현재 정보로 덮어쓰지 않는다.
-      operationId: getArchivedExperiment
-      x-priority: P0
-      x-github-issue: 47
-      x-requirements: [FR-ARC-003, FR-ARC-004, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/ExperimentId'
+        '200': { description: 작업 상태, content: { application/json: { schema: { $ref: '#/components/schemas/AiJob' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /ai-jobs/{jobId}/retry:
+    post:
+      tags: [Jobs]
+      summary: 실패한 AI 작업을 같은 입력으로 다시 실행한다
+      operationId: retryAiJob
+      parameters: [ { $ref: '#/components/parameters/JobId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       responses:
-        '200':
-          description: Archive 실험 상세
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ArchiveExperimentDetail'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /personal-evidence:
-    get:
-      tags: [Archive]
-      summary: 다음 추천·비교에 쓰는 내 관련 경험 조회
-      description: 동일 제품의 세 결과·기록 완성도, 안정적으로 쓴 조합과 두 번 이상 반복된 관찰을 원본 링크와 함께 반환한다. 상반된 기록을 숨기거나 적합도 보장으로 합치지 않는다.
-      operationId: getPersonalEvidence
-      x-priority: P0
-      x-github-issue: 26
-      x-requirements: [FR-REC-005, FR-ARC-004, FR-ARC-005, NFR-SEC-001]
-      parameters:
-        - name: productVersionId
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: functionCode
-          in: query
-          schema:
-            type: string
-        - name: categoryCode
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: 개인 근거와 반대 사례
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PersonalEvidence'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /archive/repeated-observations:
-    get:
-      tags: [Archive]
-      summary: 개인 반복 관찰 조회
-      description: 같은 제품·확정 성분·기능·제품군에서 같은 방향 결과가 완료 실험 두 건 이상일 때만 횟수·전체·반대 사례를 반환한다. 원인으로 표현하지 않는다.
-      operationId: listRepeatedObservations
-      x-priority: P1
-      x-github-issue: 27
-      x-requirements: [FR-ARC-005, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: 개인 반복 관찰 페이지
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PersonalRepeatedObservationPage'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /archive/timeline:
-    get:
-      tags: [Archive]
-      summary: 안정 루틴과 제품 사용 이력 조회
-      description: 루틴 확정, 실험 상태, Rescue, 제품 추가·교체·제외와 재시험을 시간순 사건으로 반환한다. 인과관계 그래프가 아니다.
-      operationId: getUsageTimeline
-      x-priority: P1
-      x-github-issue: 29
-      x-requirements: [FR-ARC-006, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: 시간순 사용 이력
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TimelinePage'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /lab:
-    get:
-      tags: [Lab]
-      summary: 내 연구실 현황 조회
-      description: 현재 실험 진행도, 완료 실험에서 생긴 연구 기록, 선택한 캐릭터·테마와 최근 보상을 한 화면용 응답으로 반환한다.
-      operationId: getMyLab
-      x-priority: P0
-      x-github-issue: 20
-      x-requirements: [FR-LAB-001, FR-LAB-002, FR-LAB-003, NFR-SEC-001]
-      responses:
-        '200':
-          description: 내 LAB 현황
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LabOverview'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /lab/profile:
-    get:
-      tags: [Lab]
-      summary: 내 캐릭터·연구실 테마 선택 조회
-      description: 현재 선택과 선택 가능한 기본·해금·잠금 자산을 반환한다.
-      operationId: getLabProfile
-      x-priority: P1
-      x-github-issue: 51
-      x-requirements: [FR-LAB-004, NFR-SEC-001]
-      responses:
-        '200':
-          description: LAB 꾸미기 상태
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LabProfile'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-    put:
-      tags: [Lab]
-      summary: 캐릭터·연구실 테마 선택
-      description: 해금된 자산만 선택한다. 꾸미기 선택은 추천·실험 결과에 영향을 주지 않는다.
-      operationId: updateLabProfile
-      x-priority: P1
-      x-github-issue: 51
-      x-requirements: [FR-LAB-004, NFR-SEC-001]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateLabProfileRequest'
-      responses:
-        '200':
-          description: 저장된 LAB 선택
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LabProfile'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /lab/rewards:
-    get:
-      tags: [Lab]
-      summary: LAB 배지·장식과 획득 근거 조회
-      description: 로그인이나 체류가 아닌 유효한 관찰·완료 실험으로 해금된 보상과 잠긴 조건을 반환한다. 한 실험의 재처리로 보상이 중복되지 않는다.
-      operationId: listLabRewards
-      x-priority: P1
-      x-github-issue: 21
-      x-requirements: [FR-LAB-003, FR-LAB-004, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: 보상 페이지
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LabRewardPage'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /notifications/browser-subscriptions:
-    put:
-      tags: [Notifications]
-      summary: 브라우저 알림 구독 저장
-      description: 기능 설명 뒤 사용자가 브라우저 권한을 허용한 경우에만 Web Push 구독 정보를 비공개로 저장한다. 제품명·피부 상태는 알림 본문에 넣지 않는다.
-      operationId: saveBrowserNotificationSubscription
-      x-priority: P1
-      x-github-issue: 52
-      x-requirements: [FR-OBS-006, NFR-SEC-001]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SaveBrowserSubscriptionRequest'
-      responses:
-        '200':
-          description: 저장된 구독 상태
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BrowserSubscriptionState'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          $ref: '#/components/responses/ValidationFailed'
-  /notifications/browser-subscriptions/{subscriptionId}:
+        '202': { description: 재시도 시작, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /notifications:
     get:
       tags: [Notifications]
-      summary: 저장한 브라우저 알림 구독 상태 조회
-      description: 저장 응답의 구독 ID로 이 브라우저의 활성·만료·철회 상태를 반환한다. 인앱 퀘스트는 구독 여부와 무관하다.
-      operationId: getBrowserNotificationSubscription
-      x-priority: P1
-      x-github-issue: 52
-      x-requirements: [FR-OBS-006, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/SubscriptionId'
+      summary: 앱 안 알림을 본다
+      operationId: listNotifications
       responses:
-        '200':
-          description: 구독 상태
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BrowserSubscriptionState'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    delete:
+        '200': { description: 알림, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Notification' } } } } }
+  /notifications/{notificationId}/read:
+    post:
       tags: [Notifications]
-      summary: 저장한 브라우저 알림 구독 철회
-      description: 지정한 본인 구독을 철회하고 이후 예정 전송을 억제한다. 인앱 퀘스트와 과거 관찰은 그대로 유지한다.
-      operationId: revokeBrowserNotificationSubscription
-      x-priority: P1
-      x-github-issue: 52
-      x-requirements: [FR-OBS-006, NFR-SEC-001]
-      parameters:
-        - $ref: '#/components/parameters/SubscriptionId'
+      summary: 알림을 읽음 처리한다
+      operationId: readNotification
+      parameters: [ { name: notificationId, in: path, required: true, schema: { type: integer } } ]
       responses:
-        '204':
-          description: 구독 철회 완료
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '204': { description: 읽음 }
+
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: 로그인 응답으로 받은 30일짜리 Spring Security JWT. 프론트엔드는 sessionStorage에 저장하고 Bearer 헤더로 전송한다.
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
   parameters:
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      description: 같은 사용자 안에서 한 작업을 유일하게 식별하는 UUID. 같은 키·같은 요청은 최초 응답을 재사용한다.
-      schema:
-        type: string
-        format: uuid
-    OptionalIdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: false
-      description: 중복 클릭 방지용 UUID. 전달한 경우 동일 키에 동일 의미를 적용한다.
-      schema:
-        type: string
-        format: uuid
-    Cursor:
-      name: cursor
-      in: query
-      required: false
-      description: 이전 응답의 nextCursor. 내부 정렬 키로 해석하지 않는다.
-      schema:
-        type: string
-        maxLength: 500
-    Limit:
-      name: limit
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 50
-        default: 20
-    ProductId:
-      name: productId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    ProductVersionId:
-      name: productVersionId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    RoutineVersionId:
-      name: routineVersionId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    UploadAssetId:
-      name: uploadAssetId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    AiJobId:
-      name: aiJobId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    RecommendationId:
-      name: recommendationId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    CandidateId:
-      name: candidateId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    ExperimentId:
-      name: experimentId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    QuestId:
-      name: questId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    ObservationId:
-      name: observationId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    RescueCaseId:
-      name: rescueCaseId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    SubscriptionId:
-      name: subscriptionId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 8, maxLength: 100 } }
+    MemoryId: { name: memoryId, in: path, required: true, schema: { type: integer } }
+    ProductVersionId: { name: productVersionId, in: path, required: true, schema: { type: integer } }
+    MyProductId: { name: myProductId, in: path, required: true, schema: { type: integer } }
+    ReceiptId: { name: receiptId, in: path, required: true, schema: { type: integer } }
+    RoutineId: { name: routineId, in: path, required: true, schema: { type: integer } }
+    RescueId: { name: rescueId, in: path, required: true, schema: { type: integer } }
+    JobId: { name: jobId, in: path, required: true, schema: { type: integer } }
   responses:
-    BadRequest:
-      description: 요청 JSON, 쿼리 또는 헤더 형식이 잘못됨
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          examples:
-            default:
-              $ref: '#/components/examples/BadRequestProblem'
-    Unauthorized:
-      description: access JWT가 없거나 서명이 잘못됐거나 30일 만료가 지남
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          examples:
-            default:
-              value:
-                type: https://skincause.app/problems/authentication-required
-                title: 로그인이 필요합니다.
-                status: 401
-                code: AUTHENTICATION_REQUIRED
-                detail: 다시 로그인한 뒤 이어서 진행해 주세요.
-                fieldErrors: []
-                traceId: 01J5QY8M7C
-    NotFound:
-      description: 리소스가 없거나 현재 사용자 소유가 아님. 소유권 실패도 같은 응답을 사용한다.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          examples:
-            default:
-              value:
-                type: https://skincause.app/problems/resource-not-found
-                title: 기록을 찾을 수 없습니다.
-                status: 404
-                code: RESOURCE_NOT_FOUND
-                detail: 삭제됐거나 접근할 수 없는 기록입니다.
-                fieldErrors: []
-                traceId: 01J5QY8M7C
-    Conflict:
-      description: 현재 도메인 상태 또는 중복 요청과 충돌함
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          examples:
-            activeExperiment:
-              value:
-                type: https://skincause.app/problems/active-experiment-exists
-                title: 진행 중인 실험이 있습니다.
-                status: 409
-                code: ACTIVE_EXPERIMENT_EXISTS
-                detail: 진행 중인 실험을 먼저 완료하거나 취소해 주세요.
-                fieldErrors: []
-                traceId: 01J5QY8M7C
-            idempotencyConflict:
-              value:
-                type: https://skincause.app/problems/idempotency-key-reused
-                title: 요청 식별자가 이미 사용됐습니다.
-                status: 409
-                code: IDEMPOTENCY_KEY_REUSED
-                detail: 새 작업이라면 새로운 Idempotency-Key로 다시 요청해 주세요.
-                fieldErrors: []
-                traceId: 01J5QY8M7C
-    ValidationFailed:
-      description: 필수값·열거형·도메인 조합 검증 실패
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          examples:
-            default:
-              value:
-                type: https://skincause.app/problems/validation-failed
-                title: 입력을 다시 확인해 주세요.
-                status: 422
-                code: VALIDATION_FAILED
-                detail: 수정할 항목이 있습니다.
-                fieldErrors:
-                  - field: durationDays
-                    code: DURATION_OUT_OF_RANGE
-                    message: 실험 기간은 7일에서 28일 사이여야 합니다.
-                traceId: 01J5QY8M7C
-    Locked:
-      description: 계정 삭제가 시작되어 새 쓰기가 잠김
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          examples:
-            default:
-              value:
-                type: https://skincause.app/problems/account-write-locked
-                title: 계정 삭제가 진행 중입니다.
-                status: 423
-                code: ACCOUNT_WRITE_LOCKED
-                detail: 새로운 기록을 저장할 수 없습니다.
-                fieldErrors: []
-                traceId: 01J5QY8M7C
-    PayloadTooLarge:
-      description: 허용한 이미지 크기를 초과함
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          examples:
-            default:
-              value:
-                type: https://skincause.app/problems/payload-too-large
-                title: 이미지가 너무 큽니다.
-                status: 413
-                code: IMAGE_TOO_LARGE
-                detail: 10MB 이하 JPG, PNG 또는 WEBP 이미지를 사용해 주세요.
-                fieldErrors: []
-                traceId: 01J5QY8M7C
-  examples:
-    SignUpRequest:
-      value:
-        email: user@example.com
-        password: correct-horse-battery-staple
-        timezone: Asia/Seoul
-    AccessToken:
-      value:
-        accessToken: eyJhbGciOiJIUzI1NiJ9.example
-        tokenType: Bearer
-        expiresAt: '2026-09-03T13:00:00Z'
-        user:
-          id: 2c702683-806b-45df-a2f2-8d228f609811
-          email: user@example.com
-          timezone: Asia/Seoul
-          hasStableRoutine: false
-          hasOpenExperiment: false
-    SaveRoutineDraftRequest:
-      value:
-        name: 현재 루틴
-        baseVersionId: null
-        items:
-          - productVersionId: 9e750e61-d0c8-4fd8-8b40-9855a55ebc41
-            timeSlot: AM
-            position: 1
-            frequencyType: DAILY
-          - productVersionId: 1270eec5-3502-4bb3-904f-e59a1df70440
-            timeSlot: PM
-            position: 1
-            frequencyType: SPECIFIC_DAYS
-            daysOfWeek: [MON, WED, FRI]
-    CurrentRoutine:
-      value:
-        routineId: 09d14063-7bd9-407f-9b0a-4be63414e99d
-        currentStableVersion:
-          id: 4ad359b1-7c69-40ac-8336-1ea545cd0637
-          routineId: 09d14063-7bd9-407f-9b0a-4be63414e99d
-          versionNo: 2
-          status: CONFIRMED
-          sourceType: MANUAL_UPDATE
-          confirmedByUserAt: '2026-08-03T02:00:00Z'
-          routineStartedOn: '2026-07-01'
-          routineStartedOnPrecision: APPROXIMATE
-          lastProductChangeOn: '2026-07-01'
-          lastProductChangePrecision: APPROXIMATE
-          currentDiscomfortState: NO
-          evidenceStrength: SUFFICIENT
-          items: []
-        draftVersion: null
-    CreateRecommendationRequest:
-      value:
-        routineVersionId: 4ad359b1-7c69-40ac-8336-1ea545cd0637
-        goalFunctionCode: MOISTURIZING
-        changeIntent: ADD
-        preferredCategoryCodes: [SERUM, CREAM]
-        timeSlot: PM
-        additionalContext: 요즘 당김이 있어 보습 제품을 추가하고 싶어요.
-    Recommendation:
-      value:
-        id: 03837910-8850-4bc7-a50f-0db971e7e57b
-        routineVersionId: 4ad359b1-7c69-40ac-8336-1ea545cd0637
-        goalFunctionCode: MOISTURIZING
-        changeIntent: ADD
-        policyVersion: rec-1
-        rankingSource: NO_ELIGIBLE_CANDIDATE
-        status: COMPLETED
-        candidates: []
-        emptyReason: NO_ELIGIBLE_PRODUCTS
-        createdAt: '2026-08-03T03:00:00Z'
-    CreateExperimentRequest:
-      value:
-        candidateId: bcaefc83-a98f-4b9f-ae38-89ffed190be7
-        comparisonId: 30cc2d64-8ce2-4dc0-91dc-07db5b8137f4
-        plannedStartDate: '2026-08-04'
-        durationDays: 14
-        timeSlot: PM
-        position: 3
-        observationFocusCodes: [REDNESS, STINGING, DRYNESS]
-    SubmitObservationRequest:
-      value:
-        condition: NO_CHANGE
-        usedAsPlanned: true
-        usesSinceLastCheck: 1
-        otherProductChangeState: NO
-        otherProductChanges: []
-        observedAt: '2026-08-04T12:30:00Z'
-        memo: 특별한 변화는 없었어요.
-    SubmitDiscomfortObservationRequest:
-      value:
-        condition: DISCOMFORT
-        usedAsPlanned: true
-        usesSinceLastCheck: 1
-        otherProductChangeState: NO
-        otherProductChanges: []
-        observedAt: '2026-08-04T12:30:00Z'
-        discomfort:
-          severity: MODERATE
-          typeCodes: [STINGING_BURNING]
-          areaCodes: [CHEEKS]
-          contextChangeCodes: [SLEEP_DEPRIVATION]
-          helpNeeded: false
-          spreadingOrWorsening: false
-        pauseProductUse: true
-    CompleteExperimentRequest:
-      value:
-        discomfortOutcome: NONE
-        goalOutcome: HELPED
-        nextUseDecision: PROMOTE_TO_STABLE
-        summary: 계획 기간 동안 불편함이 없었고 보습에 도움이 됐다고 느꼈어요.
-        confirmedRoutineItems:
-          - productVersionId: 9e750e61-d0c8-4fd8-8b40-9855a55ebc41
-            timeSlot: AM
-            position: 1
-            frequencyType: DAILY
-    RescueCase:
-      value:
-        id: 4c0d26a3-bd30-49bb-8cec-d0247db1de3c
-        experimentId: c177f33d-528f-405f-9f72-af218c5b5a04
-        triggerObservationId: 5ea4d344-bc49-4cd5-8bfa-86d7a19a0754
-        baselineRoutineVersionId: 4ad359b1-7c69-40ac-8336-1ea545cd0637
-        policyVersion: rescue-1
-        evidenceStrength: LIMITED
-        safetyPriority: false
-        missingInformation: []
-        items: []
-        explanation:
-          source: AI_VALIDATED
-          summary: 새로 추가한 제품을 먼저 보류하고 추가 변경 없이 상태를 확인해 보세요.
-          evidence: [이 제품은 마지막 안정 루틴 이후 추가됐습니다.]
-          counterEvidence: [같은 시기에 수면 부족이 기록됐습니다.]
-          missingInformation: []
-          checkOrderOptions: [최근 추가한 제품의 사용 여부를 먼저 확인합니다., 기록상 바뀌지 않은 제품도 안전 판정은 아닙니다.]
-          safetyNotice: SkinCause는 원인이나 질환을 판단하지 않습니다.
-        createdAt: '2026-08-04T12:31:00Z'
-    BadRequestProblem:
-      value:
-        type: https://skincause.app/problems/bad-request
-        title: 요청 형식을 확인해 주세요.
-        status: 400
-        code: BAD_REQUEST
-        detail: 읽을 수 없는 요청입니다.
-        fieldErrors: []
-        traceId: 01J5QY8M7C
+    Unauthorized: { description: 인증 필요, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    NotFound: { description: 없거나 접근 권한 없음, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    Conflict: { description: 현재 상태와 충돌, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    Validation: { description: 입력 검증 실패, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
   schemas:
-    ProblemDetails:
+    Credentials:
       type: object
-      additionalProperties: false
-      required: [type, title, status, code, detail, fieldErrors, traceId]
-      properties:
-        type:
-          type: string
-          format: uri
-        title:
-          type: string
-        status:
-          type: integer
-          minimum: 400
-          maximum: 599
-        code:
-          type: string
-          pattern: '^[A-Z][A-Z0-9_]+$'
-        detail:
-          type: string
-        fieldErrors:
-          type: array
-          items:
-            $ref: '#/components/schemas/FieldError'
-        traceId:
-          type: string
-        instance:
-          type: string
-          format: uri-reference
-    FieldError:
-      type: object
-      additionalProperties: false
-      required: [field, code, message]
-      properties:
-        field:
-          type: string
-        code:
-          type: string
-        message:
-          type: string
-    PageInfo:
-      type: object
-      additionalProperties: false
-      required: [hasNext]
-      properties:
-        hasNext:
-          type: boolean
-        nextCursor:
-          type: [string, 'null']
-    SignUpRequest:
-      type: object
-      additionalProperties: false
-      required: [email, password, timezone]
-      properties:
-        email:
-          type: string
-          format: email
-          maxLength: 254
-        password:
-          type: string
-          format: password
-          minLength: 10
-          maxLength: 128
-        timezone:
-          type: string
-          description: IANA 시간대
-          example: Asia/Seoul
-    LoginRequest:
-      type: object
-      additionalProperties: false
       required: [email, password]
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          format: password
-    AccessToken:
+      properties: { email: { type: string, format: email }, password: { type: string, minLength: 8 } }
+    AuthSession:
       type: object
-      additionalProperties: false
-      required: [accessToken, tokenType, expiresAt, user]
-      properties:
-        accessToken:
-          type: string
-          description: 30일 동안 유효한 단일 JWT. 프론트엔드는 sessionStorage에만 두고 로그나 영구 저장소에 기록하지 않는다.
-        tokenType:
-          type: string
-          const: Bearer
-        expiresAt:
-          type: string
-          format: date-time
-          description: access JWT 만료 시각. refresh token과 인증 cookie는 발급하지 않는다.
-        user:
-          $ref: '#/components/schemas/MyProfile'
-    MyProfile:
+      required: [accessToken, user]
+      properties: { accessToken: { type: string }, user: { $ref: '#/components/schemas/Profile' } }
+    Profile:
       type: object
-      additionalProperties: false
-      required: [id, email, timezone, hasStableRoutine, hasOpenExperiment]
+      required: [id, email, timezone, onboardingComplete]
       properties:
-        id:
-          type: string
-          format: uuid
-        email:
-          type: string
-          format: email
-        timezone:
-          type: string
-        hasStableRoutine:
-          type: boolean
-        hasOpenExperiment:
-          type: boolean
-    UpdateProfileRequest:
+        id: { type: integer }
+        email: { type: string, format: email }
+        timezone: { type: string, example: Asia/Seoul }
+        onboardingComplete: { type: boolean }
+        currentRoutineId: { type: [integer, 'null'] }
+        stableRoutineId: { type: [integer, 'null'] }
+    ProfileUpdate:
       type: object
-      additionalProperties: false
-      required: [timezone]
       properties:
-        timezone:
-          type: string
-          example: Asia/Seoul
-    DeleteAccountRequest:
+        timezone: { type: string }
+        onboardingAnswers: { type: object, additionalProperties: { type: string } }
+        onboardingComplete: { type: boolean }
+    AiMemory:
+      allOf:
+        - { $ref: '#/components/schemas/AiMemoryWrite' }
+        - { type: object, required: [id, source, updatedAt], properties: { id: { type: integer }, source: { type: string, enum: [ONBOARDING, CONVERSATION, USER_EDIT] }, updatedAt: { type: string, format: date-time } } }
+    AiMemoryWrite:
       type: object
-      additionalProperties: false
-      required: [password, confirmationText]
-      properties:
-        password:
-          type: string
-          format: password
-        confirmationText:
-          type: string
-          const: DELETE
-    DeletionAccepted:
+      required: [text]
+      properties: { text: { type: string, minLength: 1, maxLength: 1000 } }
+    ProductSummary:
       type: object
-      additionalProperties: false
-      required: [deletionJobId, status, requestedAt, backupPurgeBy]
+      required: [productVersionId, brand, name, category, versionStatus]
       properties:
-        deletionJobId:
-          type: string
-          format: uuid
-        status:
-          type: string
-          const: REQUESTED
-        requestedAt:
-          type: string
-          format: date-time
-        backupPurgeBy:
-          type: string
-          format: date-time
-          description: 공급자 보존 주기를 포함한 최대 제거 예정 시각
-    UserConcerns:
+        productVersionId: { type: integer }
+        brand: { type: string }
+        name: { type: string }
+        category: { type: string, enum: [SKINCARE, CLEANSING, SUNCARE] }
+        volumeOption: { type: [string, 'null'] }
+        imageUrl: { type: [string, 'null'], format: uri }
+        versionStatus: { type: string, enum: [VERIFIED, UNCERTAIN, RETIRED] }
+    Source:
       type: object
-      additionalProperties: false
-      required: [concernCodes, unknown]
+      required: [type, title, organization, url, checkedAt]
       properties:
-        concernCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        unknown:
-          type: boolean
-          description: true이면 concernCodes는 비어 있어야 한다.
-    ReplaceConcernsRequest:
-      $ref: '#/components/schemas/UserConcerns'
-    TimeSlot:
-      type: string
-      enum: [AM, PM]
-    RoutineFrequencyType:
-      type: string
-      enum: [DAILY, SPECIFIC_DAYS, WEEKLY_COUNT, AS_NEEDED, UNKNOWN]
-    DatePrecision:
-      type: string
-      enum: [EXACT, APPROXIMATE, UNKNOWN]
-    AnswerState:
-      type: string
-      enum: [YES, NO, UNKNOWN]
-    RoutineVersionStatus:
-      type: string
-      enum: [DRAFT, CONFIRMED]
-    RoutineSourceType:
-      type: string
-      enum: [INITIAL, MANUAL_UPDATE, EXPERIMENT_RESULT]
-    RoutineItemInput:
+        type: { type: string, enum: [BRAND, REGULATOR, OFFICIAL_DB, PAPER, PERSONAL_RECORD] }
+        title: { type: string }
+        organization: { type: string }
+        publishedAt: { type: [string, 'null'], format: date }
+        url: { type: [string, 'null'], format: uri }
+        checkedAt: { type: string, format: date-time }
+    ProductDetail:
+      allOf:
+        - { $ref: '#/components/schemas/ProductSummary' }
+        - type: object
+          required: [facts, ingredientLabel, sources, referenceOffers]
+          properties:
+            facts: { type: array, items: { type: object, required: [type, text, sourceIndex], properties: { type: { type: string, enum: [DIRECTIONS, CLAIM, TEXTURE, CAUTION] }, text: { type: string }, sourceIndex: { type: integer } } } }
+            ingredientLabel: { type: array, items: { type: string } }
+            sources: { type: array, items: { $ref: '#/components/schemas/Source' } }
+            referenceOffers: { type: array, items: { type: object, required: [retailer, priceKrw, checkedAt], properties: { retailer: { type: string }, priceKrw: { type: integer }, url: { type: string, format: uri }, checkedAt: { type: string, format: date-time }, usedForDecision: { type: boolean, const: false } } } }
+    SimilarProduct:
+      allOf:
+        - { $ref: '#/components/schemas/ProductSummary' }
+        - { type: object, required: [reason, owned], properties: { reason: { type: string }, owned: { type: boolean } } }
+    MyProduct:
       type: object
-      additionalProperties: false
-      required: [productVersionId, timeSlot, position, frequencyType]
+      required: [id, state, versionStatus, registeredAt]
       properties:
-        productVersionId:
-          type: string
-          format: uuid
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-        position:
-          type: integer
-          minimum: 1
-          maximum: 30
-        frequencyType:
-          $ref: '#/components/schemas/RoutineFrequencyType'
-        weeklyCount:
-          type: [integer, 'null']
-          minimum: 1
-          maximum: 7
-          description: WEEKLY_COUNT일 때만 필수
-        daysOfWeek:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            enum: [MON, TUE, WED, THU, FRI, SAT, SUN]
-          description: SPECIFIC_DAYS일 때 하나 이상
-    RoutineItem:
+        id: { type: integer }
+        product: { anyOf: [ { $ref: '#/components/schemas/ProductSummary' }, { type: 'null' } ] }
+        enteredName: { type: [string, 'null'] }
+        state: { type: string, enum: [UNUSED, IN_CURRENT_ROUTINE, ONLY_IN_STABLE_ROUTINE] }
+        versionStatus: { type: string, enum: [VERIFIED, UNCERTAIN] }
+        registeredAt: { type: string, format: date-time }
+    MyProductDetail:
+      allOf:
+        - { $ref: '#/components/schemas/MyProduct' }
+        - { type: object, properties: { memo: { type: [string, 'null'] }, routineHistory: { type: array, items: { $ref: '#/components/schemas/RoutineSummary' } }, latestAnalysisId: { type: [integer, 'null'] } } }
+    MyProductGroups:
       type: object
-      additionalProperties: false
-      required: [id, productVersionId, timeSlot, position, frequencyType, daysOfWeek, product]
+      required: [unused, currentRoutine, lastStableRoutine]
       properties:
-        id:
-          type: string
-          format: uuid
-        productVersionId:
-          type: string
-          format: uuid
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-        position:
-          type: integer
-          minimum: 1
-          maximum: 30
-        frequencyType:
-          $ref: '#/components/schemas/RoutineFrequencyType'
-        weeklyCount:
-          type: [integer, 'null']
-          minimum: 1
-          maximum: 7
-        daysOfWeek:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        product:
-          $ref: '#/components/schemas/ProductVersionSummary'
-    SaveRoutineDraftRequest:
+        unused: { type: array, items: { $ref: '#/components/schemas/MyProduct' } }
+        currentRoutine: { type: array, items: { $ref: '#/components/schemas/MyProduct' } }
+        lastStableRoutine: { type: array, items: { $ref: '#/components/schemas/MyProduct' } }
+    Receipt:
       type: object
-      additionalProperties: false
-      required: [name, items]
+      required: [id, status, originalRetained, items]
       properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 50
-          default: 현재 루틴
-        baseVersionId:
-          type: [string, 'null']
-          format: uuid
-          description: 기존 안정 루틴을 편집할 때의 원본 버전. 최초 초안은 null.
-        items:
-          type: array
-          minItems: 1
-          maxItems: 30
-          items:
-            $ref: '#/components/schemas/RoutineItemInput'
-    ConfirmRoutineRequest:
-      type: object
-      additionalProperties: false
-      required: [draftVersionId, stableConfirmedByUser, routineStartedOnPrecision, lastProductChangePrecision, currentDiscomfortState]
-      properties:
-        draftVersionId:
-          type: string
-          format: uuid
-        stableConfirmedByUser:
-          type: boolean
-          const: true
-          description: AI 판단이 아닌 사용자의 명시적 확인
-        routineStartedOn:
-          type: [string, 'null']
-          format: date
-        routineStartedOnPrecision:
-          $ref: '#/components/schemas/DatePrecision'
-        lastProductChangeOn:
-          type: [string, 'null']
-          format: date
-        lastProductChangePrecision:
-          $ref: '#/components/schemas/DatePrecision'
-        currentDiscomfortState:
-          $ref: '#/components/schemas/AnswerState'
-          description: 안정 루틴 확정에는 NO가 필수다. YES 또는 UNKNOWN이면 422로 거부하되 초안은 유지한다.
-    RoutineVersion:
-      type: object
-      additionalProperties: false
-      required: [id, routineId, versionNo, status, sourceType, routineStartedOnPrecision, lastProductChangePrecision, currentDiscomfortState, evidenceStrength, items]
-      properties:
-        id:
-          type: string
-          format: uuid
-        routineId:
-          type: string
-          format: uuid
-        versionNo:
-          type: integer
-          minimum: 1
-        status:
-          $ref: '#/components/schemas/RoutineVersionStatus'
-        sourceType:
-          $ref: '#/components/schemas/RoutineSourceType'
-        confirmedByUserAt:
-          type: [string, 'null']
-          format: date-time
-        routineStartedOn:
-          type: [string, 'null']
-          format: date
-        routineStartedOnPrecision:
-          $ref: '#/components/schemas/DatePrecision'
-        lastProductChangeOn:
-          type: [string, 'null']
-          format: date
-        lastProductChangePrecision:
-          $ref: '#/components/schemas/DatePrecision'
-        currentDiscomfortState:
-          $ref: '#/components/schemas/AnswerState'
-        evidenceStrength:
-          $ref: '#/components/schemas/EvidenceStrength'
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/RoutineItem'
-    CurrentRoutine:
-      type: object
-      additionalProperties: false
-      required: [routineId, currentStableVersion, draftVersion]
-      properties:
-        routineId:
-          type: [string, 'null']
-          format: uuid
-        currentStableVersion:
-          oneOf:
-            - $ref: '#/components/schemas/RoutineVersion'
-            - type: 'null'
-        draftVersion:
-          oneOf:
-            - $ref: '#/components/schemas/RoutineVersion'
-            - type: 'null'
-    VerificationStatus:
-      type: string
-      enum: [DRAFT, USER_CONFIRMED, OPERATOR_VERIFIED]
-    ProductSourceType:
-      type: string
-      enum: [CATALOG, USER_DRAFT]
-    ProductVersionSummary:
-      type: object
-      additionalProperties: false
-      required: [productId, productVersionId, name, categoryCode, verificationStatus, sourceType]
-      properties:
-        productId:
-          type: string
-          format: uuid
-        productVersionId:
-          type: string
-          format: uuid
-        brandName:
-          type: [string, 'null']
-        name:
-          type: string
-        categoryCode:
-          type: string
-        verificationStatus:
-          $ref: '#/components/schemas/VerificationStatus'
-        sourceType:
-          $ref: '#/components/schemas/ProductSourceType'
-    ProductIngredient:
-      type: object
-      additionalProperties: false
-      required: [position, rawName, verificationStatus, sourceType]
-      properties:
-        position:
-          type: integer
-          minimum: 1
-        rawName:
-          type: string
-        ingredientId:
-          type: [string, 'null']
-          format: uuid
-        canonicalName:
-          type: [string, 'null']
-        verificationStatus:
-          $ref: '#/components/schemas/VerificationStatus'
-        sourceType:
-          type: string
-          enum: [CATALOG, IMAGE, MANUAL]
-    ProductFunction:
-      type: object
-      additionalProperties: false
-      required: [functionCode, displayName, sourceType, sourceReference, verificationStatus]
-      properties:
-        functionCode:
-          type: string
-        displayName:
-          type: string
-        sourceType:
-          type: string
-          enum: [CLAIM, INGREDIENT_RULE, OPERATOR]
-        sourceReference:
-          type: string
-        verificationStatus:
-          $ref: '#/components/schemas/VerificationStatus'
-        observationNote:
-          type: [string, 'null']
-    ProductVersionDetail:
-      type: object
-      additionalProperties: false
-      required: [product, versionNo, ingredients, functions]
-      properties:
-        product:
-          $ref: '#/components/schemas/ProductVersionSummary'
-        versionNo:
-          type: integer
-          minimum: 1
-        sourceReference:
-          type: [string, 'null']
-        confirmedAt:
-          type: [string, 'null']
-          format: date-time
-        ingredients:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProductIngredient'
-        functions:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProductFunction'
-    ProductSearchPage:
-      type: object
-      additionalProperties: false
-      required: [items, page]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProductVersionSummary'
-        page:
-          $ref: '#/components/schemas/PageInfo'
-    CreatePersonalProductRequest:
-      type: object
-      additionalProperties: false
-      required: [brandName, name, categoryCode]
-      properties:
-        brandName:
-          type: string
-          minLength: 1
-          maxLength: 100
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-        categoryCode:
-          type: string
-        barcode:
-          type: [string, 'null']
-          maxLength: 32
-    UpdatePersonalProductRequest:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        brandName:
-          type: string
-          minLength: 1
-          maxLength: 100
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-        categoryCode:
-          type: string
-        barcode:
-          type: [string, 'null']
-          maxLength: 32
-    PersonalProduct:
-      type: object
-      additionalProperties: false
-      required: [productId, latestVersion]
-      properties:
-        productId:
-          type: string
-          format: uuid
-        latestVersion:
-          $ref: '#/components/schemas/ProductVersionDetail'
-    UploadPurpose:
-      type: string
-      enum: [INGREDIENT_LABEL, PURCHASE_IMAGE]
-    PrepareUploadRequest:
-      type: object
-      additionalProperties: false
-      required: [purpose, contentType, sizeBytes, fileName]
-      properties:
-        purpose:
-          $ref: '#/components/schemas/UploadPurpose'
-        contentType:
-          type: string
-          enum: [image/jpeg, image/png, image/webp]
-        sizeBytes:
-          type: integer
-          minimum: 1
-          maximum: 10485760
-        fileName:
-          type: string
-          minLength: 1
-          maxLength: 255
-    PreparedUpload:
-      type: object
-      additionalProperties: false
-      required: [uploadAssetId, purpose, uploadMethod, uploadUrl, requiredHeaders, expiresAt, deleteAfter]
-      properties:
-        uploadAssetId:
-          type: string
-          format: uuid
-        purpose:
-          $ref: '#/components/schemas/UploadPurpose'
-        uploadMethod:
-          type: string
-          const: PUT
-        uploadUrl:
-          type: string
-          format: uri
-          description: 짧게 유효한 OCI 업로드 URL. 저장하거나 로그에 남기지 않는다.
-        requiredHeaders:
-          type: object
-          additionalProperties:
-            type: string
-        expiresAt:
-          type: string
-          format: date-time
-        deleteAfter:
-          type: string
-          format: date-time
-    StartExtractionRequest:
-      type: object
-      additionalProperties: false
-      required: [uploadAssetId, aiProcessingConsent]
-      properties:
-        uploadAssetId:
-          type: string
-          format: uuid
-        aiProcessingConsent:
-          type: boolean
-          const: true
-          description: 이 이미지의 최소 원문을 OpenAI로 보내 구조화하는 작업별 명시 동의. 동의하지 않으면 이 API 대신 직접 입력을 사용한다.
-    AiJobStatus:
-      type: string
-      enum: [QUEUED, RUNNING, SUCCEEDED, FAILED, TIMED_OUT]
-    AiTaskType:
-      type: string
-      enum: [INGREDIENT_EXTRACTION, PURCHASE_ITEM_EXTRACTION, GOAL_CLASSIFICATION, OBSERVATION_STRUCTURING, FOLLOW_UP_QUESTIONS, EXPLANATION]
-    AiJobAccepted:
-      type: object
-      additionalProperties: false
-      required: [aiJobId, taskType, status, createdAt]
-      properties:
-        aiJobId:
-          type: string
-          format: uuid
-        taskType:
-          $ref: '#/components/schemas/AiTaskType'
-        status:
-          $ref: '#/components/schemas/AiJobStatus'
-        createdAt:
-          type: string
-          format: date-time
-    AiJob:
-      type: object
-      additionalProperties: false
-      required: [id, taskType, status, model, promptVersion, schemaVersion, resultRetention, createdAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        taskType:
-          $ref: '#/components/schemas/AiTaskType'
-        status:
-          $ref: '#/components/schemas/AiJobStatus'
-        model:
-          type: string
-        promptVersion:
-          type: string
-        schemaVersion:
-          type: string
-        errorCode:
-          type: [string, 'null']
-          description: 공급자 원문이 아닌 비민감 오류 코드
-        createdAt:
-          type: string
-          format: date-time
-        startedAt:
-          type: [string, 'null']
-          format: date-time
-        completedAt:
-          type: [string, 'null']
-          format: date-time
-        resultRetention:
-          type: string
-          const: VALIDATED_STRUCTURE_AND_PROVENANCE_ONLY
-          description: 요청·응답 원문은 영구 저장하지 않고 검증된 구조화 결과와 모델·프롬프트·스키마 버전만 남긴다.
-    ExtractionReviewStatus:
-      type: string
-      enum: [PENDING, ACCEPTED, CORRECTED, REJECTED]
-    IngredientExtractionItem:
-      type: object
-      additionalProperties: false
-      required: [id, position, rawText, reviewStatus]
-      properties:
-        id:
-          type: string
-          format: uuid
-        position:
-          type: integer
-          minimum: 1
-        rawText:
-          type: string
-        suggestedIngredientId:
-          type: [string, 'null']
-          format: uuid
-          description: 확인된 alias 검색으로 찾은 후보이며 AI가 생성한 ID가 아니다.
-        suggestedCanonicalName:
-          type: [string, 'null']
-        reviewStatus:
-          $ref: '#/components/schemas/ExtractionReviewStatus'
-        confirmedIngredientId:
-          type: [string, 'null']
-          format: uuid
-    IngredientExtraction:
-      type: object
-      additionalProperties: false
-      required: [job, productId, uploadAssetId, items]
-      properties:
-        job:
-          $ref: '#/components/schemas/AiJob'
-        productId:
-          type: string
-          format: uuid
-        uploadAssetId:
-          type: string
-          format: uuid
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/IngredientExtractionItem'
-    ConfirmIngredientItem:
-      type: object
-      additionalProperties: false
-      required: [extractionItemId, reviewStatus, rawName]
-      properties:
-        extractionItemId:
-          type: string
-          format: uuid
-        reviewStatus:
-          type: string
-          enum: [ACCEPTED, CORRECTED, REJECTED]
-        rawName:
-          type: string
-        confirmedIngredientId:
-          type: [string, 'null']
-          format: uuid
-    ConfirmIngredientExtractionRequest:
-      type: object
-      additionalProperties: false
-      required: [items]
-      properties:
-        items:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/ConfirmIngredientItem'
-    PurchaseExtractionItem:
-      type: object
-      additionalProperties: false
-      required: [id, rawBrand, rawProductName, reviewStatus, catalogMatches]
-      properties:
-        id:
-          type: string
-          format: uuid
-        rawBrand:
-          type: [string, 'null']
-        rawProductName:
-          type: [string, 'null']
-        reviewStatus:
-          $ref: '#/components/schemas/ExtractionReviewStatus'
-        catalogMatches:
-          type: array
-          maxItems: 5
-          description: 서버 카탈로그 검색 결과. AI가 productVersionId를 만들지 않는다.
-          items:
-            $ref: '#/components/schemas/ProductVersionSummary'
-    PurchaseExtraction:
-      type: object
-      additionalProperties: false
-      required: [job, uploadAssetId, items]
-      properties:
-        job:
-          $ref: '#/components/schemas/AiJob'
-        uploadAssetId:
-          type: string
-          format: uuid
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/PurchaseExtractionItem'
-    PurchaseResolution:
-      type: object
-      additionalProperties: false
-      required: [extractionItemId, action]
-      properties:
-        extractionItemId:
-          type: string
-          format: uuid
-        action:
-          type: string
-          enum: [USE_CATALOG_PRODUCT, CREATE_PERSONAL_PRODUCT, REJECT]
-        productVersionId:
-          type: [string, 'null']
-          format: uuid
-          description: USE_CATALOG_PRODUCT일 때 사용자가 고른 서버 검색 후보
-        personalProduct:
-          oneOf:
-            - $ref: '#/components/schemas/CreatePersonalProductRequest'
-            - type: 'null'
-    ConfirmPurchaseExtractionRequest:
-      type: object
-      additionalProperties: false
-      required: [resolutions]
-      properties:
-        resolutions:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/PurchaseResolution'
-    ConfirmedPurchaseProducts:
-      type: object
-      additionalProperties: false
-      required: [products]
-      properties:
-        products:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProductVersionSummary'
-    ChangeIntent:
-      type: string
-      enum: [ADD, REPLACE]
-    EvidenceStrength:
-      type: string
-      enum: [SUFFICIENT, LIMITED, INSUFFICIENT]
-      description: 피부 적합 확률이 아니라 입력과 계산을 재현할 수 있는 정도
+        id: { type: integer }
+        status: { type: string, enum: [QUEUED, RUNNING, NEEDS_CONFIRMATION, CONFIRMED, FAILED] }
+        originalRetained: { type: boolean, const: true }
+        items: { type: array, items: { type: object, required: [id, rawText, candidates], properties: { id: { type: integer }, rawText: { type: string }, candidates: { type: array, items: { $ref: '#/components/schemas/ProductSummary' } } } } }
     EvidenceItem:
       type: object
-      additionalProperties: false
-      required: [code, message, sourceType]
+      required: [relation, statement, source]
       properties:
-        code:
-          type: string
-        message:
-          type: string
-        sourceType:
-          type: string
-          enum: [CATALOG, ROUTINE, PERSONAL_EXPERIMENT, PERSONAL_REPEATED_OBSERVATION, USER_INPUT, POLICY]
-        sourceExperimentIds:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            format: uuid
-    EvidenceBundle:
+        relation: { type: string, enum: [SUPPORT, OPPOSE, UNCERTAIN] }
+        statement: { type: string }
+        source: { $ref: '#/components/schemas/Source' }
+    ProductOpinion:
       type: object
-      additionalProperties: false
-      required: [supporting, opposing, personal, missingInformation, otherVariables]
+      required: [id, product, conclusion, conclusionLabel, evidence, uncertainties, conversationId, disclaimer]
       properties:
-        supporting:
-          type: array
-          items:
-            $ref: '#/components/schemas/EvidenceItem'
-        opposing:
-          type: array
-          items:
-            $ref: '#/components/schemas/EvidenceItem'
-        personal:
-          type: array
-          items:
-            $ref: '#/components/schemas/EvidenceItem'
-        missingInformation:
-          type: array
-          items:
-            $ref: '#/components/schemas/EvidenceItem'
-        otherVariables:
-          type: array
-          items:
-            $ref: '#/components/schemas/EvidenceItem'
-    CreateRecommendationRequest:
-      type: object
-      additionalProperties: false
-      required: [routineVersionId, goalFunctionCode, changeIntent]
-      properties:
-        routineVersionId:
-          type: string
-          format: uuid
-          description: 반드시 현재 사용자가 확정한 안정 루틴 버전
-        goalFunctionCode:
-          type: string
-        changeIntent:
-          $ref: '#/components/schemas/ChangeIntent'
-        targetRoutineItemId:
-          type: [string, 'null']
-          format: uuid
-          description: REPLACE이면 같은 routineVersionId의 항목으로 필수
-        preferredCategoryCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        timeSlot:
-          oneOf:
-            - $ref: '#/components/schemas/TimeSlot'
-            - type: 'null'
-        avoidTextureCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        additionalContext:
-          type: [string, 'null']
-          maxLength: 500
-          description: aiAssistance가 있을 때만 최소 원문을 목적 구조화·설명에 사용한다. 순위·사실을 바꾸지 않는다.
-        aiAssistance:
-          oneOf:
-            - $ref: '#/components/schemas/RecommendationAiAssistanceRequest'
-            - type: 'null'
-          description: 생략하면 서버 순위와 고정 설명만 반환한다.
-    RecommendationAiAssistanceRequest:
-      type: object
-      additionalProperties: false
-      required: [requested, aiProcessingConsent, purposes]
-      properties:
-        requested:
-          type: boolean
-          const: true
-        aiProcessingConsent:
-          type: boolean
-          const: true
-        purposes:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          items:
-            type: string
-            enum: [GOAL_CLASSIFICATION, EXPLANATION, MISSING_INFORMATION_QUESTIONS]
-    RecommendationRankingSource:
-      type: string
-      enum: [SERVER_RULES, NO_ELIGIBLE_CANDIDATE]
-      description: 버전이 있는 서버 결정표 또는 적격 후보 없음
-    RecommendationCandidate:
-      type: object
-      additionalProperties: false
-      required: [id, product, rank, evidenceStrength, evidence, observationFocusCodes]
-      properties:
-        id:
-          type: string
-          format: uuid
-        product:
-          $ref: '#/components/schemas/ProductVersionSummary'
-        rank:
-          type: integer
-          minimum: 1
-          maximum: 3
-        evidenceStrength:
-          $ref: '#/components/schemas/EvidenceStrength'
-        evidence:
-          $ref: '#/components/schemas/EvidenceBundle'
-        explanation:
-          type: string
-          description: 서버 순위를 설명하는 제한된 AI 문장 또는 고정 문장. 순위·제품 적합성·원인을 바꾸거나 확정하지 않는다.
-        addedFunctionCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        overlappingFunctionCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        observationFocusCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
+        id: { type: integer }
+        product: { $ref: '#/components/schemas/ProductSummary' }
+        conclusion: { type: string, enum: [CONSIDER, OVERLAP, LOW_RELEVANCE, INSUFFICIENT] }
+        conclusionLabel: { type: string }
+        evidence: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } }
+        uncertainties: { type: array, items: { type: string } }
+        routineChange: { type: [string, 'null'] }
+        conversationId: { type: integer }
+        disclaimer: { type: string }
     Recommendation:
       type: object
-      additionalProperties: false
-      required: [id, routineVersionId, goalFunctionCode, changeIntent, policyVersion, rankingSource, status, candidates, createdAt]
+      required: [id, state, candidates]
       properties:
-        id:
-          type: string
-          format: uuid
-        routineVersionId:
-          type: string
-          format: uuid
-        goalFunctionCode:
-          type: string
-        changeIntent:
-          $ref: '#/components/schemas/ChangeIntent'
-        targetRoutineItemId:
-          type: [string, 'null']
-          format: uuid
-        policyVersion:
-          type: string
-        rankingSource:
-          $ref: '#/components/schemas/RecommendationRankingSource'
-        status:
-          type: string
-          enum: [RUNNING, COMPLETED, FAILED]
-        candidates:
-          type: array
-          maxItems: 3
-          items:
-            $ref: '#/components/schemas/RecommendationCandidate'
-        emptyReason:
-          type: [string, 'null']
-          enum: [NO_ELIGIBLE_PRODUCTS, NO_GOAL_MATCH, INSUFFICIENT_CATALOG_DATA, null]
-        createdAt:
-          type: string
-          format: date-time
-    CandidateSourceType:
-      type: string
-      enum: [RECOMMENDATION, SEARCH, DIRECT]
-    CandidateStatus:
-      type: string
-      enum: [SAVED, STALE, STARTED, ARCHIVED]
-    SaveExperimentCandidateRequest:
+        id: { type: integer }
+        state: { type: string, enum: [NEEDS_CONTEXT, READY] }
+        question: { type: [string, 'null'] }
+        candidates: { type: array, maxItems: 5, items: { type: object, required: [rank, product, reason, evidence], properties: { rank: { type: integer }, product: { $ref: '#/components/schemas/ProductSummary' }, reason: { type: string }, hesitation: { type: [string, 'null'] }, evidence: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } } } } }
+    RoutineItem:
       type: object
-      additionalProperties: false
-      required: [routineVersionId, productVersionId, sourceType, goalFunctionCode, changeIntent]
+      required: [myProductId, period, position]
       properties:
-        routineVersionId:
-          type: string
-          format: uuid
-        productVersionId:
-          type: string
-          format: uuid
-        recommendationCandidateId:
-          type: [string, 'null']
-          format: uuid
-          description: sourceType이 RECOMMENDATION이면 필수이며 제품과 요청 조건이 일치해야 한다.
-        sourceType:
-          $ref: '#/components/schemas/CandidateSourceType'
-        goalFunctionCode:
-          type: string
-        changeIntent:
-          $ref: '#/components/schemas/ChangeIntent'
-        targetRoutineItemId:
-          type: [string, 'null']
-          format: uuid
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-    ExperimentCandidate:
+        myProductId: { type: integer }
+        period: { type: string, enum: [MORNING, EVENING] }
+        position: { type: integer, minimum: 1 }
+        frequencyText: { type: [string, 'null'], maxLength: 100 }
+        aiNote: { type: [string, 'null'] }
+    RoutineWrite:
       type: object
-      additionalProperties: false
-      required: [id, routineVersionId, product, sourceType, goalFunctionCode, changeIntent, status, createdAt]
+      required: [items]
       properties:
-        id:
-          type: string
-          format: uuid
-        routineVersionId:
-          type: string
-          format: uuid
-        product:
-          $ref: '#/components/schemas/ProductVersionSummary'
-        recommendationCandidateId:
-          type: [string, 'null']
-          format: uuid
-        sourceType:
-          $ref: '#/components/schemas/CandidateSourceType'
-        goalFunctionCode:
-          type: string
-        changeIntent:
-          $ref: '#/components/schemas/ChangeIntent'
-        targetRoutineItemId:
-          type: [string, 'null']
-          format: uuid
-        status:
-          $ref: '#/components/schemas/CandidateStatus'
-        latestComparisonId:
-          type: [string, 'null']
-          format: uuid
-        createdAt:
-          type: string
-          format: date-time
-    ExperimentCandidatePage:
+        expectedCurrentRoutineId: { type: [integer, 'null'] }
+        sourceType: { type: string, enum: [USER_EDIT, RESCUE_PLAN], default: USER_EDIT }
+        items: { type: array, minItems: 1, items: { $ref: '#/components/schemas/RoutineItem' } }
+    RoutineSummary:
       type: object
-      additionalProperties: false
-      required: [items, page]
+      required: [id, versionNo, sourceType, startedLocalDate, assessmentDueAt, isCurrent]
       properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/ExperimentCandidate'
-        page:
-          $ref: '#/components/schemas/PageInfo'
-    CreateComparisonRequest:
+        id: { type: integer }
+        versionNo: { type: integer }
+        sourceType: { type: string, enum: [USER_EDIT, RESCUE_PLAN] }
+        startedLocalDate: { type: string, format: date }
+        assessmentDueAt: { type: string, format: date-time }
+        isCurrent: { type: boolean }
+        isStable: { type: boolean }
+        outcome: { type: [string, 'null'], enum: [NO_DISCOMFORT, DISCOMFORT, NEED_MORE_TIME, UNKNOWN, null] }
+    Routine:
+      allOf:
+        - { $ref: '#/components/schemas/RoutineSummary' }
+        - { type: object, required: [items, dayNumber, aiAnalysisStatus], properties: { items: { type: array, items: { $ref: '#/components/schemas/RoutineItem' } }, dayNumber: { type: integer, minimum: 1 }, aiAnalysisStatus: { type: string, enum: [QUEUED, RUNNING, SUCCEEDED, FAILED] }, rescueRecordWithoutChange: { type: boolean } } }
+    RoutineChange:
       type: object
-      additionalProperties: false
-      properties:
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-        position:
-          type: integer
-          minimum: 1
-          maximum: 30
-        targetRoutineItemId:
-          type: [string, 'null']
-          format: uuid
-          description: 후보 저장 뒤 교체 위치를 다시 확인할 때만 전달
-    ProductDiff:
+      required: [type, description]
+      properties: { type: { type: string, enum: [PRODUCT_ADDED, PRODUCT_REMOVED, ORDER_CHANGED, FREQUENCY_CHANGED, PERIOD_CHANGED] }, myProductId: { type: [integer, 'null'] }, description: { type: string } }
+    AssessmentWrite:
       type: object
-      additionalProperties: false
-      required: [addedProductVersionIds, removedProductVersionIds, keptProductVersionIds]
+      required: [kind, outcome]
       properties:
-        addedProductVersionIds:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            format: uuid
-        removedProductVersionIds:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            format: uuid
-        keptProductVersionIds:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            format: uuid
-    FunctionDiff:
+        kind: { type: string, enum: [FINAL, EARLY] }
+        actualUseMatched: { type: [boolean, 'null'] }
+        outcome: { type: string, enum: [NO_DISCOMFORT, DISCOMFORT, NEED_MORE_TIME, UNKNOWN] }
+        responseText: { type: [string, 'null'] }
+        extendDays: { type: [integer, 'null'], const: 7 }
+    Assessment:
+      allOf:
+        - { $ref: '#/components/schemas/AssessmentWrite' }
+        - { type: object, required: [id, routineId, assessedAt, promotedToStable], properties: { id: { type: integer }, routineId: { type: integer }, assessedAt: { type: string, format: date-time }, promotedToStable: { type: boolean }, nextDueAt: { type: [string, 'null'], format: date-time } } }
+    RescueMessage:
       type: object
-      additionalProperties: false
-      required: [addedFunctionCodes, overlappingFunctionCodes, removedFunctionCodes, unknownFunctionData]
-      properties:
-        addedFunctionCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        overlappingFunctionCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        removedFunctionCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        unknownFunctionData:
-          type: boolean
-    CandidateComparison:
+      required: [id, role, content, createdAt]
+      properties: { id: { type: integer }, role: { type: string, enum: [USER, ASSISTANT] }, content: { type: string }, choices: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }, createdAt: { type: string, format: date-time } }
+    RescuePlan:
       type: object
-      additionalProperties: false
-      required: [id, candidateId, routineVersionId, versionNo, policyVersion, evidenceStrength, productDiff, functionDiff, observationFocusCodes, evidence, createdAt]
+      required: [ranking, routine, basisStrength]
       properties:
-        id:
-          type: string
-          format: uuid
-        candidateId:
-          type: string
-          format: uuid
-        routineVersionId:
-          type: string
-          format: uuid
-        versionNo:
-          type: integer
-          minimum: 1
-        policyVersion:
-          type: string
-        evidenceStrength:
-          $ref: '#/components/schemas/EvidenceStrength'
-        productDiff:
-          $ref: '#/components/schemas/ProductDiff'
-        functionDiff:
-          $ref: '#/components/schemas/FunctionDiff'
-        observationFocusCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        evidence:
-          $ref: '#/components/schemas/EvidenceBundle'
-        invalidatedAt:
-          type: [string, 'null']
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-    RankCandidatesRequest:
+        ranking: { type: array, items: { type: object, required: [rank, label, support, opposition, uncertainty], properties: { rank: { type: integer }, myProductId: { type: [integer, 'null'] }, label: { type: string }, support: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } }, opposition: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } }, uncertainty: { type: array, items: { type: string } } } } }
+        routine: { $ref: '#/components/schemas/RoutineWrite' }
+        basisStrength: { type: string, enum: [NORMAL, WEAK_NO_STABLE_ROUTINE, NONE_NO_ROUTINE] }
+    Rescue:
       type: object
-      additionalProperties: false
-      required: [candidateIds]
+      required: [id, status, messages, changes, safetyBoundaryReached]
       properties:
-        candidateIds:
-          type: array
-          minItems: 1
-          maxItems: 20
-          uniqueItems: true
-          items:
-            type: string
-            format: uuid
-    RankedCandidate:
+        id: { type: integer }
+        status: { type: string, enum: [CONVERSATION, ANALYZING, READY, CLOSED] }
+        startRoutineId: { type: [integer, 'null'] }
+        stableRoutineId: { type: [integer, 'null'] }
+        messages: { type: array, items: { $ref: '#/components/schemas/RescueMessage' } }
+        changes: { type: array, items: { $ref: '#/components/schemas/RoutineChange' } }
+        plan: { anyOf: [ { $ref: '#/components/schemas/RescuePlan' }, { type: 'null' } ] }
+        safetyBoundaryReached: { type: boolean }
+    RescueApplyResult:
       type: object
-      additionalProperties: false
-      required: [candidateId, comparisonId, rank, evidenceStrength, evidence, reason]
+      required: [action]
       properties:
-        candidateId:
-          type: string
-          format: uuid
-        comparisonId:
-          type: string
-          format: uuid
-        rank:
-          type: integer
-          minimum: 1
-        evidenceStrength:
-          $ref: '#/components/schemas/EvidenceStrength'
-        evidence:
-          $ref: '#/components/schemas/EvidenceBundle'
-        reason:
-          type: string
-    CandidateRanking:
+        action: { type: string, enum: [CREATE_ROUTINE, RECORD_ONLY] }
+        routineId: { type: [integer, 'null'] }
+        assessmentDueAt: { type: [string, 'null'], format: date-time }
+        rescueRecordWithoutChange: { type: boolean }
+    JobAccepted:
       type: object
-      additionalProperties: false
-      required: [routineVersionId, policyVersion, items]
-      properties:
-        routineVersionId:
-          type: string
-          format: uuid
-        policyVersion:
-          type: string
-          description: 저장한 실험 후보의 순서를 계산한 서버 규칙 버전
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/RankedCandidate'
-    ExperimentStatus:
-      type: string
-      enum: [PLANNED, ACTIVE, PAUSED, COMPLETED, CANCELLED]
-    CreateExperimentRequest:
+      required: [jobId, status]
+      properties: { jobId: { type: integer }, status: { type: string, enum: [QUEUED, RUNNING] } }
+    AiJob:
       type: object
-      additionalProperties: false
-      required: [candidateId, comparisonId, plannedStartDate, durationDays, timeSlot, position, observationFocusCodes]
+      required: [id, type, status, createdAt]
       properties:
-        candidateId:
-          type: string
-          format: uuid
-        comparisonId:
-          type: string
-          format: uuid
-          description: 후보의 유효한 최신 비교 버전
-        plannedStartDate:
-          type: string
-          format: date
-          description: 첫 사용 전 보여주는 예정 시작일. 실제 일정은 첫 사용 관찰 시각부터 다시 계산한다.
-        durationDays:
-          type: integer
-          minimum: 7
-          maximum: 28
-          default: 14
-          description: 임상적 효능·안전 기준이 아닌 운영 기간. 첫 사용 후에는 바꿀 수 없다.
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-        position:
-          type: integer
-          minimum: 1
-          maximum: 30
-        observationFocusCodes:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          items:
-            type: string
-        doNotChangeNotes:
-          type: array
-          items:
-            type: string
-            maxLength: 200
-    UpdateExperimentPlanRequest:
+        id: { type: integer }
+        type: { type: string, enum: [RECEIPT_OCR, PRODUCT_OPINION, RECOMMENDATION, PRODUCT_RESEARCH, ROUTINE_ANALYSIS, ROUTINE_ORDER, RESCUE] }
+        status: { type: string, enum: [QUEUED, RUNNING, SUCCEEDED, FAILED] }
+        resultType: { type: [string, 'null'] }
+        resultId: { type: [integer, 'null'] }
+        errorCode: { type: [string, 'null'] }
+        retryable: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        finishedAt: { type: [string, 'null'], format: date-time }
+    Notification:
       type: object
-      additionalProperties: false
-      minProperties: 1
+      required: [id, type, title, targetType, targetId, dueAt]
       properties:
-        plannedStartDate:
-          type: string
-          format: date
-          description: 첫 사용 전의 예정 시작일만 바꿀 수 있다.
-        durationDays:
-          type: integer
-          minimum: 7
-          maximum: 28
-          description: 첫 사용 전의 운영 기간만 바꿀 수 있다.
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-        position:
-          type: integer
-          minimum: 1
-          maximum: 30
-        observationFocusCodes:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          items:
-            type: string
-        doNotChangeNotes:
-          type: array
-          items:
-            type: string
-            maxLength: 200
-    PauseReason:
-      type: string
-      enum: [DISCOMFORT, TRAVEL, PRODUCT_UNAVAILABLE, USER_CHOICE, OTHER]
-    PauseExperimentRequest:
+        id: { type: integer }
+        type: { type: string, enum: [ASSESSMENT_DUE, EXTENDED_ASSESSMENT_DUE, AI_JOB_SUCCEEDED, AI_JOB_FAILED] }
+        title: { type: string }
+        body: { type: string }
+        targetType: { type: string }
+        targetId: { type: integer }
+        dueAt: { type: string, format: date-time }
+        readAt: { type: [string, 'null'], format: date-time }
+    Problem:
       type: object
-      additionalProperties: false
-      required: [reason]
+      required: [type, title, status, code]
       properties:
-        reason:
-          $ref: '#/components/schemas/PauseReason'
-        note:
-          type: [string, 'null']
-          maxLength: 300
-    CancelExperimentRequest:
-      type: object
-      additionalProperties: false
-      required: [reasonCode]
-      properties:
-        reasonCode:
-          type: string
-          enum: [BEFORE_START, NO_LONGER_WANTED, PRODUCT_UNAVAILABLE, PLAN_CHANGED, OTHER]
-        note:
-          type: [string, 'null']
-          maxLength: 300
-    CreateRetrialRequest:
-      type: object
-      additionalProperties: false
-      required: [stableConfirmedByUser, plannedStartDate, durationDays, timeSlot, position]
-      properties:
-        stableConfirmedByUser:
-          type: boolean
-          const: true
-        plannedStartDate:
-          type: string
-          format: date
-        durationDays:
-          type: integer
-          minimum: 7
-          maximum: 28
-          default: 14
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-        position:
-          type: integer
-          minimum: 1
-          maximum: 30
-        additionalObservationFocusCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-    ExperimentTransition:
-      type: object
-      additionalProperties: false
-      required: [id, toStatus, occurredAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        fromStatus:
-          oneOf:
-            - $ref: '#/components/schemas/ExperimentStatus'
-            - type: 'null'
-        toStatus:
-          $ref: '#/components/schemas/ExperimentStatus'
-        reasonCode:
-          type: [string, 'null']
-        occurredAt:
-          type: string
-          format: date-time
-    Progress:
-      type: object
-      additionalProperties: false
-      required: [completedRequired, skippedRequired, totalRequired, percent, resultRecorded, experimentCompleted]
-      properties:
-        completedRequired:
-          type: integer
-          minimum: 0
-        totalRequired:
-          type: integer
-          minimum: 0
-        skippedRequired:
-          type: integer
-          minimum: 0
-        percent:
-          type: integer
-          minimum: 0
-          maximum: 100
-          description: 필수 관찰 완성도. 실험 완료율이 아님
-        resultRecorded:
-          type: boolean
-        experimentCompleted:
-          type: boolean
-          description: 결과가 저장되어 COMPLETED인지 여부. percent와 독립적
-    ExperimentSummary:
-      type: object
-      additionalProperties: false
-      required: [id, status, product, baselineRoutineVersionId, plannedStartDate, plannedEndDate, durationDays, timeSlot, position, progress, createdAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          $ref: '#/components/schemas/ExperimentStatus'
-        product:
-          $ref: '#/components/schemas/ProductVersionSummary'
-        baselineRoutineVersionId:
-          type: string
-          format: uuid
-        parentExperimentId:
-          type: [string, 'null']
-          format: uuid
-        plannedStartDate:
-          type: string
-          format: date
-          description: 첫 사용 전에 사용자가 정한 예정 시작일
-        plannedEndDate:
-          type: string
-          format: date
-          description: 예정 시작일과 durationDays로 계산한 미리보기 종료일
-        durationDays:
-          type: integer
-          minimum: 7
-          maximum: 28
-          description: 실험의 운영 기간. 첫 사용 후에는 고정된다.
-        actualStartedAt:
-          type: [string, 'null']
-          format: date-time
-          description: FIRST_USE 관찰의 observedAt. 이 시각을 기준으로 퀘스트 일정을 다시 계산한다.
-        expectedEndAt:
-          type: [string, 'null']
-          format: date-time
-          description: 실제 첫 사용 시각과 durationDays로 다시 계산한 종료 예정 시각. 첫 사용 전에는 null이다.
-        completedAt:
-          type: [string, 'null']
-          format: date-time
-        timeSlot:
-          $ref: '#/components/schemas/TimeSlot'
-        position:
-          type: integer
-          minimum: 1
-        progress:
-          $ref: '#/components/schemas/Progress'
-        createdAt:
-          type: string
-          format: date-time
-    ExperimentDetail:
-      type: object
-      additionalProperties: false
-      required: [experiment, candidate, comparison, observationFocusCodes, doNotChangeNotes, transitions, quests]
-      properties:
-        experiment:
-          $ref: '#/components/schemas/ExperimentSummary'
-        candidate:
-          $ref: '#/components/schemas/ExperimentCandidate'
-        comparison:
-          $ref: '#/components/schemas/CandidateComparison'
-        observationFocusCodes:
-          type: array
-          items:
-            type: string
-        doNotChangeNotes:
-          type: array
-          items:
-            type: string
-        transitions:
-          type: array
-          items:
-            $ref: '#/components/schemas/ExperimentTransition'
-        quests:
-          type: array
-          items:
-            $ref: '#/components/schemas/ObservationQuest'
-        result:
-          oneOf:
-            - $ref: '#/components/schemas/ExperimentResult'
-            - type: 'null'
-    QuestType:
-      type: string
-      enum: [FIRST_USE, EARLY_CHECK, MID_CHECK, FINAL_CHECK]
-    QuestStatus:
-      type: string
-      enum: [SCHEDULED, COMPLETED, SKIPPED, CANCELLED]
-    QuestDisplayStatus:
-      type: string
-      enum: [UPCOMING, TODAY, MISSED, COMPLETED, STOPPED]
-      description: 사용자 시간대로 계산한 화면 상태. 저장 원본은 QuestStatus다.
-    ObservationQuest:
-      type: object
-      additionalProperties: false
-      required: [id, experimentId, type, required, status, displayStatus]
-      properties:
-        id:
-          type: string
-          format: uuid
-        experimentId:
-          type: string
-          format: uuid
-        type:
-          $ref: '#/components/schemas/QuestType'
-        required:
-          type: boolean
-        dueAt:
-          type: [string, 'null']
-          format: date-time
-        previousDueAt:
-          type: [string, 'null']
-          format: date-time
-        status:
-          $ref: '#/components/schemas/QuestStatus'
-        displayStatus:
-          $ref: '#/components/schemas/QuestDisplayStatus'
-        skipReasonCode:
-          type: [string, 'null']
-          enum: [DO_NOT_REMEMBER, MISSED_WINDOW, PRODUCT_NOT_USED, OTHER, RESULT_RECORDED_WITHOUT_OBSERVATION, null]
-          description: 마지막 값은 결과 확정 시 남은 필수 퀘스트에 서버가 적용한다.
-        observationId:
-          type: [string, 'null']
-          format: uuid
-        completedAt:
-          type: [string, 'null']
-          format: date-time
-    QuestPage:
-      type: object
-      additionalProperties: false
-      required: [items, page]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/ObservationQuest'
-        page:
-          $ref: '#/components/schemas/PageInfo'
-    ExperimentQuests:
-      type: object
-      additionalProperties: false
-      required: [experimentId, progress, items]
-      properties:
-        experimentId:
-          type: string
-          format: uuid
-        progress:
-          $ref: '#/components/schemas/Progress'
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/ObservationQuest'
-    ObservationCondition:
-      type: string
-      enum: [NO_CHANGE, COMFORTABLE_OR_BETTER, DISCOMFORT, UNSURE, NOT_USED]
-    ObservationKind:
-      type: string
-      enum: [QUEST, CHANGE, STOP, RESTART, FOLLOW_UP]
-    DiscomfortSeverity:
-      type: string
-      enum: [MILD, MODERATE, SEVERE]
-    DiscomfortDetailInput:
-      type: object
-      additionalProperties: false
-      required: [severity, typeCodes, areaCodes, contextChangeCodes, helpNeeded, spreadingOrWorsening]
-      properties:
-        severity:
-          $ref: '#/components/schemas/DiscomfortSeverity'
-        firstNoticedAt:
-          type: [string, 'null']
-          format: date-time
-        typeCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            enum: [DRYNESS_TIGHTNESS, REDNESS, ITCHING, STINGING_BURNING, BUMPS, OTHER]
-        areaCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        contextChangeCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            enum: [OUTDOOR_ACTIVITY, DIFFERENT_CLEANSING, SLEEP_DEPRIVATION, OTHER_COSMETIC_CHANGE, OTHER, NONE, UNKNOWN]
-        otherContext:
-          type: [string, 'null']
-          maxLength: 300
-        helpNeeded:
-          type: boolean
-        spreadingOrWorsening:
-          type: boolean
-    ObservationAiStructuringRequest:
-      type: object
-      additionalProperties: false
-      required: [requested, aiProcessingConsent, purpose]
-      properties:
-        requested:
-          type: boolean
-          const: true
-        aiProcessingConsent:
-          type: boolean
-          const: true
-          description: 이 관찰의 선택값과 최소 메모만 OpenAI로 보내는 작업별 명시 동의
-        purpose:
-          type: string
-          const: FOLLOW_UP_QUESTIONS
-    ObservationAiAssistance:
-      type: object
-      additionalProperties: false
-      required: [status, source, followUpQuestions]
-      properties:
-        status:
-          type: string
-          enum: [NOT_REQUESTED, SUCCEEDED, FAILED, TIMED_OUT]
-        source:
-          type: string
-          enum: [NONE, AI_VALIDATED, DIRECT_INPUT_FALLBACK]
-        followUpQuestions:
-          type: array
-          maxItems: 3
-          items:
-            type: string
-        aiJobId:
-          type: [string, 'null']
-          format: uuid
-    OtherProductChangeInput:
-      type: object
-      additionalProperties: false
-      required: [productVersionId, changeType, occurredAt]
-      properties:
-        productVersionId:
-          type: string
-          format: uuid
-        changeType:
-          type: string
-          enum: [STARTED, STOPPED, RESTARTED, USAGE_CHANGED]
-        occurredAt:
-          type: string
-          format: date-time
-    SubmitObservationRequest:
-      type: object
-      additionalProperties: false
-      required: [condition, observedAt]
-      properties:
-        condition:
-          $ref: '#/components/schemas/ObservationCondition'
-        usedAsPlanned:
-          type: [boolean, 'null']
-        usesSinceLastCheck:
-          type: [integer, 'null']
-          minimum: 0
-        otherProductChangeState:
-          oneOf:
-            - $ref: '#/components/schemas/AnswerState'
-            - type: 'null'
-        otherProductChanges:
-          type: array
-          items:
-            $ref: '#/components/schemas/OtherProductChangeInput'
-          description: otherProductChangeState가 YES이면 하나 이상
-        observedAt:
-          type: string
-          format: date-time
-          description: 미래일 수 없다. recordedAt은 서버가 기록한다.
-        memo:
-          type: [string, 'null']
-          maxLength: 500
-        discomfort:
-          oneOf:
-            - $ref: '#/components/schemas/DiscomfortDetailInput'
-            - type: 'null'
-          description: condition이 DISCOMFORT이면 필수
-        pauseProductUse:
-          type: boolean
-          default: false
-        aiStructuring:
-          oneOf:
-            - $ref: '#/components/schemas/ObservationAiStructuringRequest'
-            - type: 'null'
-          description: 생략하면 메모를 AI로 전송하지 않는다.
-    CreateAdHocObservationRequest:
-      type: object
-      additionalProperties: false
-      required: [kind, condition, observedAt]
-      properties:
-        kind:
-          type: string
-          enum: [CHANGE, STOP, RESTART, FOLLOW_UP]
-        condition:
-          $ref: '#/components/schemas/ObservationCondition'
-        usedAsPlanned:
-          type: [boolean, 'null']
-        usesSinceLastCheck:
-          type: [integer, 'null']
-          minimum: 0
-        otherProductChangeState:
-          oneOf:
-            - $ref: '#/components/schemas/AnswerState'
-            - type: 'null'
-        otherProductChanges:
-          type: array
-          items:
-            $ref: '#/components/schemas/OtherProductChangeInput'
-        observedAt:
-          type: string
-          format: date-time
-        memo:
-          type: [string, 'null']
-          maxLength: 500
-        discomfort:
-          oneOf:
-            - $ref: '#/components/schemas/DiscomfortDetailInput'
-            - type: 'null'
-        pauseProductUse:
-          type: boolean
-          default: false
-        aiStructuring:
-          oneOf:
-            - $ref: '#/components/schemas/ObservationAiStructuringRequest'
-            - type: 'null'
-          description: 생략하면 메모를 AI로 전송하지 않는다.
-    UpdateObservationRequest:
-      type: object
-      additionalProperties: false
-      required: [condition, observedAt]
-      properties:
-        condition:
-          $ref: '#/components/schemas/ObservationCondition'
-        usedAsPlanned:
-          type: [boolean, 'null']
-        usesSinceLastCheck:
-          type: [integer, 'null']
-          minimum: 0
-        otherProductChangeState:
-          oneOf:
-            - $ref: '#/components/schemas/AnswerState'
-            - type: 'null'
-        otherProductChanges:
-          type: array
-          items:
-            $ref: '#/components/schemas/OtherProductChangeInput'
-        observedAt:
-          type: string
-          format: date-time
-        memo:
-          type: [string, 'null']
-          maxLength: 500
-        discomfort:
-          oneOf:
-            - $ref: '#/components/schemas/DiscomfortDetailInput'
-            - type: 'null'
-        aiStructuring:
-          oneOf:
-            - $ref: '#/components/schemas/ObservationAiStructuringRequest'
-            - type: 'null'
-          description: 생략하면 수정 메모를 AI로 전송하지 않는다.
-    Observation:
-      type: object
-      additionalProperties: false
-      required: [id, experimentId, kind, condition, otherProductChanges, observedAt, recordedAt, updatedAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        experimentId:
-          type: string
-          format: uuid
-        questId:
-          type: [string, 'null']
-          format: uuid
-        kind:
-          $ref: '#/components/schemas/ObservationKind'
-        condition:
-          $ref: '#/components/schemas/ObservationCondition'
-        usedAsPlanned:
-          type: [boolean, 'null']
-        usesSinceLastCheck:
-          type: [integer, 'null']
-          minimum: 0
-        otherProductChangeState:
-          oneOf:
-            - $ref: '#/components/schemas/AnswerState'
-            - type: 'null'
-        otherProductChanges:
-          type: array
-          items:
-            $ref: '#/components/schemas/OtherProductChangeInput'
-        memo:
-          type: [string, 'null']
-        observedAt:
-          type: string
-          format: date-time
-        recordedAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        discomfort:
-          oneOf:
-            - $ref: '#/components/schemas/DiscomfortDetailInput'
-            - type: 'null'
-    ObservationReceipt:
-      type: object
-      additionalProperties: false
-      required: [observation, experimentStatus, quest, aiAssistance]
-      properties:
-        observation:
-          $ref: '#/components/schemas/Observation'
-        experimentStatus:
-          $ref: '#/components/schemas/ExperimentStatus'
-        quest:
-          oneOf:
-            - $ref: '#/components/schemas/ObservationQuest'
-            - type: 'null'
-        rescueCaseId:
-          type: [string, 'null']
-          format: uuid
-        safetyPriority:
-          type: boolean
-          default: false
-        aiAssistance:
-          $ref: '#/components/schemas/ObservationAiAssistance'
-    SkipQuestRequest:
-      type: object
-      additionalProperties: false
-      required: [reasonCode]
-      properties:
-        reasonCode:
-          type: string
-          enum: [DO_NOT_REMEMBER, MISSED_WINDOW, PRODUCT_NOT_USED, OTHER]
-    ExperimentEventType:
-      type: string
-      enum: [FIRST_USE, PRODUCT_STOPPED, PRODUCT_RESTARTED, PLAN_DEVIATION, UNPLANNED_PRODUCT_CHANGE]
-    CreateExperimentEventRequest:
-      type: object
-      additionalProperties: false
-      required: [type, occurredAt]
-      properties:
-        type:
-          $ref: '#/components/schemas/ExperimentEventType'
-        productVersionId:
-          type: [string, 'null']
-          format: uuid
-        occurredAt:
-          type: string
-          format: date-time
-        timeSlot:
-          oneOf:
-            - $ref: '#/components/schemas/TimeSlot'
-            - type: 'null'
-        position:
-          type: [integer, 'null']
-          minimum: 1
-        note:
-          type: [string, 'null']
-          maxLength: 300
-    ExperimentEvent:
-      type: object
-      additionalProperties: false
-      required: [id, experimentId, type, occurredAt, recordedAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        experimentId:
-          type: string
-          format: uuid
-        type:
-          $ref: '#/components/schemas/ExperimentEventType'
-        productVersionId:
-          type: [string, 'null']
-          format: uuid
-        occurredAt:
-          type: string
-          format: date-time
-        recordedAt:
-          type: string
-          format: date-time
-        details:
-          type: object
-          additionalProperties: true
-    RescueClassification:
-      type: string
-      enum: [RECENT_CHANGE, CHANGED_TOGETHER, NO_RECORDED_CHANGE, INSUFFICIENT_INFORMATION]
-      description: 서버 정책이 기록된 사실로 계산한다. 원인·안전성·유지 권고가 아니다.
-    RescueChangeSource:
-      type: string
-      enum: [EXPERIMENT, UNPLANNED, STABLE, UNKNOWN]
-    RescueItem:
-      type: object
-      additionalProperties: false
-      required: [id, product, classification, changeSource, facts, checkOrderOptions]
-      properties:
-        id:
-          type: string
-          format: uuid
-        product:
-          $ref: '#/components/schemas/ProductVersionSummary'
-        classification:
-          $ref: '#/components/schemas/RescueClassification'
-        changeSource:
-          $ref: '#/components/schemas/RescueChangeSource'
-        facts:
-          type: array
-          items:
-            type: string
-        checkOrderOptions:
-          type: array
-          items:
-            type: string
-          description: safetyPriority가 true이면 비어 있고 변경 이력만 제공한다.
-    RescueExplanation:
-      type: object
-      additionalProperties: false
-      required: [source, summary, evidence, counterEvidence, missingInformation, checkOrderOptions, safetyNotice]
-      properties:
-        source:
-          type: string
-          enum: [AI_VALIDATED, TEMPLATE_FALLBACK]
-        summary:
-          type: string
-        evidence:
-          type: array
-          items:
-            type: string
-        counterEvidence:
-          type: array
-          items:
-            type: string
-        missingInformation:
-          type: array
-          items:
-            type: string
-        checkOrderOptions:
-          type: array
-          items:
-            type: string
-          description: 안전 우선에서는 빈 배열
-        safetyNotice:
-          type: string
-    RescueCase:
-      type: object
-      additionalProperties: false
-      required: [id, experimentId, triggerObservationId, baselineRoutineVersionId, policyVersion, evidenceStrength, safetyPriority, missingInformation, items, explanation, createdAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        experimentId:
-          type: string
-          format: uuid
-        triggerObservationId:
-          type: string
-          format: uuid
-        baselineRoutineVersionId:
-          type: string
-          format: uuid
-        policyVersion:
-          type: string
-        evidenceStrength:
-          $ref: '#/components/schemas/EvidenceStrength'
-        safetyPriority:
-          type: boolean
-        missingInformation:
-          type: array
-          items:
-            type: string
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/RescueItem'
-        explanation:
-          $ref: '#/components/schemas/RescueExplanation'
-        createdAt:
-          type: string
-          format: date-time
-    DiscomfortOutcome:
-      type: string
-      enum: [NONE, PRESENT, UNSURE]
-      description: 이번 사용 중 사용자가 느낀 불편 여부. 원인 판정이 아니다.
-    GoalOutcome:
-      type: string
-      enum: [HELPED, NO_CHANGE, UNSURE]
-      description: 선택한 사용 목적에 대한 주관적 체감. 효능 판정이 아니다.
-    NextUseDecision:
-      type: string
-      enum: [PROMOTE_TO_STABLE, STOP, HOLD, RETRY]
-      description: 사용자가 선택한 다음 사용 결정
-    BaselineRoutineUseState:
-      type: string
-      enum: [NOT_APPLICABLE, ALL_CONTINUED, SOME_STOPPED, ALL_STOPPED, UNKNOWN]
-      description: Rescue 이후 기존 안정 루틴 제품을 어떻게 사용했는지에 대한 사용자 응답
-    RecordCompleteness:
-      type: object
-      additionalProperties: false
-      required: [actualUseDays, totalUseCount, completedRequiredQuests, skippedRequiredQuests, totalRequiredQuests, otherProductChangeState, evidenceStrength]
-      properties:
-        actualUseDays:
-          type: integer
-          minimum: 0
-        totalUseCount:
-          type: [integer, 'null']
-          minimum: 0
-          description: 모든 구간의 실제 사용 횟수를 알 때만 합산하고 하나라도 모르면 null
-        completedRequiredQuests:
-          type: integer
-          minimum: 0
-        skippedRequiredQuests:
-          type: integer
-          minimum: 0
-        totalRequiredQuests:
-          type: integer
-          minimum: 0
-        otherProductChangeState:
-          $ref: '#/components/schemas/AnswerState'
-          description: 전체 관찰에서 실험 제품 외 변경이 있었는지의 집계. 모르는 기록이 남으면 UNKNOWN을 보존한다.
-        evidenceStrength:
-          $ref: '#/components/schemas/EvidenceStrength'
-          description: 계획 대비 실제 기간·필수 관찰·사용 횟수·다른 변경 답변으로 계산한 기록 완성도. 피부 적합 확률이 아님
-    CompleteExperimentRequest:
-      type: object
-      additionalProperties: false
-      required: [discomfortOutcome, goalOutcome, nextUseDecision]
-      properties:
-        discomfortOutcome:
-          $ref: '#/components/schemas/DiscomfortOutcome'
-        goalOutcome:
-          $ref: '#/components/schemas/GoalOutcome'
-        nextUseDecision:
-          $ref: '#/components/schemas/NextUseDecision'
-        baselineRoutineUseState:
-          oneOf:
-            - $ref: '#/components/schemas/BaselineRoutineUseState'
-            - type: 'null'
-          description: Rescue가 있으면 NOT_APPLICABLE 이외 값으로 필수다. Rescue가 없으면 생략하고 서버가 NOT_APPLICABLE로 저장한다.
-        summary:
-          type: [string, 'null']
-          maxLength: 1000
-        confirmedRoutineItems:
-          type: array
-          description: nextUseDecision이 PROMOTE_TO_STABLE이고 discomfortOutcome이 NONE일 때 사용자가 확인한 전체 새 루틴
-          items:
-            $ref: '#/components/schemas/RoutineItemInput'
-    ExperimentResult:
-      type: object
-      additionalProperties: false
-      required: [id, experimentId, discomfortOutcome, goalOutcome, nextUseDecision, baselineRoutineUseState, recordCompleteness, completedAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        experimentId:
-          type: string
-          format: uuid
-        discomfortOutcome:
-          $ref: '#/components/schemas/DiscomfortOutcome'
-        goalOutcome:
-          $ref: '#/components/schemas/GoalOutcome'
-        nextUseDecision:
-          $ref: '#/components/schemas/NextUseDecision'
-        baselineRoutineUseState:
-          $ref: '#/components/schemas/BaselineRoutineUseState'
-        recordCompleteness:
-          $ref: '#/components/schemas/RecordCompleteness'
-        summary:
-          type: [string, 'null']
-        resultingRoutineVersionId:
-          type: [string, 'null']
-          format: uuid
-        completedAt:
-          type: string
-          format: date-time
-    LabRecord:
-      type: object
-      additionalProperties: false
-      required: [id, experimentId, displayAssetCode, observationCompletion, earnedAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        experimentId:
-          type: string
-          format: uuid
-        displayAssetCode:
-          type: string
-        observationCompletion:
-          $ref: '#/components/schemas/Progress'
-        earnedAt:
-          type: string
-          format: date-time
-    ExperimentCompletion:
-      type: object
-      additionalProperties: false
-      required: [result, labRecord]
-      properties:
-        result:
-          $ref: '#/components/schemas/ExperimentResult'
-        resultingStableRoutine:
-          oneOf:
-            - $ref: '#/components/schemas/RoutineVersion'
-            - type: 'null'
-        labRecord:
-          $ref: '#/components/schemas/LabRecord'
-        unlockedRewardCodes:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-    ArchiveExperimentSummary:
-      type: object
-      additionalProperties: false
-      required: [experiment, goalFunctionCode, requiredQuestCompletion, stableRoutinePromoted, hasRetrial]
-      properties:
-        experiment:
-          $ref: '#/components/schemas/ExperimentSummary'
-        goalFunctionCode:
-          type: string
-        result:
-          oneOf:
-            - $ref: '#/components/schemas/ExperimentResult'
-            - type: 'null'
-        requiredQuestCompletion:
-          $ref: '#/components/schemas/Progress'
-        stableRoutinePromoted:
-          type: boolean
-        hasRetrial:
-          type: boolean
-        cancelReasonCode:
-          type: [string, 'null']
-    ArchiveExperimentPage:
-      type: object
-      additionalProperties: false
-      required: [items, page]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/ArchiveExperimentSummary'
-        page:
-          $ref: '#/components/schemas/PageInfo'
-    ArchiveExperimentDetail:
-      type: object
-      additionalProperties: false
-      required: [experiment, baselineRoutine, comparison, observations, events, rescues, followUpObservations, retrialExperimentIds]
-      properties:
-        experiment:
-          $ref: '#/components/schemas/ExperimentDetail'
-        baselineRoutine:
-          $ref: '#/components/schemas/RoutineVersion'
-        comparison:
-          $ref: '#/components/schemas/CandidateComparison'
-        observations:
-          type: array
-          items:
-            $ref: '#/components/schemas/Observation'
-        events:
-          type: array
-          items:
-            $ref: '#/components/schemas/ExperimentEvent'
-        rescues:
-          type: array
-          items:
-            $ref: '#/components/schemas/RescueCase'
-        followUpObservations:
-          type: array
-          items:
-            $ref: '#/components/schemas/Observation'
-        retrialExperimentIds:
-          type: array
-          items:
-            type: string
-            format: uuid
-    PersonalEvidenceCase:
-      type: object
-      additionalProperties: false
-      required: [experimentId, productVersionId, discomfortOutcome, goalOutcome, nextUseDecision, recordCompleteness, actualPeriod, relationCodes]
-      properties:
-        experimentId:
-          type: string
-          format: uuid
-        productVersionId:
-          type: string
-          format: uuid
-        discomfortOutcome:
-          $ref: '#/components/schemas/DiscomfortOutcome'
-        goalOutcome:
-          $ref: '#/components/schemas/GoalOutcome'
-        nextUseDecision:
-          $ref: '#/components/schemas/NextUseDecision'
-        recordCompleteness:
-          $ref: '#/components/schemas/RecordCompleteness'
-        actualPeriod:
-          type: object
-          additionalProperties: false
-          required: [startedAt, endedAt]
-          properties:
-            startedAt:
-              type: string
-              format: date-time
-            endedAt:
-              type: string
-              format: date-time
-        relationCodes:
-          type: array
-          items:
-            type: string
-            enum: [SAME_PRODUCT, RETRIAL, STABLE_COMBINATION, REPEATED_OBSERVATION, OPPOSING_CASE]
-    PersonalEvidence:
-      type: object
-      additionalProperties: false
-      required: [cases, repeatedObservations, disclaimer]
-      properties:
-        cases:
-          type: array
-          items:
-            $ref: '#/components/schemas/PersonalEvidenceCase'
-        repeatedObservations:
-          type: array
-          items:
-            $ref: '#/components/schemas/PersonalRepeatedObservation'
-        disclaimer:
-          type: string
-          description: 개인 기록도 원인·향후 적합성을 보장하지 않는다는 고정 경계
-    RepeatedObservationDimension:
-      type: string
-      enum: [PRODUCT, INGREDIENT, FUNCTION, CATEGORY]
-    PersonalRepeatedObservation:
-      type: object
-      additionalProperties: false
-      required: [dimension, referenceCode, directionType, directionCode, sameDirectionCount, totalRelatedCount, opposingCount, supportingExperimentIds, opposingExperimentIds, disclaimer]
-      properties:
-        dimension:
-          $ref: '#/components/schemas/RepeatedObservationDimension'
-        referenceCode:
-          type: string
-          description: 제품 UUID 문자열, 확인 성분 UUID 문자열, 기능 또는 제품군 코드
-        displayName:
-          type: string
-        directionType:
-          type: string
-          enum: [DISCOMFORT, GOAL]
-        directionCode:
-          type: string
-          description: DiscomfortOutcome 또는 GoalOutcome 값
-        sameDirectionCount:
-          type: integer
-          minimum: 2
-        totalRelatedCount:
-          type: integer
-          minimum: 2
-        opposingCount:
-          type: integer
-          minimum: 0
-        supportingExperimentIds:
-          type: array
-          minItems: 2
-          uniqueItems: true
-          items:
-            type: string
-            format: uuid
-        opposingExperimentIds:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-            format: uuid
-        disclaimer:
-          type: string
-          const: 관련 기록에서 반복되었지만 원인이나 향후 적합성으로 확인된 것은 아닙니다.
-    PersonalRepeatedObservationPage:
-      type: object
-      additionalProperties: false
-      required: [items, page]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/PersonalRepeatedObservation'
-        page:
-          $ref: '#/components/schemas/PageInfo'
-    TimelineEvent:
-      type: object
-      additionalProperties: false
-      required: [id, type, occurredAt, title, sourceType, sourceId]
-      properties:
-        id:
-          type: string
-          format: uuid
-        type:
-          type: string
-          enum: [ROUTINE_CONFIRMED, EXPERIMENT_PLANNED, EXPERIMENT_STARTED, EXPERIMENT_PAUSED, EXPERIMENT_RESUMED, EXPERIMENT_COMPLETED, EXPERIMENT_CANCELLED, RESCUE_CREATED, PRODUCT_ADDED, PRODUCT_REPLACED, PRODUCT_REMOVED, RETRIAL_CREATED]
-        occurredAt:
-          type: string
-          format: date-time
-        title:
-          type: string
-        sourceType:
-          type: string
-          enum: [ROUTINE_VERSION, EXPERIMENT, RESCUE_CASE]
-        sourceId:
-          type: string
-          format: uuid
-    TimelinePage:
-      type: object
-      additionalProperties: false
-      required: [items, page]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/TimelineEvent'
-        page:
-          $ref: '#/components/schemas/PageInfo'
-    LabAssetType:
-      type: string
-      enum: [CHARACTER, THEME, BADGE, DECORATION, SAMPLE]
-    LabAssetState:
-      type: object
-      additionalProperties: false
-      required: [code, type, name, unlocked, unlockDescription]
-      properties:
-        code:
-          type: string
-        type:
-          $ref: '#/components/schemas/LabAssetType'
-        name:
-          type: string
-        unlocked:
-          type: boolean
-        unlockDescription:
-          type: string
-        earnedAt:
-          type: [string, 'null']
-          format: date-time
-        sourceExperimentId:
-          type: [string, 'null']
-          format: uuid
-    LabProfile:
-      type: object
-      additionalProperties: false
-      required: [selectedCharacterCode, selectedThemeCode, availableCharacters, availableThemes]
-      properties:
-        selectedCharacterCode:
-          type: string
-        selectedThemeCode:
-          type: string
-        availableCharacters:
-          type: array
-          items:
-            $ref: '#/components/schemas/LabAssetState'
-        availableThemes:
-          type: array
-          items:
-            $ref: '#/components/schemas/LabAssetState'
-    UpdateLabProfileRequest:
-      type: object
-      additionalProperties: false
-      required: [selectedCharacterCode, selectedThemeCode]
-      properties:
-        selectedCharacterCode:
-          type: string
-        selectedThemeCode:
-          type: string
-    LabOverview:
-      type: object
-      additionalProperties: false
-      required: [profile, currentProgress, completedResearchCount, recentRecords, recentRewards]
-      properties:
-        profile:
-          $ref: '#/components/schemas/LabProfile'
-        currentProgress:
-          oneOf:
-            - $ref: '#/components/schemas/Progress'
-            - type: 'null'
-        completedResearchCount:
-          type: integer
-          minimum: 0
-        recentRecords:
-          type: array
-          maxItems: 10
-          items:
-            $ref: '#/components/schemas/LabRecord'
-        recentRewards:
-          type: array
-          maxItems: 10
-          items:
-            $ref: '#/components/schemas/LabAssetState'
-    LabRewardPage:
-      type: object
-      additionalProperties: false
-      required: [items, page]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/LabAssetState'
-        page:
-          $ref: '#/components/schemas/PageInfo'
-    SaveBrowserSubscriptionRequest:
-      type: object
-      additionalProperties: false
-      required: [endpoint, publicKey, authSecret]
-      properties:
-        endpoint:
-          type: string
-          format: uri
-          maxLength: 2000
-        publicKey:
-          type: string
-          maxLength: 500
-        authSecret:
-          type: string
-          maxLength: 500
-        expiresAt:
-          type: [string, 'null']
-          format: date-time
-    BrowserSubscriptionState:
-      type: object
-      additionalProperties: false
-      required: [id, status, createdAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [ACTIVE, EXPIRED, REVOKED]
-        expiresAt:
-          type: [string, 'null']
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string, examples: [ROUTINE_VERSION_CONFLICT] }
+        detail: { type: string }
+        fields: { type: object, additionalProperties: { type: array, items: { type: string } } }
