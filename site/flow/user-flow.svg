@@ -1,10 +1,10 @@
-<svg width="8200" height="5000" viewBox="0 0 8200 5000" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="6800" height="3600" viewBox="0 0 6800 3600" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#15251F" flood-opacity="0.08"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#15251F" flood-opacity="0.08"/>
     </filter>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
-      <path d="M1 1L10 6L1 11" stroke="#6D756F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M1 1L10 6L1 11" stroke="#707872" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </marker>
     <marker id="arrow-ai" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
       <path d="M1 1L10 6L1 11" stroke="#6656B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -12,558 +12,339 @@
     <style>
       text { font-family: Pretendard, Inter, Arial, sans-serif; fill: #17201C; }
       .title { font-size: 58px; font-weight: 800; letter-spacing: -1.8px; }
-      .subtitle { font-size: 25px; font-weight: 500; fill: #59635D; }
-      .section-title { font-size: 31px; font-weight: 800; letter-spacing: -0.5px; }
-      .section-caption { font-size: 20px; font-weight: 500; fill: #69736D; }
+      .subtitle { font-size: 24px; font-weight: 500; fill: #59635D; }
+      .section-title { font-size: 31px; font-weight: 800; }
+      .section-copy { font-size: 19px; font-weight: 500; fill: #69736D; }
       .node-title { font-size: 25px; font-weight: 750; }
       .node-copy { font-size: 19px; font-weight: 500; fill: #5B665F; }
-      .tiny { font-size: 17px; font-weight: 600; fill: #707A74; }
+      .small { font-size: 17px; font-weight: 600; fill: #707A74; }
       .tag { font-size: 17px; font-weight: 750; }
       .panel { fill: #F7F8F6; stroke: #DCE1DD; stroke-width: 2; }
       .node { fill: white; stroke: #AEB7B1; stroke-width: 2.5; filter: url(#shadow); }
       .ai { fill: #F4F1FF; stroke: #7766D2; }
-      .server { fill: #EEF5FF; stroke: #5682B5; }
       .data { fill: #F0F5F2; stroke: #6D8B79; }
       .good { fill: #ECF8F2; stroke: #2C8669; }
       .warn { fill: #FFF8E8; stroke: #B98A2F; }
       .danger { fill: #FFF1EF; stroke: #B85C52; }
-      .muted { fill: #F1F2F0; stroke: #A8AFAA; }
       .decision { fill: white; stroke: #8E9791; stroke-width: 2.5; filter: url(#shadow); }
-      .line { fill: none; stroke: #6D756F; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .line { fill: none; stroke: #707872; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
       .line-ai { fill: none; stroke: #6656B8; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-ai); }
       .line-dashed { fill: none; stroke: #8E9791; stroke-width: 2.5; stroke-dasharray: 10 10; marker-end: url(#arrow); }
-      .label-bg { fill: white; stroke: #D9DEDA; stroke-width: 1.5; }
     </style>
   </defs>
 
-  <rect width="8200" height="5000" fill="white"/>
-  <rect x="0" y="0" width="8200" height="430" fill="#F5F8F6"/>
-  <circle cx="142" cy="124" r="42" fill="#236F5E"/>
-  <text x="142" y="136" text-anchor="middle" font-size="32" font-weight="800" fill="white">S</text>
-  <text class="title" x="220" y="130">SkinCause 사용자 흐름</text>
-  <text class="subtitle" x="220" y="182">AI가 코덕의 화장품 탐색·루틴·사용 결과를 기억하고, 다음 판단과 행동까지 개인화한다</text>
+  <rect width="6800" height="3600" fill="white"/>
+  <rect width="6800" height="420" fill="#F5F8F6"/>
+  <circle cx="140" cy="122" r="42" fill="#236F5E"/>
+  <text x="140" y="134" text-anchor="middle" font-size="32" font-weight="800" fill="white">S</text>
+  <text class="title" x="218" y="128">SkinCause 사용자 흐름</text>
+  <text class="subtitle" x="218" y="180">사기 전 AI와 따져보고, 쓴 뒤 경험을 남겨 다음 선택에 다시 쓴다</text>
 
-  <g transform="translate(220 266)">
-    <rect width="124" height="42" rx="21" fill="white" stroke="#AEB7B1"/>
-    <circle cx="22" cy="21" r="7" fill="#FFFFFF" stroke="#7A847D" stroke-width="2"/>
-    <text class="tag" x="40" y="27">사용자</text>
-    <rect x="142" width="126" height="42" rx="21" fill="#F4F1FF" stroke="#7766D2"/>
-    <circle cx="164" cy="21" r="7" fill="#7766D2"/>
-    <text class="tag" x="182" y="27" fill="#5746A5">AI 대화</text>
-    <rect x="286" width="154" height="42" rx="21" fill="#EEF5FF" stroke="#5682B5"/>
-    <circle cx="308" cy="21" r="7" fill="#5682B5"/>
-    <text class="tag" x="326" y="27" fill="#3C668F">서버 검증</text>
-    <rect x="458" width="152" height="42" rx="21" fill="#ECF8F2" stroke="#2C8669"/>
-    <circle cx="480" cy="21" r="7" fill="#2C8669"/>
-    <text class="tag" x="498" y="27" fill="#216D55">개인 기록</text>
-    <rect x="628" width="168" height="42" rx="21" fill="#FFF8E8" stroke="#B98A2F"/>
-    <path d="M650 12L660 30H640L650 12Z" fill="#B98A2F"/>
-    <text class="tag" x="674" y="27" fill="#8A641F">사용자 확인</text>
+  <g transform="translate(218 258)">
+    <rect width="128" height="42" rx="21" fill="white" stroke="#AEB7B1"/>
+    <circle cx="22" cy="21" r="7" fill="white" stroke="#7A847D" stroke-width="2"/>
+    <text class="tag" x="42" y="27">사용자</text>
+    <rect x="146" width="132" height="42" rx="21" fill="#F4F1FF" stroke="#7766D2"/>
+    <circle cx="168" cy="21" r="7" fill="#7766D2"/>
+    <text class="tag" x="188" y="27" fill="#5746A5">AI 대화</text>
+    <rect x="296" width="148" height="42" rx="21" fill="#ECF8F2" stroke="#2C8669"/>
+    <circle cx="318" cy="21" r="7" fill="#2C8669"/>
+    <text class="tag" x="338" y="27" fill="#216D55">개인 기록</text>
   </g>
 
-  <!-- Section backgrounds -->
-  <rect class="panel" x="100" y="500" width="1100" height="3600" rx="32"/>
-  <rect class="panel" x="1260" y="500" width="2240" height="3600" rx="32"/>
-  <rect class="panel" x="3560" y="500" width="1700" height="3600" rx="32"/>
-  <rect class="panel" x="5320" y="500" width="1260" height="3600" rx="32"/>
-  <rect class="panel" x="6640" y="500" width="1460" height="3600" rx="32"/>
-
-  <text class="section-title" x="150" y="568">0. 시작과 홈</text>
-  <text class="section-caption" x="150" y="602">처음 한 번만 설정하고, 이후 필요한 순간에 들어온다</text>
-  <text class="section-title" x="1310" y="568">1. AI 제품 탐색</text>
-  <text class="section-caption" x="1310" y="602">한 제품의 구매 의견 또는 다음 후보 추천</text>
-  <text class="section-title" x="3610" y="568">2. 내 화장품과 AI 루틴</text>
-  <text class="section-caption" x="3610" y="602">구매를 실제 사용 조건과 연결한다</text>
-  <text class="section-title" x="5370" y="568">3. 7일 결과</text>
-  <text class="section-caption" x="5370" y="602">문제없음도 놓치지 않고 개인 데이터로 만든다</text>
-  <text class="section-title" x="6690" y="568">4. AI Rescue</text>
-  <text class="section-caption" x="6690" y="602">최근 변경을 근거로 다음 루틴까지 제안한다</text>
-
-  <!-- Main connectors: start and home -->
-  <path class="line" d="M650 820V900"/>
-  <path class="line" d="M650 1050V1130"/>
-  <path class="line-ai" d="M650 1330V1420"/>
-  <path class="line" d="M650 1630V1740"/>
-  <path class="line" d="M1030 1860H1190V820H1420"/>
-  <path class="line" d="M1030 1915H1215V2540H1420"/>
-  <path class="line" d="M1030 1970H1240V770H3760"/>
-  <path class="line" d="M1030 2025H1260V1810H3760"/>
-  <path class="line" d="M1030 2080H1290V760H6830"/>
-  <path class="line-dashed" d="M650 1330V3920H390"/>
-
-  <!-- Start and home nodes -->
-  <rect class="node good" x="470" y="690" width="360" height="130" rx="65"/>
-  <text class="node-title" x="650" y="748" text-anchor="middle">처음 시작</text>
-  <text class="node-copy" x="650" y="782" text-anchor="middle">가입 또는 로그인</text>
-
-  <rect class="node" x="350" y="900" width="600" height="150" rx="24"/>
-  <text class="node-title" x="650" y="962" text-anchor="middle">이메일 계정</text>
-  <text class="node-copy" x="650" y="1000" text-anchor="middle">개인 기록을 사용자별로 분리</text>
-
-  <rect class="node ai" x="280" y="1130" width="740" height="200" rx="24"/>
-  <text class="node-title" x="650" y="1190" text-anchor="middle">AI 온보딩 대화</text>
-  <text class="node-copy" x="650" y="1230" text-anchor="middle">피부 고민 · 선호 사용감 · 피하고 싶은 조건</text>
-  <text class="node-copy" x="650" y="1265" text-anchor="middle">제품 선택 때 알고 싶은 것</text>
-  <text class="tiny" x="650" y="1300" text-anchor="middle">모든 질문은 자연어 · 건너뛰기 가능</text>
-
-  <rect class="node ai" x="300" y="1420" width="700" height="210" rx="24"/>
-  <text class="node-title" x="650" y="1480" text-anchor="middle">AI가 기억할 맥락 확인</text>
-  <text class="node-copy" x="650" y="1520" text-anchor="middle">AI가 이해한 문장을 먼저 보여준다</text>
-  <text class="node-copy" x="650" y="1555" text-anchor="middle">사용자가 확인 · 수정 · 삭제</text>
-  <text class="tiny" x="650" y="1592" text-anchor="middle">기억은 다음 제품 의견·추천·Rescue에 재사용</text>
-
-  <rect class="node" x="260" y="1740" width="770" height="430" rx="28"/>
-  <text class="node-title" x="645" y="1800" text-anchor="middle">홈</text>
-  <text class="node-copy" x="645" y="1840" text-anchor="middle">지금 해야 할 행동 하나를 먼저 보여준다</text>
-  <rect x="315" y="1885" width="300" height="54" rx="15" fill="#F4F1FF" stroke="#7766D2"/>
-  <text class="tiny" x="465" y="1919" text-anchor="middle">이거 사볼까?</text>
-  <rect x="650" y="1885" width="325" height="54" rx="15" fill="#F4F1FF" stroke="#7766D2"/>
-  <text class="tiny" x="812" y="1919" text-anchor="middle">제품 추천받기</text>
-  <rect x="315" y="1955" width="300" height="54" rx="15" fill="white" stroke="#AEB7B1"/>
-  <text class="tiny" x="465" y="1989" text-anchor="middle">새 화장품 추가</text>
-  <rect x="650" y="1955" width="325" height="54" rx="15" fill="white" stroke="#AEB7B1"/>
-  <text class="tiny" x="812" y="1989" text-anchor="middle">현재 루틴</text>
-  <rect x="315" y="2025" width="660" height="70" rx="18" fill="#FFF1EF" stroke="#B85C52"/>
-  <text class="tiny" x="645" y="2068" text-anchor="middle" fill="#963F37">불편함이 생겼어요 → AI Rescue</text>
-  <text class="tiny" x="645" y="2132" text-anchor="middle">우선순위: 진행 중 Rescue → 7일 결과 → AI 실패 → 탐색</text>
-
-  <rect class="node data" x="250" y="2320" width="800" height="230" rx="24"/>
-  <text class="node-title" x="650" y="2380" text-anchor="middle">AI가 기억하는 내용</text>
-  <text class="node-copy" x="650" y="2420" text-anchor="middle">온보딩과 대화에서 확인한 자연어 맥락</text>
-  <text class="node-copy" x="650" y="2455" text-anchor="middle">사용자가 언제든 확인 · 수정 · 삭제</text>
-  <text class="tiny" x="650" y="2500" text-anchor="middle">구조화된 루틴·결과 이력과는 별도로 보관</text>
-
-  <rect class="node muted" x="250" y="2730" width="800" height="300" rx="24"/>
-  <text class="node-title" x="650" y="2790" text-anchor="middle">루틴이 아직 없다면</text>
-  <text class="node-copy" x="650" y="2832" text-anchor="middle">제품 하나만으로 첫 루틴을 만들 수 있다</text>
-  <text class="node-copy" x="650" y="2867" text-anchor="middle">빈도는 나중에 입력해도 된다</text>
-  <text class="node-copy" x="650" y="2902" text-anchor="middle">이미 불편하면 현재 사용 제품을 기록한 뒤 Rescue</text>
-  <text class="tiny" x="650" y="2950" text-anchor="middle">안정 루틴이 없다는 한계를 화면에 명시</text>
-
-  <!-- Product opinion lane connectors -->
-  <path class="line" d="M1820 900H1940"/>
-  <path class="line" d="M2250 900H2400"/>
-  <path class="line" d="M2710 900H2800V1080"/>
-  <path class="line" d="M2095 1045V1170"/>
-  <path class="line-ai" d="M2800 1270V1380"/>
-  <path class="line" d="M2800 1560V1670"/>
-  <path class="line-ai" d="M2800 1910V2010"/>
-  <path class="line" d="M2800 2190V2290"/>
-  <path class="line" d="M3220 2400H3400V1280H3760"/>
-
-  <text class="tag" x="1340" y="700" fill="#5746A5">A · 특정 제품이 궁금하다</text>
-  <rect class="node" x="1420" y="810" width="400" height="180" rx="24"/>
-  <text class="node-title" x="1620" y="870" text-anchor="middle">제품명 검색</text>
-  <text class="node-copy" x="1620" y="910" text-anchor="middle">외부에서 본 한 제품</text>
-  <text class="tiny" x="1620" y="950" text-anchor="middle">“이거 사볼까?”</text>
-
-  <polygon class="decision" points="2095,755 2250,900 2095,1045 1940,900"/>
-  <text class="node-title" x="2095" y="888" text-anchor="middle">제품 버전</text>
-  <text class="tiny" x="2095" y="923" text-anchor="middle">확정 가능?</text>
-  <text class="tiny" x="2290" y="875">예</text>
-  <text class="tiny" x="2120" y="1100">아니오</text>
-
-  <rect class="node warn" x="1800" y="1170" width="590" height="210" rx="24"/>
-  <text class="node-title" x="2095" y="1230" text-anchor="middle">버전 확인 중으로 등록</text>
-  <text class="node-copy" x="2095" y="1270" text-anchor="middle">포장 · 구매 시기 · 용량으로 검수 요청</text>
-  <text class="node-copy" x="2095" y="1305" text-anchor="middle">기록과 메모는 가능</text>
-  <text class="tiny" x="2095" y="1345" text-anchor="middle">확정 전에는 AI 판단 근거에서 제외</text>
-
-  <rect class="node ai" x="2400" y="810" width="620" height="180" rx="24"/>
-  <text class="node-title" x="2710" y="870" text-anchor="middle">구매 맥락 확인</text>
-  <text class="node-copy" x="2710" y="910" text-anchor="middle">이 제품으로 무엇을 바꾸고 싶은가?</text>
-  <text class="tiny" x="2710" y="950" text-anchor="middle">필요한 정보만 AI가 추가 질문</text>
-
-  <rect class="node ai" x="2410" y="1080" width="780" height="190" rx="24"/>
-  <text class="node-title" x="2800" y="1140" text-anchor="middle">OpenAI 근거 검색</text>
-  <text class="node-copy" x="2800" y="1180" text-anchor="middle">공식 제품 정보 · 정부/공식 DB · 원 논문</text>
-  <text class="tiny" x="2800" y="1222" text-anchor="middle">현재·안정 루틴 · 보유품 · 과거 결과 · AI 기억도 연결</text>
-
-  <rect class="node server" x="2410" y="1380" width="780" height="180" rx="24"/>
-  <text class="node-title" x="2800" y="1440" text-anchor="middle">서버 검증</text>
-  <text class="node-copy" x="2800" y="1480" text-anchor="middle">실제 제품 버전 · 출처 · 개인 기록 소유권</text>
-  <text class="tiny" x="2800" y="1520" text-anchor="middle">존재하지 않는 제품과 출처 없는 주장을 제거</text>
-
-  <rect class="node ai" x="2310" y="1670" width="980" height="240" rx="24"/>
-  <text class="node-title" x="2800" y="1730" text-anchor="middle">개인화 제품 의견</text>
-  <text class="node-copy" x="2800" y="1770" text-anchor="middle">① 지금 고려할 이유가 큼  ② 비슷한 제품이 이미 있음</text>
-  <text class="node-copy" x="2800" y="1807" text-anchor="middle">③ 현재 목적과 거리가 있음  ④ 판단 정보가 부족함</text>
-  <text class="tiny" x="2800" y="1855" text-anchor="middle">살 이유 · 망설일 이유 · 정보 부족 · 내 루틴 변화 · 출처</text>
-
-  <rect class="node ai" x="2390" y="2010" width="820" height="180" rx="24"/>
-  <text class="node-title" x="2800" y="2070" text-anchor="middle">제품 AI 후속 대화</text>
-  <text class="node-copy" x="2800" y="2110" text-anchor="middle">근거 · 차이 · 순서 · 대안 · 모르는 점</text>
-  <text class="tiny" x="2800" y="2150" text-anchor="middle">같은 분석과 출처를 유지해 아래로 이어서 답변</text>
-
-  <rect class="node" x="2380" y="2290" width="840" height="220" rx="24"/>
-  <text class="node-title" x="2800" y="2350" text-anchor="middle">사용자 선택</text>
-  <text class="node-copy" x="2800" y="2392" text-anchor="middle">샀어요 → 내 화장품에 추가</text>
-  <text class="node-copy" x="2800" y="2427" text-anchor="middle">찜하기 · 비슷한 제품 최대 5개</text>
-  <text class="tiny" x="2800" y="2470" text-anchor="middle">보유 제품은 “보유 중”으로 비활성화</text>
-
-  <!-- Recommendation lane -->
-  <path class="line-ai" d="M1840 2640H1950"/>
-  <path class="line" d="M2240 2640H2400"/>
-  <path class="line-ai" d="M2095 2785V2880"/>
-  <path class="line-ai" d="M2390 2980H2480V2790"/>
-  <path class="line-ai" d="M2800 2790V2920"/>
-  <path class="line" d="M2800 3100V3200"/>
-  <path class="line" d="M2800 3420V3510"/>
-  <path class="line" d="M3210 3610H3400V1280H3760"/>
-
-  <text class="tag" x="1340" y="2480" fill="#5746A5">B · 다음 제품을 추천받고 싶다</text>
-  <rect class="node ai" x="1420" y="2550" width="420" height="180" rx="24"/>
-  <text class="node-title" x="1630" y="2610" text-anchor="middle">자연어로 말하기</text>
-  <text class="node-copy" x="1630" y="2650" text-anchor="middle">원하는 변화 · 싫은 사용감</text>
-  <text class="tiny" x="1630" y="2690" text-anchor="middle">피부 상태 enum에 끼워 맞추지 않음</text>
-
-  <polygon class="decision" points="2095,2495 2240,2640 2095,2785 1950,2640"/>
-  <text class="node-title" x="2095" y="2628" text-anchor="middle">결과를 바꿀</text>
-  <text class="tiny" x="2095" y="2663" text-anchor="middle">정보가 비었나?</text>
-  <text class="tiny" x="2270" y="2615">아니오</text>
-  <text class="tiny" x="2115" y="2835">예</text>
-
-  <rect class="node ai" x="1800" y="2880" width="590" height="200" rx="24"/>
-  <text class="node-title" x="2095" y="2940" text-anchor="middle">AI가 한 가지만 더 질문</text>
-  <text class="node-copy" x="2095" y="2980" text-anchor="middle">예: 향이 강한 제품은 제외할까요?</text>
-  <text class="tiny" x="2095" y="3025" text-anchor="middle">확인한 조건은 AI 기억에 저장 가능</text>
-
-  <rect class="node ai" x="2400" y="2600" width="800" height="190" rx="24"/>
-  <text class="node-title" x="2800" y="2660" text-anchor="middle">실제 카탈로그 + 웹 검색</text>
-  <text class="node-copy" x="2800" y="2700" text-anchor="middle">국내 판매 제품과 공식·1차 출처를 함께 찾음</text>
-  <text class="tiny" x="2800" y="2742" text-anchor="middle">가격 · 인기 · 리뷰는 추천 순서에서 제외</text>
-
-  <rect class="node server" x="2400" y="2920" width="800" height="180" rx="24"/>
-  <text class="node-title" x="2800" y="2980" text-anchor="middle">서버 후보 검증</text>
-  <text class="node-copy" x="2800" y="3020" text-anchor="middle">국내 버전 · 중복 보유 · 제외 조건 · 출처</text>
-  <text class="tiny" x="2800" y="3060" text-anchor="middle">통과한 후보만 남김</text>
-
-  <rect class="node ai" x="2310" y="3200" width="980" height="220" rx="24"/>
-  <text class="node-title" x="2800" y="3260" text-anchor="middle">추천 결과 0~5개</text>
-  <text class="node-copy" x="2800" y="3300" text-anchor="middle">추천 이유 · 망설일 이유 · 정보 부족</text>
-  <text class="node-copy" x="2800" y="3337" text-anchor="middle">현재 루틴에서 달라지는 점 · 확인할 점</text>
-  <text class="tiny" x="2800" y="3380" text-anchor="middle">수를 채우기 위해 약한 후보를 넣지 않음</text>
-
-  <rect class="node" x="2390" y="3510" width="820" height="200" rx="24"/>
-  <text class="node-title" x="2800" y="3570" text-anchor="middle">후보 선택</text>
-  <text class="node-copy" x="2800" y="3610" text-anchor="middle">제품 의견을 더 묻거나 찜하기</text>
-  <text class="node-copy" x="2800" y="3647" text-anchor="middle">구매했다면 내 화장품에 추가</text>
-  <text class="tiny" x="2800" y="3685" text-anchor="middle">추천은 끝이 아니라 이후 사용 기록의 시작</text>
-
-  <!-- Registration and routine connectors -->
-  <path class="line" d="M4130 910V1020"/>
-  <path class="line-ai" d="M4130 1160V1240"/>
-  <path class="line" d="M4470 1330H4550"/>
-  <path class="line" d="M4850 1330H4980V1510"/>
-  <path class="line" d="M4700 1465V1530H4420"/>
-  <path class="line" d="M4420 1690V1790"/>
-  <path class="line" d="M4420 2000V2080"/>
-  <path class="line-ai" d="M4420 2280V2370"/>
-  <path class="line" d="M4770 2470H4860"/>
-  <path class="line-ai" d="M5035 2575V2690H4420"/>
-  <path class="line" d="M4420 2860V2950"/>
-  <path class="line-ai" d="M4420 3130V3220"/>
-  <path class="line" d="M4770 3310H4870"/>
-  <path class="line-ai" d="M4420 3400V3500"/>
-  <path class="line" d="M4420 3690V3780"/>
-  <path class="line" d="M4820 3890H5180V1070H5480"/>
-  <path class="line" d="M5260 3040H5350"/>
-
-  <text class="tag" x="3650" y="700" fill="#236F5E">C · 산 제품을 실제 루틴에 연결</text>
-  <rect class="node" x="3760" y="770" width="740" height="140" rx="24"/>
-  <text class="node-title" x="4130" y="828" text-anchor="middle">새 화장품 추가</text>
-  <text class="node-copy" x="4130" y="867" text-anchor="middle">제품명 검색 또는 영수증 OCR</text>
-
-  <rect class="node ai" x="3740" y="1020" width="780" height="140" rx="24"/>
-  <text class="node-title" x="4130" y="1078" text-anchor="middle">영수증이라면 AI가 후보 추출</text>
-  <text class="node-copy" x="4130" y="1118" text-anchor="middle">브랜드 · 제품명 · 용량만 읽고 사용자가 확인</text>
-
-  <rect class="node server" x="3790" y="1240" width="680" height="180" rx="24"/>
-  <text class="node-title" x="4130" y="1300" text-anchor="middle">국내 제품 버전 연결</text>
-  <text class="node-copy" x="4130" y="1340" text-anchor="middle">포장 · 구매 시기 · 용량으로 서비스가 판별</text>
-  <text class="tiny" x="4130" y="1380" text-anchor="middle">사용자에게 버전을 고르게 하지 않음</text>
-
-  <polygon class="decision" points="4700,1195 4850,1330 4700,1465 4550,1330"/>
-  <text class="node-title" x="4700" y="1318" text-anchor="middle">버전 확정?</text>
-  <text class="tiny" x="4700" y="1352" text-anchor="middle">예 / 아니오</text>
-
-  <rect class="node warn" x="4870" y="1240" width="330" height="180" rx="22"/>
-  <text class="node-title" x="5035" y="1300" text-anchor="middle">확인 중</text>
-  <text class="node-copy" x="5035" y="1340" text-anchor="middle">AI 분석 제외</text>
-  <text class="tiny" x="5035" y="1380" text-anchor="middle">검수 요청 접수</text>
-
-  <rect class="node good" x="3860" y="1530" width="1120" height="160" rx="24"/>
-  <text class="node-title" x="4420" y="1590" text-anchor="middle">미사용 화장품에 추가</text>
-  <text class="node-copy" x="4420" y="1630" text-anchor="middle">샀다고 현재 루틴에 자동으로 넣지 않음 · 제품 메모 가능</text>
-
-  <rect class="node" x="3780" y="1790" width="1280" height="210" rx="24"/>
-  <text class="node-title" x="4420" y="1850" text-anchor="middle">내 화장품</text>
-  <text class="node-copy" x="4420" y="1892" text-anchor="middle">미사용 화장품  ·  현재 루틴  ·  마지막 안정 루틴</text>
-  <text class="tiny" x="4420" y="1940" text-anchor="middle">재고·소진 상태를 복잡하게 관리하지 않음</text>
-
-  <rect class="node" x="3760" y="2080" width="1320" height="200" rx="24"/>
-  <text class="node-title" x="4420" y="2140" text-anchor="middle">루틴 편집</text>
-  <text class="node-copy" x="4420" y="2180" text-anchor="middle">클렌징 포함 제품 · 아침/저녁 · 바르는 순서 · 실제 빈도</text>
-  <text class="tiny" x="4420" y="2225" text-anchor="middle">목록에 없으면 새 화장품 추가 후 이 화면으로 복귀</text>
-
-  <rect class="node ai" x="3710" y="2370" width="1060" height="200" rx="24"/>
-  <text class="node-title" x="4240" y="2430" text-anchor="middle">AI 추천 순서로 배치</text>
-  <text class="node-copy" x="4240" y="2470" text-anchor="middle">공식 사용법 · 제형 · 현재 맥락으로 순서와 빈도 제안</text>
-  <text class="tiny" x="4240" y="2515" text-anchor="middle">사용자가 적용한 뒤 저장 전 자유롭게 수정</text>
-
-  <polygon class="decision" points="5035,2365 5200,2470 5035,2575 4870,2470"/>
-  <text class="node-title" x="5035" y="2458" text-anchor="middle">공식 안내가</text>
-  <text class="tiny" x="5035" y="2493" text-anchor="middle">모호·충돌?</text>
-  <text class="tiny" x="5060" y="2630">예 → AI가 사용자에게 확인</text>
-
-  <rect class="node" x="3790" y="2690" width="1260" height="170" rx="24"/>
-  <text class="node-title" x="4420" y="2750" text-anchor="middle">사용자가 루틴 저장</text>
-  <text class="node-copy" x="4420" y="2790" text-anchor="middle">기존 기록을 덮지 않고 새 불변 버전 생성</text>
-  <text class="tiny" x="4420" y="2830" text-anchor="middle">제품·순서·시간대·빈도 변경 모두 새 버전</text>
-
-  <rect class="node good" x="3790" y="2950" width="1260" height="180" rx="24"/>
-  <text class="node-title" x="4420" y="3010" text-anchor="middle">현재 루틴 vN · DAY 1</text>
-  <text class="node-copy" x="4420" y="3050" text-anchor="middle">사용자 시간대 기준 7일 시작</text>
-  <text class="tiny" x="4420" y="3090" text-anchor="middle">Rescue가 만든 루틴도 똑같은 일반 루틴</text>
-
-  <rect class="node ai" x="3770" y="3220" width="1000" height="180" rx="24"/>
-  <text class="node-title" x="4270" y="3280" text-anchor="middle">저장 후 AI 루틴 분석</text>
-  <text class="node-copy" x="4270" y="3320" text-anchor="middle">제품별 위치 · 역할 · 확인할 점 · 근거</text>
-  <text class="tiny" x="4270" y="3360" text-anchor="middle">새 버전 기준 비동기 실행</text>
-
-  <rect class="node warn" x="4870" y="3220" width="330" height="180" rx="24"/>
-  <text class="node-title" x="5035" y="3280" text-anchor="middle">AI 실패</text>
-  <text class="node-copy" x="5035" y="3320" text-anchor="middle">루틴은 보존</text>
-  <text class="tiny" x="5035" y="3360" text-anchor="middle">상단에서 재시도</text>
-
-  <rect class="node ai" x="3760" y="3500" width="1320" height="190" rx="24"/>
-  <text class="node-title" x="4420" y="3560" text-anchor="middle">루틴 속 각 제품의 AI 정보</text>
-  <text class="node-copy" x="4420" y="3600" text-anchor="middle">왜 이 순서인지 · 앞뒤 제품과의 관계 · 내 기록 · 모르는 점</text>
-  <text class="tiny" x="4420" y="3645" text-anchor="middle">루틴 버전이 바뀌면 새 분석 생성</text>
-
-  <rect class="node warn" x="3760" y="3780" width="1060" height="220" rx="24"/>
-  <text class="node-title" x="4290" y="3840" text-anchor="middle">DAY 7 전에 루틴을 바꾸려 함</text>
-  <text class="node-copy" x="4290" y="3882" text-anchor="middle">지금까지 결과를 짧게 남기기 또는 기록 없이 변경</text>
-  <text class="tiny" x="4290" y="3925" text-anchor="middle">남긴 결과는 낮은 신뢰도의 조기 기록 · 안정 승급 안 함</text>
-  <text class="tiny" x="4290" y="3965" text-anchor="middle">새 루틴 저장 후 DAY 1부터 다시 시작</text>
-
-  <!-- Seven-day connectors -->
-  <path class="line" d="M5940 980V1070"/>
-  <path class="line" d="M6100 1190H6280V1410H5940"/>
-  <path class="line" d="M5780 1190H5480V3040H5260"/>
-  <path class="line" d="M5940 1570V1660"/>
-  <path class="line" d="M5780 1770H5480V3040H5260"/>
-  <path class="line" d="M5940 1880V1970"/>
-  <path class="line" d="M5740 2190V2290"/>
-  <path class="line" d="M5940 2410V2510"/>
-  <path class="line" d="M6320 2080H6510V760H6830"/>
-  <path class="line" d="M6140 2620H6420V850H6830"/>
-  <path class="line" d="M5740 2710H5470V840H5650"/>
-  <path class="line-dashed" d="M5740 2410V3860H3320V3730"/>
-
-  <rect class="node good" x="5480" y="760" width="920" height="220" rx="24"/>
-  <text class="node-title" x="5940" y="820" text-anchor="middle">현재 루틴 알아가기</text>
-  <text class="node-copy" x="5940" y="862" text-anchor="middle">DAY 1 → DAY 7</text>
-  <text class="node-copy" x="5940" y="899" text-anchor="middle">매일 입력하지 않고 홈에서 진행만 보여줌</text>
-  <text class="tiny" x="5940" y="943" text-anchor="middle">불편하면 기다리지 않고 언제든 Rescue</text>
-
-  <polygon class="decision" points="5940,1035 6100,1190 5940,1345 5780,1190"/>
-  <text class="node-title" x="5940" y="1178" text-anchor="middle">7일 전에</text>
-  <text class="tiny" x="5940" y="1212" text-anchor="middle">루틴 변경?</text>
-  <text class="tiny" x="6130" y="1160">아니오</text>
-  <text class="tiny" x="5705" y="1160">예</text>
-
-  <rect class="node" x="5520" y="1410" width="840" height="160" rx="24"/>
-  <text class="node-title" x="5940" y="1470" text-anchor="middle">DAY 7 · 00:00</text>
-  <text class="node-copy" x="5940" y="1510" text-anchor="middle">앱 안 알림과 홈 행동 생성</text>
-  <text class="tiny" x="5940" y="1547" text-anchor="middle">7일은 의학 기준이 아닌 MVP 운영 규칙</text>
-
-  <polygon class="decision" points="5940,1630 6100,1770 5940,1910 5780,1770"/>
-  <text class="node-title" x="5940" y="1758" text-anchor="middle">실제 사용이</text>
-  <text class="tiny" x="5940" y="1792" text-anchor="middle">기록과 비슷함?</text>
-  <text class="tiny" x="6130" y="1740">예</text>
-  <text class="tiny" x="5700" y="1740">아니오</text>
-
-  <rect class="node ai" x="5560" y="1970" width="760" height="220" rx="24"/>
-  <text class="node-title" x="5940" y="2030" text-anchor="middle">7일 결과 대화</text>
-  <text class="node-copy" x="5940" y="2070" text-anchor="middle">불편 없음 · 불편함 · 더 써봐야 함</text>
-  <text class="tiny" x="5940" y="2115" text-anchor="middle">아침/저녁 세부 내용은 필요할 때 대화에서 확인</text>
-  <text class="tiny" x="5940" y="2152" text-anchor="middle">미응답을 불편 없음으로 추정하지 않음</text>
-
-  <rect class="node good" x="5400" y="2290" width="680" height="210" rx="24"/>
-  <text class="node-title" x="5740" y="2350" text-anchor="middle">불편 없음</text>
-  <text class="node-copy" x="5740" y="2390" text-anchor="middle">현재 버전을 마지막 안정 루틴으로 승급</text>
-  <text class="tiny" x="5740" y="2435" text-anchor="middle">루틴 전체 기록 · 제품 단독 판정 아님</text>
-
-  <rect class="node danger" x="6140" y="2290" width="360" height="210" rx="24"/>
-  <text class="node-title" x="6320" y="2350" text-anchor="middle">불편함</text>
-  <text class="node-copy" x="6320" y="2390" text-anchor="middle">대화를 유지해</text>
-  <text class="node-copy" x="6320" y="2425" text-anchor="middle">AI Rescue로 이동</text>
-
-  <rect class="node warn" x="5740" y="2510" width="800" height="220" rx="24"/>
-  <text class="node-title" x="6140" y="2570" text-anchor="middle">더 써봐야 함</text>
-  <text class="node-copy" x="6140" y="2610" text-anchor="middle">같은 루틴으로 7일을 더 사용</text>
-  <text class="tiny" x="6140" y="2655" text-anchor="middle">안정 루틴은 그대로 · 이후 다시 결과 질문</text>
-
-  <rect class="node ai" x="5410" y="2860" width="1060" height="250" rx="24"/>
-  <text class="node-title" x="5940" y="2920" text-anchor="middle">안정 루틴을 쓰는 동안의 가치</text>
-  <text class="node-copy" x="5940" y="2962" text-anchor="middle">루틴 기록만 반복해서 보여주지 않는다</text>
-  <text class="node-copy" x="5940" y="2999" text-anchor="middle">AI 제품 의견 · 다음 추천 · 제품별 질문으로 연결</text>
-  <text class="tiny" x="5940" y="3045" text-anchor="middle">누적 경험이 다음 판단의 개인 근거가 됨</text>
-
-  <!-- Rescue connectors -->
-  <path class="line-ai" d="M7290 980V1070"/>
-  <path class="line-ai" d="M7290 1270V1360"/>
-  <path class="line" d="M7450 1500H7790V1630"/>
-  <path class="line" d="M7130 1500H6900V1630"/>
-  <path class="line" d="M7140 1750H7000V1960"/>
-  <path class="line" d="M7440 1750H7580V1960"/>
-  <path class="line" d="M7290 2140V2230"/>
-  <path class="line-ai" d="M7290 2430V2520"/>
-  <path class="line" d="M7290 2710V2800"/>
-  <path class="line-ai" d="M7290 3000V3090"/>
-  <path class="line" d="M7290 3330V3420"/>
-  <path class="line" d="M7130 3560H6800V3040H5260"/>
-  <path class="line" d="M7450 3560H7790V840H6400"/>
-  <path class="line-ai" d="M7290 3740V3840"/>
-
-  <rect class="node ai" x="6830" y="760" width="920" height="220" rx="24"/>
-  <text class="node-title" x="7290" y="820" text-anchor="middle">불편함을 평소 말투로 입력</text>
-  <text class="node-copy" x="7290" y="862" text-anchor="middle">예: 어제부터 볼이 따갑고 빨개졌어요</text>
-  <text class="tiny" x="7290" y="905" text-anchor="middle">이전 채팅을 지우지 않고 아래로 계속 이어짐</text>
-  <text class="tiny" x="7290" y="943" text-anchor="middle">진행률 설문 대신 자유 입력 + 필요한 선택지</text>
-
-  <rect class="node ai" x="6790" y="1070" width="1000" height="200" rx="24"/>
-  <text class="node-title" x="7290" y="1130" text-anchor="middle">AI가 표현을 이해하고 빈 정보만 질문</text>
-  <text class="node-copy" x="7290" y="1170" text-anchor="middle">발생 시점 · 실제 사용 · 다른 변화 · 현재 심한 정도</text>
-  <text class="tiny" x="7290" y="1215" text-anchor="middle">이미 기록된 내용은 다시 묻지 않음 · 사용자 확인 후 저장</text>
-
-  <polygon class="decision" points="7290,1350 7450,1500 7290,1650 7130,1500"/>
-  <text class="node-title" x="7290" y="1488" text-anchor="middle">심하거나 빠르게</text>
-  <text class="tiny" x="7290" y="1522" text-anchor="middle">악화되고 있나?</text>
-  <text class="tiny" x="7500" y="1470">예</text>
-  <text class="tiny" x="7050" y="1470">아니오</text>
-
-  <rect class="node danger" x="7610" y="1630" width="420" height="220" rx="24"/>
-  <text class="node-title" x="7820" y="1690" text-anchor="middle">제품 순위 중단</text>
-  <text class="node-copy" x="7820" y="1730" text-anchor="middle">전문가 확인 제안</text>
-  <text class="tiny" x="7820" y="1775" text-anchor="middle">진단·응급도·진료과는</text>
-  <text class="tiny" x="7820" y="1805" text-anchor="middle">앱이 결정하지 않음</text>
-
-  <polygon class="decision" points="7290,1610 7440,1750 7290,1890 7140,1750"/>
-  <text class="node-title" x="7290" y="1738" text-anchor="middle">현재 루틴</text>
-  <text class="tiny" x="7290" y="1772" text-anchor="middle">기록이 있나?</text>
-  <text class="tiny" x="7480" y="1720">예</text>
-  <text class="tiny" x="7060" y="1720">아니오</text>
-
-  <rect class="node muted" x="6740" y="1960" width="520" height="220" rx="24"/>
-  <text class="node-title" x="7000" y="2020" text-anchor="middle">루틴 기록 없음</text>
-  <text class="node-copy" x="7000" y="2060" text-anchor="middle">일반 안전 안내와 자유 기록</text>
-  <text class="tiny" x="7000" y="2105" text-anchor="middle">제품 의심 순위는 만들지 않음</text>
-
-  <rect class="node server" x="7320" y="1960" width="520" height="220" rx="24"/>
-  <text class="node-title" x="7580" y="2020" text-anchor="middle">최근 변경 계산</text>
-  <text class="node-copy" x="7580" y="2060" text-anchor="middle">안정 루틴 ↔ 현재 루틴</text>
-  <text class="tiny" x="7580" y="2105" text-anchor="middle">안정 루틴이 없으면 근거 약함 표시</text>
-
-  <rect class="node warn" x="6800" y="2230" width="980" height="200" rx="24"/>
-  <text class="node-title" x="7290" y="2290" text-anchor="middle">사용자가 변경 사실 확인</text>
-  <text class="node-copy" x="7290" y="2330" text-anchor="middle">추가·삭제 · 순서 · 빈도 · 실제 사용 시점</text>
-  <text class="tiny" x="7290" y="2375" text-anchor="middle">빠진 내용이나 잘못된 시점을 대화에서 수정</text>
-
-  <rect class="node ai" x="6790" y="2520" width="1000" height="190" rx="24"/>
-  <text class="node-title" x="7290" y="2580" text-anchor="middle">AI 근거 검색</text>
-  <text class="node-copy" x="7290" y="2620" text-anchor="middle">공식 정보 · 완제품 사람 연구 · 원료 연구 · 개인 기록</text>
-  <text class="tiny" x="7290" y="2665" text-anchor="middle">원료 연구를 완제품 효과로 확대하지 않음</text>
-
-  <rect class="node server" x="6810" y="2800" width="960" height="200" rx="24"/>
-  <text class="node-title" x="7290" y="2860" text-anchor="middle">서버가 AI 결과 검증</text>
-  <text class="node-copy" x="7290" y="2900" text-anchor="middle">출처 · 제품 버전 · 개인 기록 소유권 · 제안 루틴 형식</text>
-  <text class="tiny" x="7290" y="2945" text-anchor="middle">원인·범인·확률 표현을 거절</text>
-
-  <rect class="node ai" x="6730" y="3090" width="1120" height="240" rx="24"/>
-  <text class="node-title" x="7290" y="3150" text-anchor="middle">확인 순위 + 권장 루틴 하나</text>
-  <text class="node-copy" x="7290" y="3190" text-anchor="middle">각 순위: 먼저 보는 이유 · 반대 근거 · 모르는 점 · 출처</text>
-  <text class="node-copy" x="7290" y="3227" text-anchor="middle">다음 루틴: 유지/제외 제품 · 아침/저녁 · 순서 · 빈도</text>
-  <text class="tiny" x="7290" y="3275" text-anchor="middle">사용자가 선택하기 전에는 실제 루틴을 바꾸지 않음</text>
-
-  <polygon class="decision" points="7290,3410 7450,3560 7290,3710 7130,3560"/>
-  <text class="node-title" x="7290" y="3548" text-anchor="middle">사용자 선택</text>
-  <text class="tiny" x="7290" y="3582" text-anchor="middle">적용 / 기록만</text>
-  <text class="tiny" x="7000" y="3530">적용</text>
-  <text class="tiny" x="7510" y="3530">기록만</text>
-
-  <rect class="node good" x="6830" y="3840" width="920" height="180" rx="24"/>
-  <text class="node-title" x="7290" y="3900" text-anchor="middle">다시 불편하면 새 Rescue</text>
-  <text class="node-copy" x="7290" y="3940" text-anchor="middle">새 루틴 버전을 기준으로 다시 분석</text>
-  <text class="tiny" x="7290" y="3980" text-anchor="middle">이전 Rescue 순위와 결과는 보조 근거로 재사용</text>
-
-  <!-- Bottom data and AI platform -->
-  <rect x="100" y="4180" width="8000" height="700" rx="32" fill="#18241F"/>
-  <text x="170" y="4255" font-size="31" font-weight="800" fill="white">모든 흐름 아래에서 함께 쌓이는 개인 데이터와 AI 통제</text>
-  <text x="170" y="4292" font-size="19" font-weight="500" fill="#B7C4BD">정형화는 시스템 사실에만 사용하고, 피부·사용 맥락은 자연어와 근거 참조로 보존한다</text>
-
-  <g transform="translate(170 4350)">
-    <rect width="1180" height="390" rx="24" fill="#24352E" stroke="#537060" stroke-width="2"/>
-    <text x="50" y="65" font-size="25" font-weight="750" fill="white">제품 카탈로그</text>
-    <text x="50" y="112" font-size="19" fill="#C0CEC6">국내 제품 ID · 판매 버전 · 브랜드 · 용량</text>
-    <text x="50" y="150" font-size="19" fill="#C0CEC6">공식 사용법 · 표시 전성분 원문 · 주의 문구</text>
-    <text x="50" y="188" font-size="19" fill="#C0CEC6">출처 · 기관 · 게시일 · 확인 시각</text>
-    <text x="50" y="245" font-size="18" font-weight="700" fill="#8FD6BA">구조화한다</text>
-    <text x="50" y="282" font-size="18" fill="#C0CEC6">제품 정체성, 버전과 원문 사실</text>
-    <text x="50" y="330" font-size="18" font-weight="700" fill="#F2C96F">구조화하지 않는다</text>
-    <text x="50" y="367" font-size="18" fill="#C0CEC6">성분별 피부 효과·위험·피부 타입 만능 enum</text>
+  <!-- Panels -->
+  <rect class="panel" x="90" y="500" width="1050" height="2450" rx="30"/>
+  <rect class="panel" x="1190" y="500" width="1650" height="2450" rx="30"/>
+  <rect class="panel" x="2890" y="500" width="1300" height="2450" rx="30"/>
+  <rect class="panel" x="4240" y="500" width="1080" height="2450" rx="30"/>
+  <rect class="panel" x="5370" y="500" width="1340" height="2450" rx="30"/>
+
+  <text class="section-title" x="140" y="568">0. 시작과 홈</text>
+  <text class="section-copy" x="140" y="602">필요한 순간에 바로 들어온다</text>
+  <text class="section-title" x="1240" y="568">1. AI 제품 탐색</text>
+  <text class="section-copy" x="1240" y="602">한 제품을 따져보거나 다음 후보를 찾는다</text>
+  <text class="section-title" x="2940" y="568">2. 내 화장품과 루틴</text>
+  <text class="section-copy" x="2940" y="602">산 제품을 실제 사용 조건에 넣는다</text>
+  <text class="section-title" x="4290" y="568">3. 7일 뒤 결과</text>
+  <text class="section-copy" x="4290" y="602">문제없음도 개인 경험으로 남긴다</text>
+  <text class="section-title" x="5420" y="568">4. AI Rescue</text>
+  <text class="section-copy" x="5420" y="602">불편할 때 다음 루틴까지 이어간다</text>
+
+  <!-- 0. Start -->
+  <path class="line" d="M615 815V900"/>
+  <path class="line-ai" d="M615 1090V1180"/>
+  <path class="line" d="M615 1390V1490"/>
+
+  <rect class="node good" x="435" y="690" width="360" height="125" rx="62"/>
+  <text class="node-title" x="615" y="746" text-anchor="middle">처음 시작</text>
+  <text class="node-copy" x="615" y="782" text-anchor="middle">가입 또는 로그인</text>
+
+  <rect class="node ai" x="250" y="900" width="730" height="190" rx="24"/>
+  <text class="node-title" x="615" y="960" text-anchor="middle">AI 온보딩 대화</text>
+  <text class="node-copy" x="615" y="1002" text-anchor="middle">피부 고민 · 선호 · 피하고 싶은 조건</text>
+  <text class="small" x="615" y="1046" text-anchor="middle">자연어로 짧게 답하고 건너뛸 수 있음</text>
+
+  <rect class="node data" x="250" y="1180" width="730" height="210" rx="24"/>
+  <text class="node-title" x="615" y="1242" text-anchor="middle">AI가 기억할 내용 확인</text>
+  <text class="node-copy" x="615" y="1284" text-anchor="middle">AI가 이해한 내용을 사용자가 확인</text>
+  <text class="small" x="615" y="1330" text-anchor="middle">언제든 수정하거나 삭제할 수 있음</text>
+
+  <rect class="node" x="220" y="1490" width="790" height="520" rx="28"/>
+  <text class="node-title" x="615" y="1555" text-anchor="middle">홈</text>
+  <text class="node-copy" x="615" y="1597" text-anchor="middle">지금 필요한 행동을 바로 선택</text>
+  <rect x="280" y="1660" width="320" height="68" rx="17" fill="#F4F1FF" stroke="#7766D2"/>
+  <text class="small" x="440" y="1703" text-anchor="middle">이거 사볼까?</text>
+  <rect x="630" y="1660" width="320" height="68" rx="17" fill="#F4F1FF" stroke="#7766D2"/>
+  <text class="small" x="790" y="1703" text-anchor="middle">제품 추천받기</text>
+  <rect x="280" y="1750" width="320" height="68" rx="17" fill="white" stroke="#AEB7B1"/>
+  <text class="small" x="440" y="1793" text-anchor="middle">내 화장품</text>
+  <rect x="630" y="1750" width="320" height="68" rx="17" fill="white" stroke="#AEB7B1"/>
+  <text class="small" x="790" y="1793" text-anchor="middle">현재 루틴</text>
+  <rect x="280" y="1840" width="670" height="82" rx="18" fill="#FFF1EF" stroke="#B85C52"/>
+  <text class="small" x="615" y="1891" text-anchor="middle" fill="#963F37">불편함이 생겼어요 → AI Rescue</text>
+  <text class="small" x="615" y="1970" text-anchor="middle">7일 결과를 남길 때가 되면 홈에서 먼저 안내</text>
+
+  <rect class="node data" x="250" y="2220" width="730" height="300" rx="24"/>
+  <text class="node-title" x="615" y="2282" text-anchor="middle">개인 경험이 계속 쌓임</text>
+  <text class="node-copy" x="615" y="2328" text-anchor="middle">제품을 고른 이유</text>
+  <text class="node-copy" x="615" y="2368" text-anchor="middle">함께 쓴 제품·순서·빈도</text>
+  <text class="node-copy" x="615" y="2408" text-anchor="middle">7일 결과와 Rescue 이후 결과</text>
+  <text class="small" x="615" y="2460" text-anchor="middle">다음 AI 대화의 개인 근거로 다시 사용</text>
+
+  <!-- Home exits -->
+  <path class="line" d="M1010 1694H1160V770H1320"/>
+  <path class="line" d="M1010 1694H1170V1960H1320"/>
+  <path class="line" d="M1010 1784H2870V780H3070"/>
+  <path class="line" d="M1010 1881H5350V790H5540"/>
+
+  <!-- 1. Product exploration -->
+  <text class="tag" x="1260" y="690" fill="#5746A5">A · 궁금한 제품이 있다</text>
+  <path class="line" d="M1670 890H1770"/>
+  <path class="line-ai" d="M2260 890H2370"/>
+  <path class="line" d="M2015 1060V1170"/>
+  <path class="line" d="M2015 1420V1510"/>
+
+  <rect class="node" x="1320" y="790" width="350" height="200" rx="24"/>
+  <text class="node-title" x="1495" y="855" text-anchor="middle">제품 찾기</text>
+  <text class="node-copy" x="1495" y="900" text-anchor="middle">제품명으로 검색</text>
+  <text class="small" x="1495" y="945" text-anchor="middle">정확한 제품 선택</text>
+
+  <rect class="node ai" x="1770" y="720" width="490" height="340" rx="24"/>
+  <text class="node-title" x="2015" y="785" text-anchor="middle">AI와 제품 따져보기</text>
+  <text class="node-copy" x="2015" y="835" text-anchor="middle">왜 사고 싶은지 짧게 대화</text>
+  <text class="node-copy" x="2015" y="880" text-anchor="middle">현재 루틴·보유 제품</text>
+  <text class="node-copy" x="2015" y="920" text-anchor="middle">과거 사용 경험·제품 근거 비교</text>
+  <text class="small" x="2015" y="982" text-anchor="middle">후속 질문도 같은 대화에서 계속</text>
+
+  <rect class="node ai" x="2370" y="745" width="380" height="290" rx="24"/>
+  <text class="node-title" x="2560" y="810" text-anchor="middle">개인화된 의견</text>
+  <text class="node-copy" x="2560" y="860" text-anchor="middle">지금 고려할 이유</text>
+  <text class="node-copy" x="2560" y="900" text-anchor="middle">망설일 이유</text>
+  <text class="node-copy" x="2560" y="940" text-anchor="middle">아직 모르는 것</text>
+  <text class="small" x="2560" y="990" text-anchor="middle">적합·효과 보장은 아님</text>
+
+  <rect class="node" x="1690" y="1170" width="650" height="250" rx="24"/>
+  <text class="node-title" x="2015" y="1232" text-anchor="middle">사용자 선택</text>
+  <text class="node-copy" x="2015" y="1280" text-anchor="middle">샀어요 → 내 화장품에 추가</text>
+  <text class="node-copy" x="2015" y="1320" text-anchor="middle">비슷한 제품 더 보기</text>
+  <text class="small" x="2015" y="1370" text-anchor="middle">아직 안 샀다면 여기서 종료</text>
+
+  <rect class="node data" x="1690" y="1510" width="650" height="210" rx="24"/>
+  <text class="node-title" x="2015" y="1572" text-anchor="middle">탐색 맥락 저장</text>
+  <text class="node-copy" x="2015" y="1618" text-anchor="middle">어떤 변화를 원했고 무엇을 비교했는지</text>
+  <text class="small" x="2015" y="1666" text-anchor="middle">다음 제품 의견·추천에 다시 사용</text>
+
+  <text class="tag" x="1260" y="1860" fill="#5746A5">B · 다음 제품을 추천받고 싶다</text>
+  <path class="line-ai" d="M1690 2060H1790"/>
+  <path class="line-ai" d="M2240 2060H2340"/>
+  <path class="line" d="M2560 2240V2360"/>
+
+  <rect class="node ai" x="1320" y="1960" width="370" height="200" rx="24"/>
+  <text class="node-title" x="1505" y="2022" text-anchor="middle">원하는 변화 말하기</text>
+  <text class="node-copy" x="1505" y="2067" text-anchor="middle">평소 말하듯 자연어로</text>
+  <text class="small" x="1505" y="2110" text-anchor="middle">예: 가볍지만 덜 당겼으면</text>
+
+  <rect class="node ai" x="1790" y="1930" width="450" height="260" rx="24"/>
+  <text class="node-title" x="2015" y="1992" text-anchor="middle">AI가 필요한 것만 질문</text>
+  <text class="node-copy" x="2015" y="2040" text-anchor="middle">현재 루틴과 과거 경험 확인</text>
+  <text class="node-copy" x="2015" y="2080" text-anchor="middle">애매한 조건만 추가 질문</text>
+  <text class="small" x="2015" y="2135" text-anchor="middle">정해진 피부 상태 선택지에 가두지 않음</text>
+
+  <rect class="node ai" x="2340" y="1930" width="420" height="310" rx="24"/>
+  <text class="node-title" x="2550" y="1992" text-anchor="middle">후보 최대 5개</text>
+  <text class="node-copy" x="2550" y="2042" text-anchor="middle">왜 지금 볼 만한지</text>
+  <text class="node-copy" x="2550" y="2082" text-anchor="middle">현재 제품과 무엇이 다른지</text>
+  <text class="node-copy" x="2550" y="2122" text-anchor="middle">확인할 점과 근거</text>
+  <text class="small" x="2550" y="2182" text-anchor="middle">인기·가격은 추천 순서에 쓰지 않음</text>
+
+  <rect class="node" x="2240" y="2360" width="620" height="220" rx="24"/>
+  <text class="node-title" x="2550" y="2424" text-anchor="middle">후보 선택</text>
+  <text class="node-copy" x="2550" y="2472" text-anchor="middle">제품 상세와 AI 대화로 이동</text>
+  <text class="small" x="2550" y="2520" text-anchor="middle">구매 후 내 화장품에 추가</text>
+
+  <path class="line" d="M2340 1295H2800V780H3070"/>
+  <path class="line" d="M2860 2470H2875V780H3070"/>
+
+  <!-- 2. Products and routine -->
+  <path class="line" d="M3540 940V1040"/>
+  <path class="line" d="M3540 1230V1330"/>
+  <path class="line-ai" d="M3540 1590V1690"/>
+  <path class="line" d="M3540 1910V2020"/>
+  <path class="line" d="M4000 2150H4220V780H4390"/>
+
+  <rect class="node" x="3070" y="690" width="940" height="250" rx="24"/>
+  <text class="node-title" x="3540" y="752" text-anchor="middle">새 화장품 추가</text>
+  <text class="node-copy" x="3540" y="802" text-anchor="middle">제품명 검색 또는 영수증 OCR</text>
+  <text class="small" x="3540" y="852" text-anchor="middle">등록하면 먼저 내 화장품에 들어감</text>
+  <text class="small" x="3540" y="892" text-anchor="middle">현재 루틴에는 자동으로 넣지 않음</text>
+
+  <rect class="node" x="3070" y="1040" width="940" height="190" rx="24"/>
+  <text class="node-title" x="3540" y="1102" text-anchor="middle">내 화장품</text>
+  <text class="node-copy" x="3540" y="1150" text-anchor="middle">미사용 화장품 · 현재 루틴 · 마지막 안정 루틴</text>
+  <text class="small" x="3540" y="1192" text-anchor="middle">제품별 AI 정보와 메모 확인</text>
+
+  <rect class="node" x="3040" y="1330" width="1000" height="260" rx="24"/>
+  <text class="node-title" x="3540" y="1392" text-anchor="middle">루틴 만들기·수정</text>
+  <text class="node-copy" x="3540" y="1440" text-anchor="middle">아침/저녁 · 제품 · 바르는 순서 · 빈도</text>
+  <text class="node-copy" x="3540" y="1482" text-anchor="middle">클렌징 제품도 같은 순서 안에 추가</text>
+  <text class="small" x="3540" y="1535" text-anchor="middle">필요하면 여기서 새 화장품 추가 후 돌아옴</text>
+
+  <rect class="node ai" x="3070" y="1690" width="940" height="220" rx="24"/>
+  <text class="node-title" x="3540" y="1752" text-anchor="middle">AI 추천 순서로 배치</text>
+  <text class="node-copy" x="3540" y="1800" text-anchor="middle">현재 제품 조합에 맞는 순서와 빈도 제안</text>
+  <text class="small" x="3540" y="1850" text-anchor="middle">사용자는 제안을 적용하거나 직접 수정</text>
+
+  <rect class="node good" x="3080" y="2020" width="920" height="260" rx="24"/>
+  <text class="node-title" x="3540" y="2082" text-anchor="middle">현재 루틴 시작 · DAY 1</text>
+  <text class="node-copy" x="3540" y="2130" text-anchor="middle">새 루틴 버전과 시작일 저장</text>
+  <text class="node-copy" x="3540" y="2170" text-anchor="middle">7일 동안 평소처럼 사용</text>
+  <text class="small" x="3540" y="2220" text-anchor="middle">불편하면 7일 전에도 바로 Rescue</text>
+
+  <rect class="node warn" x="3090" y="2440" width="900" height="250" rx="24"/>
+  <text class="node-title" x="3540" y="2502" text-anchor="middle">7일 전에 루틴을 바꾸면</text>
+  <text class="node-copy" x="3540" y="2550" text-anchor="middle">지금까지 결과를 짧게 남김</text>
+  <text class="small" x="3540" y="2600" text-anchor="middle">안정 루틴으로 보지 않고 낮은 근거로 저장</text>
+  <text class="small" x="3540" y="2640" text-anchor="middle">바뀐 루틴은 새 DAY 1로 시작</text>
+
+  <!-- 3. Seven days -->
+  <path class="line" d="M4780 930V1040"/>
+  <path class="line" d="M4780 1260V1360"/>
+  <path class="line" d="M4780 1580V1680"/>
+  <path class="line" d="M4580 1830H4440V2060"/>
+  <path class="line" d="M4980 1830H5250V790H5540"/>
+  <path class="line" d="M4780 1980V2150"/>
+
+  <rect class="node good" x="4390" y="690" width="780" height="240" rx="24"/>
+  <text class="node-title" x="4780" y="752" text-anchor="middle">현재 루틴을 7일 사용</text>
+  <text class="node-copy" x="4780" y="800" text-anchor="middle">매일 기록을 요구하지 않음</text>
+  <text class="small" x="4780" y="852" text-anchor="middle">DAY 7에 홈·알림·내 화장품에서 안내</text>
+
+  <rect class="node ai" x="4380" y="1040" width="800" height="220" rx="24"/>
+  <text class="node-title" x="4780" y="1102" text-anchor="middle">AI가 결과를 가볍게 질문</text>
+  <text class="node-copy" x="4780" y="1150" text-anchor="middle">실제로 비슷하게 썼나요?</text>
+  <text class="small" x="4780" y="1200" text-anchor="middle">전반적으로 어땠는지 대화로 이어서 확인</text>
+
+  <polygon class="decision" points="4780,1360 5000,1470 4780,1580 4560,1470"/>
+  <text class="node-title" x="4780" y="1458" text-anchor="middle">결과는?</text>
+  <text class="small" x="4780" y="1498" text-anchor="middle">세 가지 선택</text>
+
+  <rect class="node good" x="4300" y="1680" width="560" height="300" rx="24"/>
+  <text class="node-title" x="4580" y="1742" text-anchor="middle">불편이 없었어요</text>
+  <text class="node-copy" x="4580" y="1792" text-anchor="middle">현재 루틴을</text>
+  <text class="node-copy" x="4580" y="1832" text-anchor="middle">마지막 안정 루틴으로 저장</text>
+  <text class="small" x="4580" y="1890" text-anchor="middle">문제없음 경험도 다음 판단의 근거</text>
+
+  <rect class="node danger" x="4920" y="1680" width="340" height="300" rx="24"/>
+  <text class="node-title" x="5090" y="1742" text-anchor="middle">불편했어요</text>
+  <text class="node-copy" x="5090" y="1800" text-anchor="middle">같은 대화에서</text>
+  <text class="node-copy" x="5090" y="1840" text-anchor="middle">AI Rescue 시작</text>
+
+  <rect class="node warn" x="4400" y="2150" width="760" height="260" rx="24"/>
+  <text class="node-title" x="4780" y="2212" text-anchor="middle">좀 더 써봐야 해요</text>
+  <text class="node-copy" x="4780" y="2260" text-anchor="middle">같은 루틴을 7일 더 관찰</text>
+  <text class="small" x="4780" y="2310" text-anchor="middle">현재 결과는 중간 기록으로 남김</text>
+  <text class="small" x="4780" y="2350" text-anchor="middle">불편하면 예정일 전에도 Rescue</text>
+
+  <path class="line-dashed" d="M4780 2410V2700H4200V780H4390"/>
+
+  <!-- 4. Rescue -->
+  <path class="line-ai" d="M6040 970V1070"/>
+  <path class="line-ai" d="M6040 1290V1390"/>
+  <path class="line-ai" d="M6040 1630V1730"/>
+  <path class="line" d="M6040 1990V2090"/>
+  <path class="line" d="M6040 2350V2460"/>
+
+  <rect class="node ai" x="5540" y="690" width="1000" height="280" rx="24"/>
+  <text class="node-title" x="6040" y="752" text-anchor="middle">AI Rescue 대화 시작</text>
+  <text class="node-copy" x="6040" y="802" text-anchor="middle">무엇이 언제부터 어떻게 불편한지 말함</text>
+  <text class="node-copy" x="6040" y="845" text-anchor="middle">심하거나 빠르게 악화되면 전문가 도움 안내</text>
+  <text class="small" x="6040" y="900" text-anchor="middle">의학적 진단이나 범인 확정은 하지 않음</text>
+
+  <rect class="node ai" x="5540" y="1070" width="1000" height="220" rx="24"/>
+  <text class="node-title" x="6040" y="1132" text-anchor="middle">최근 변경 함께 확인</text>
+  <text class="node-copy" x="6040" y="1180" text-anchor="middle">마지막 안정 루틴과 현재 루틴 비교</text>
+  <text class="small" x="6040" y="1230" text-anchor="middle">AI가 정리하고 사용자가 실제 사용과 다른 점을 고침</text>
+
+  <rect class="node ai" x="5500" y="1390" width="1080" height="240" rx="24"/>
+  <text class="node-title" x="6040" y="1452" text-anchor="middle">AI가 확인 순서 제안</text>
+  <text class="node-copy" x="6040" y="1500" text-anchor="middle">최근 변경·제품 근거·개인 기록을 함께 봄</text>
+  <text class="node-copy" x="6040" y="1542" text-anchor="middle">무엇부터 빼고 유지할지 순서대로 설명</text>
+  <text class="small" x="6040" y="1585" text-anchor="middle">가능성 표현만 사용하고 원인으로 단정하지 않음</text>
+
+  <rect class="node ai" x="5500" y="1730" width="1080" height="260" rx="24"/>
+  <text class="node-title" x="6040" y="1792" text-anchor="middle">권장 루틴 하나 제안</text>
+  <text class="node-copy" x="6040" y="1840" text-anchor="middle">마지막 안정 루틴을 우선 활용</text>
+  <text class="node-copy" x="6040" y="1882" text-anchor="middle">뺄 제품 · 유지할 제품 · 순서와 이유</text>
+  <text class="small" x="6040" y="1932" text-anchor="middle">안정 루틴이 없으면 더 보수적으로 제안</text>
+
+  <rect class="node" x="5500" y="2090" width="1080" height="260" rx="24"/>
+  <text class="node-title" x="6040" y="2152" text-anchor="middle">사용자 선택</text>
+  <text class="node-copy" x="6040" y="2200" text-anchor="middle">이 루틴으로 시작 · 직접 수정 · 기록만 남김</text>
+  <text class="small" x="6040" y="2250" text-anchor="middle">AI 제안은 사용자가 확인해야 실제 루틴이 됨</text>
+  <text class="small" x="6040" y="2290" text-anchor="middle">선택하지 않아도 Rescue 대화는 저장</text>
+
+  <rect class="node good" x="5550" y="2460" width="980" height="250" rx="24"/>
+  <text class="node-title" x="6040" y="2522" text-anchor="middle">새 현재 루틴 · DAY 1</text>
+  <text class="node-copy" x="6040" y="2570" text-anchor="middle">Rescue 이후에도 독립된 새 루틴으로 시작</text>
+  <text class="small" x="6040" y="2620" text-anchor="middle">다시 7일 뒤 결과를 남기고 경험을 축적</text>
+
+  <path class="line-dashed" d="M5550 2585H5290V880H5170"/>
+  <path class="line-dashed" d="M4580 1980V2760H615V2520"/>
+  <path class="line-dashed" d="M6040 2710V2780H615V2520"/>
+
+  <!-- Core loop -->
+  <rect x="90" y="3030" width="6620" height="420" rx="30" fill="#14271F"/>
+  <text x="150" y="3102" font-size="28" font-weight="800" fill="white">제품의 핵심 순환</text>
+  <text x="150" y="3140" font-size="18" font-weight="500" fill="#B7C8BF">기록이 쌓일수록 일반 정보보다 사용자의 실제 경험이 다음 AI 판단에서 더 중요한 근거가 된다</text>
+
+  <g transform="translate(170 3210)">
+    <rect width="930" height="120" rx="22" fill="#F4F1FF" stroke="#7766D2"/>
+    <text x="465" y="54" text-anchor="middle" font-size="24" font-weight="750" fill="#2E2657">AI 제품 의견·추천</text>
+    <text x="465" y="88" text-anchor="middle" font-size="17" font-weight="600" fill="#6656B8">무엇을 살지 또는 왜 살지</text>
+    <path d="M930 60H1030" stroke="#B7C8BF" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="1050" width="930" height="120" rx="22" fill="white" stroke="#AEB7B1"/>
+    <text x="1515" y="54" text-anchor="middle" font-size="24" font-weight="750">내 화장품·루틴</text>
+    <text x="1515" y="88" text-anchor="middle" font-size="17" font-weight="600" fill="#69736D">제품·순서·아침/저녁·빈도</text>
+    <path d="M1980 60H2080" stroke="#B7C8BF" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="2100" width="930" height="120" rx="22" fill="#ECF8F2" stroke="#2C8669"/>
+    <text x="2565" y="54" text-anchor="middle" font-size="24" font-weight="750">7일 사용</text>
+    <text x="2565" y="88" text-anchor="middle" font-size="17" font-weight="600" fill="#216D55">평소처럼 쓰고 한 번 확인</text>
+    <path d="M3030 60H3130" stroke="#B7C8BF" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="3150" width="930" height="120" rx="22" fill="#FFF8E8" stroke="#B98A2F"/>
+    <text x="3615" y="54" text-anchor="middle" font-size="24" font-weight="750">결과·AI Rescue</text>
+    <text x="3615" y="88" text-anchor="middle" font-size="17" font-weight="600" fill="#8A641F">문제없음과 불편함 모두 기록</text>
+    <path d="M4080 60H4180" stroke="#B7C8BF" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="4200" width="930" height="120" rx="22" fill="#F0F5F2" stroke="#6D8B79"/>
+    <text x="4665" y="54" text-anchor="middle" font-size="24" font-weight="750">개인 경험 축적</text>
+    <text x="4665" y="88" text-anchor="middle" font-size="17" font-weight="600" fill="#4E6C5A">다음 대화의 개인 근거</text>
+    <path d="M5130 60H5230" stroke="#B7C8BF" stroke-width="3" marker-end="url(#arrow)"/>
+
+    <rect x="5250" width="1100" height="120" rx="22" fill="#F4F1FF" stroke="#7766D2"/>
+    <text x="5800" y="54" text-anchor="middle" font-size="24" font-weight="750" fill="#2E2657">더 나은 다음 AI 판단</text>
+    <text x="5800" y="88" text-anchor="middle" font-size="17" font-weight="600" fill="#6656B8">매번 처음부터 다시 시작하지 않음</text>
   </g>
-
-  <g transform="translate(1390 4350)">
-    <rect width="1450" height="390" rx="24" fill="#24352E" stroke="#537060" stroke-width="2"/>
-    <text x="50" y="65" font-size="25" font-weight="750" fill="white">사용자 구조화 이력</text>
-    <text x="50" y="112" font-size="19" fill="#C0CEC6">내 화장품 · 제품 메모 · 찜</text>
-    <text x="50" y="150" font-size="19" fill="#C0CEC6">루틴 버전: 제품 · 아침/저녁 · 순서 · 빈도</text>
-    <text x="50" y="188" font-size="19" fill="#C0CEC6">7일/조기 결과 · 실제 사용 일치 · 안정 루틴 포인터</text>
-    <text x="50" y="226" font-size="19" fill="#C0CEC6">Rescue 대화 · 확인한 변경 · 순위 · 적용한 다음 루틴</text>
-    <text x="50" y="292" font-size="18" font-weight="700" fill="#8FD6BA">강한 개인 근거</text>
-    <text x="50" y="330" font-size="18" fill="#C0CEC6">기록대로 7일 사용 + 불편 없음</text>
-    <text x="50" y="367" font-size="18" fill="#C0CEC6">조기 기록·동시 변경은 낮은 신뢰도로 구분</text>
-  </g>
-
-  <g transform="translate(2880 4350)">
-    <rect width="1260" height="390" rx="24" fill="#322B55" stroke="#7D6CD1" stroke-width="2"/>
-    <text x="50" y="65" font-size="25" font-weight="750" fill="white">AI 자연어 기억</text>
-    <text x="50" y="112" font-size="19" fill="#D7D0F7">고민 · 선호 사용감 · 회피 조건</text>
-    <text x="50" y="150" font-size="19" fill="#D7D0F7">제품을 고를 때 알고 싶은 것</text>
-    <text x="50" y="188" font-size="19" fill="#D7D0F7">대화에서 사용자가 확인한 새로운 맥락</text>
-    <text x="50" y="255" font-size="18" font-weight="700" fill="#B7A9FF">사용자 통제</text>
-    <text x="50" y="292" font-size="18" fill="#D7D0F7">어떤 문장을 기억하는지 항상 확인</text>
-    <text x="50" y="330" font-size="18" fill="#D7D0F7">수정·삭제 즉시 다음 AI 요청에서 제외</text>
-  </g>
-
-  <g transform="translate(4180 4350)">
-    <rect width="1720" height="390" rx="24" fill="#2C3550" stroke="#6688BF" stroke-width="2"/>
-    <text x="50" y="65" font-size="25" font-weight="750" fill="white">AI가 맡는 일</text>
-    <text x="50" y="112" font-size="19" fill="#CFD9EE">자연어 이해 · 필요한 추가 질문 · OpenAI 웹 검색</text>
-    <text x="50" y="150" font-size="19" fill="#CFD9EE">제품 의견 · 추천 · 루틴 순서 · Rescue 설명과 대화</text>
-    <text x="50" y="188" font-size="19" fill="#CFD9EE">완제품 연구와 원료 연구를 구분해 현재 질문에 연결</text>
-    <text x="50" y="255" font-size="18" font-weight="700" fill="#99B9EE">비동기 작업</text>
-    <text x="50" y="292" font-size="18" fill="#CFD9EE">영수증 OCR · 추천 · 제품/성분 조사 · 루틴 분석 · Rescue</text>
-    <text x="50" y="330" font-size="18" fill="#CFD9EE">실패해도 사용자의 제품·루틴·결과 기록은 보존</text>
-  </g>
-
-  <g transform="translate(5940 4350)">
-    <rect width="2090" height="390" rx="24" fill="#243946" stroke="#6594AC" stroke-width="2"/>
-    <text x="50" y="65" font-size="25" font-weight="750" fill="white">서버가 반드시 검증하는 일</text>
-    <text x="50" y="112" font-size="19" fill="#D1E2EA">인증과 소유권 · 실제 제품 ID/버전 · 현재/안정 루틴 · 버전 차이</text>
-    <text x="50" y="150" font-size="19" fill="#D1E2EA">AI 출력 schema · 인용 출처 · 개인 기록 참조 · 금지 표현</text>
-    <text x="50" y="188" font-size="19" fill="#D1E2EA">사용자가 확정한 상태 전이만 저장 · 중복 요청 방지</text>
-    <text x="50" y="255" font-size="18" font-weight="700" fill="#9CCDE3">AI가 결정할 수 없는 것</text>
-    <text x="50" y="292" font-size="18" fill="#D1E2EA">제품 적합 확률 · 의료 진단 · 원인 확정 · 자동 제품 중단</text>
-    <text x="50" y="330" font-size="18" fill="#D1E2EA">가격·인기를 이용한 순위 · 불확실한 정보를 없음으로 단정</text>
-  </g>
-
-  <!-- Data feedback arrows -->
-  <path d="M2140 4180V4100H2800V3710" stroke="#83A293" stroke-width="3" stroke-dasharray="12 10" fill="none" marker-end="url(#arrow)"/>
-  <path d="M3500 4180V4070H650V2550" stroke="#7D6CD1" stroke-width="3" stroke-dasharray="12 10" fill="none" marker-end="url(#arrow-ai)"/>
-  <path d="M5040 4180V4070H7290V4020" stroke="#6688BF" stroke-width="3" stroke-dasharray="12 10" fill="none" marker-end="url(#arrow)"/>
-
-  <text x="4100" y="4935" text-anchor="middle" font-size="20" font-weight="600" fill="#657169">결과가 쌓일수록 일반 정보보다 이 사용자의 실제 경험이 다음 AI 판단에서 더 중요한 근거가 된다</text>
 </svg>
