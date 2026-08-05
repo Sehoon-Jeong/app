@@ -10,6 +10,8 @@
 
 GitHub Feature 이슈가 사용자 흐름·분기·실패·수용 조건의 유일한 기능명세다. 저장소에 별도 기능명세 문서를 만들거나 같은 내용을 복사하지 않는다.
 
+전체 기능의 통합 초안, 영역별 production-ready 책임과 Figma 반영 절차는 [협업과 구현 흐름](./docs/02-collaboration-workflow.md)을 따른다.
+
 ## 작업 원칙
 
 - `Ready`인 Task를 기준으로 구현한다. Feature는 사용자 결과, Task는 한 사람이 완료·검증할 수 있는 작업이다.

@@ -97,8 +97,9 @@ AI는 모든 피부 상태를 미리 만든 선택지에 끼워 맞추지 않습
 | --- | --- | --- |
 | 0 | [제품 브리프](./docs/01-product-brief.md) | 누구의 어떤 문제를 풀고 무엇을 검증하는가 |
 | 1 | [요구사항](./docs/04-requirements/README.md) | 기능별로 나눈 의무와 이유 |
-| 2 | [GitHub Feature](https://github.com/orgs/sksksksksksss/projects/2) | 모든 정상 흐름, 분기·실패와 수용 조건의 원본 |
-| 3 | [OpenAPI](./docs/api/openapi.yaml) | 프론트엔드와 서버의 계약 |
-| 4 | [데이터 모델](./docs/06-data-model/README.md) | 개인 경험과 AI 근거가 쌓이는 구조 |
+| 2 | [협업과 구현 흐름](./docs/02-collaboration-workflow.md) | AI 통합 초안부터 영역별 완성과 디자인 반영까지 |
+| 3 | [GitHub Feature](https://github.com/orgs/sksksksksss/projects/2) | 모든 정상 흐름, 분기·실패와 수용 조건의 원본 |
+| 4 | [OpenAPI](./docs/api/openapi.yaml) | 프론트엔드와 서버의 계약 |
+| 5 | [데이터 모델](./docs/06-data-model/README.md) | 개인 경험과 AI 근거가 쌓이는 구조 |
 
 개발을 시작할 때는 [AGENTS.md](./AGENTS.md)를 먼저 읽습니다. 제품 의미가 바뀌면 Feature 이슈와 요구사항을 먼저 고치고, API·데이터 의미가 바뀌면 OpenAPI와 데이터 모델을 같은 PR에서 함께 수정합니다.

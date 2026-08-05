@@ -1,15 +1,16 @@
 # 문서 안내
 
-처음 보는 사람도 아래 여섯 문서만 순서대로 읽으면 제품과 구현 범위를 알 수 있다.
+처음 보는 사람도 아래 문서만 순서대로 읽으면 제품과 구현 범위를 알 수 있다.
 
 | 순서 | 문서 | 내용 |
 | --- | --- | --- |
 | 0 | [제품 브리프](./01-product-brief.md) | 누구의 어떤 문제를 풀고 무엇을 검증하는가 |
 | 1 | [요구사항](./04-requirements/README.md) | 기능별 사용자·시스템 의무와 제품 근거 |
-| 2 | [구현 우선순위와 태스크](./03-delivery-plan.md) | P0·P1·P2와 실제 GitHub Task |
-| 3 | [GitHub Feature](https://github.com/orgs/sksksksksksss/projects/2) | 각 흐름의 입력, 분기, 결과와 예외의 원본 |
-| 4 | [OpenAPI](./api/openapi.yaml) | 프론트엔드와 서버 사이의 계약 |
-| 5 | [데이터 모델](./06-data-model/README.md) | 무엇을 어떤 관계로 저장하는가 |
+| 2 | [협업과 구현 흐름](./02-collaboration-workflow.md) | AI 통합 초안, 영역 책임 개발과 디자인 반영 절차 |
+| 3 | [구현 우선순위와 태스크](./03-delivery-plan.md) | P0·P1·P2와 실제 GitHub Task |
+| 4 | [GitHub Feature](https://github.com/orgs/sksksksksksss/projects/2) | 각 흐름의 입력, 분기, 결과와 예외의 원본 |
+| 5 | [OpenAPI](./api/openapi.yaml) | 프론트엔드와 서버 사이의 계약 |
+| 6 | [데이터 모델](./06-data-model/README.md) | 무엇을 어떤 관계로 저장하는가 |
 
 ## 보조 문서
 
