@@ -4,7 +4,7 @@
 
 | 순서 | 문서 | 내용 |
 | --- | --- | --- |
-| 0 | [제품 설명](./01-product-brief.md) | 왜 만들며 무엇을 검증하는가 |
+| 0 | [제품 브리프](./01-product-brief.md) | 누구의 어떤 문제를 풀고 무엇을 검증하는가 |
 | 1 | [요구사항](./04-requirements.md) | 사용자가 할 수 있어야 하는 일과 제품 근거 |
 | 2 | [기능 명세](./05-features/functional-specification.md) | 각 흐름의 입력, 분기, 결과와 예외 |
 | 3 | [OpenAPI](./api/openapi.yaml) | 프론트엔드와 서버 사이의 계약 |
@@ -19,4 +19,4 @@
 
 ## 문서가 충돌할 때
 
-사용자가 실제로 보는 흐름은 [프로토타입](https://sksksksksksss.github.io/service/prototype/)을 우선한다. 제품 의미는 제품 설명과 요구사항, 처리 규칙은 기능 명세, 필드는 OpenAPI, 저장 방식은 데이터 모델을 따른다. 충돌을 발견하면 한 문서만 고치지 말고 관련 문서를 같은 PR에서 함께 수정한다.
+사용자가 실제로 보는 흐름은 [프로토타입](https://sksksksksksss.github.io/service/prototype/)을 우선한다. 제품 의미는 제품 브리프와 요구사항, 처리 규칙은 기능 명세, 필드는 OpenAPI, 저장 방식은 데이터 모델을 따른다. 충돌을 발견하면 한 문서만 고치지 말고 관련 문서를 같은 PR에서 함께 수정한다.

@@ -4,7 +4,7 @@
 
 **후기는 남의 경험입니다. SkinCause는 내 경험을 다음 선택의 근거로 바꿉니다.**
 
-SkinCause는 코덕의 화장품 탐색·루틴·사용 결과를 AI가 대화로 기억하고 해석해, 다음 제품 판단부터 7일 관찰, 불편 대응과 다음 추천까지 개인화하는 AI 스킨케어 플랫폼입니다.
+SkinCause는 신제품을 자주 탐색하는 사용자의 화장품 선택·루틴·사용 결과를 AI가 연결해 기억하고, 다음 제품 판단을 더 개인화하는 스킨케어 플랫폼입니다.
 
 [프로토타입 사용하기](https://sksksksksksss.github.io/service/prototype/) · [전체 사용자 흐름](https://sksksksksksss.github.io/service/flow/) · [API 문서](https://sksksksksksss.github.io/service/api/) · [개발 작업판](https://github.com/orgs/sksksksksksss/projects/2)
 
@@ -82,7 +82,7 @@ AI는 모든 피부 상태를 미리 만든 선택지에 끼워 맞추지 않습
 
 | 순서 | 문서 | 무엇을 알 수 있나 |
 | --- | --- | --- |
-| 0 | [제품 설명](./docs/01-product-brief.md) | 왜 만들고 무엇을 검증하는가 |
+| 0 | [제품 브리프](./docs/01-product-brief.md) | 누구의 어떤 문제를 풀고 무엇을 검증하는가 |
 | 1 | [요구사항](./docs/04-requirements.md) | 사용자가 할 수 있어야 하는 일과 이유 |
 | 2 | [기능 명세](./docs/05-features/functional-specification.md) | 모든 정상 흐름, 분기와 예외 |
 | 3 | [OpenAPI](./docs/api/openapi.yaml) | 프론트엔드와 서버의 계약 |
