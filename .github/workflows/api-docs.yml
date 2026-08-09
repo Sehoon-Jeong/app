@@ -45,7 +45,7 @@ jobs:
           cp prototype/index.html _site/prototype/index.html
           npx --yes @redocly/cli@2.43.3 build-docs docs/api/openapi.yaml \
             --output _site/api/index.html \
-            --title "SkinCause MVP API"
+            --title "SKN API"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
