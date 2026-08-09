@@ -3,7 +3,7 @@
 - 원본: [openapi.yaml](./openapi.yaml)
 - 사람이 보는 문서: [GitHub Pages Redoc](https://sksksksksksss.github.io/service/api/)
 
-OpenAPI는 P0·P1·P2의 전체 계약을 보존한다. endpoint나 enum이 있다는 이유만으로 현재 구현 범위가 되지 않는다. 우선순위와 실제 착수 범위는 [요구사항](../04-requirements/README.md), 부모 GitHub Feature와 [구현 태스크](../03-delivery-plan.md)를 따른다.
+OpenAPI는 P0 경험 순환과 P1에서 바로 이어지는 운영 계약을 보존한다. endpoint가 있다는 이유만으로 현재 구현 범위가 되지 않는다. 우선순위와 착수 범위는 [요구사항](../04-requirements/README.md), 부모 GitHub Feature와 [구현 태스크](../03-delivery-plan.md)를 따른다.
 
 ## 공통 규칙
 

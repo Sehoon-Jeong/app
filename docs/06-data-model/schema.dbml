@@ -77,16 +77,11 @@ Enum routine_frequency_mode {
   CUSTOM
 }
 
-Enum assessment_schedule_status {
+Enum experience_review_schedule_status {
   SCHEDULED
   COMPLETED
   CANCELLED
   MISSED
-}
-
-Enum assessment_kind {
-  EARLY_CHECK
-  SCHEDULED_REVIEW
 }
 
 Enum adherence_status {
@@ -96,18 +91,36 @@ Enum adherence_status {
   UNKNOWN
 }
 
-Enum observed_outcome {
-  NO_DISCOMFORT
-  DISCOMFORT
+Enum experience_sentiment {
+  LIKED
+  DISAPPOINTED
   UNKNOWN
 }
 
-Enum assessment_decision {
-  COMPLETE
-  EXTEND
-  UPDATE_ROUTINE
-  START_RESCUE
-  RECORD_ONLY
+Enum discomfort_status {
+  NONE_REPORTED
+  REPORTED
+  UNKNOWN
+}
+
+Enum experience_source_type {
+  IN_USE
+  DAY_7_REVIEW
+  PRODUCT_NOTE
+  RESCUE
+}
+
+Enum pattern_status {
+  CANDIDATE
+  ACTIVE
+  SUPERSEDED
+  REJECTED
+}
+
+Enum pattern_feedback_type {
+  RELEVANT
+  NOT_RELEVANT
+  UNSURE
 }
 
 Enum evidence_relation {
@@ -191,8 +204,9 @@ Enum safety_action {
 }
 
 Enum analysis_type {
-  OPINION
-  RECOMMENDATION
+  EXPERIENCE_EXTRACTION
+  PATTERN_DISCOVERY
+  PRODUCT_EXPLORATION
   PRODUCT_RESEARCH
   ROUTINE_ORDER
   ROUTINE_ANALYSIS
@@ -201,8 +215,10 @@ Enum analysis_type {
 }
 
 Enum conversation_kind {
-  PRODUCT_OPINION
-  RECOMMENDATION
+  GENERAL
+  PRODUCT_EXPLORATION
+  PATTERN
+  RESCUE
   PRODUCT_RESEARCH
 }
 
@@ -213,8 +229,9 @@ Enum conversation_status {
 
 Enum ai_job_type {
   RECEIPT_OCR
-  PRODUCT_OPINION
-  RECOMMENDATION
+  EXPERIENCE_EXTRACTION
+  PATTERN_DISCOVERY
+  PRODUCT_EXPLORATION
   PRODUCT_RESEARCH
   ROUTINE_ANALYSIS
   ROUTINE_ORDER
@@ -229,7 +246,7 @@ Enum notification_status {
 }
 
 Enum notification_type {
-  ASSESSMENT_DUE
+  EXPERIENCE_REVIEW_DUE
   AI_JOB_SUCCEEDED
   AI_JOB_FAILED
 }
@@ -514,14 +531,14 @@ Table routine_item {
   }
 }
 
-Table routine_assessment_schedule {
+Table experience_review_schedule {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
   routine_version_id integer [not null]
   sequence_no integer [not null, note: '최초 1, 연장마다 증가']
   due_at text [not null, note: 'UTC ISO 8601']
-  status assessment_schedule_status [not null]
-  created_from_assessment_id integer
+  status experience_review_schedule_status [not null]
+  completed_experience_record_id integer
   completed_at text [note: 'UTC ISO 8601']
   created_at text [not null, note: 'UTC ISO 8601']
 
@@ -533,32 +550,54 @@ Table routine_assessment_schedule {
   }
 }
 
-Table routine_assessment {
+Table experience_record {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
   routine_version_id integer [not null]
-  schedule_id integer [unique]
-  kind assessment_kind [not null]
-  sequence_no integer [not null, note: 'EARLY_CHECK=0, SCHEDULED_REVIEW는 schedule sequence']
+  review_schedule_id integer [unique]
+  user_product_id integer
+  source_type experience_source_type [not null]
   adherence adherence_status [not null]
-  outcome observed_outcome [not null]
-  decision assessment_decision [not null]
-  response_text text
-  assessed_at text [not null, note: 'UTC ISO 8601']
+  sentiment experience_sentiment [not null]
+  discomfort discomfort_status [not null]
+  original_text text
+  original_text_revision_no integer [not null, default: 1]
+  recorded_at text [not null, note: 'UTC ISO 8601']
 
   indexes {
     (id, user_id) [unique]
     (id, user_id, routine_version_id) [unique]
-    (routine_version_id, kind, sequence_no) [unique]
-    (user_id, assessed_at)
+    (id, user_id, user_product_id) [unique]
+    (user_id, recorded_at)
+    (user_product_id, recorded_at)
+    (routine_version_id, recorded_at)
   }
 }
 
-Table stable_routine_period {
+Table experience_observation {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  experience_record_id integer [not null]
+  observation_key text [not null, note: 'AI schema의 열린 문자열 key']
+  observation_text text [not null]
+  source_span text [not null, note: '사용자 원문에서 대응하는 표현']
+  polarity text [not null, note: 'POSITIVE, NEGATIVE, NEUTRAL, UNKNOWN']
+  analysis_run_id integer [not null]
+  schema_version text [not null]
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (experience_record_id, observation_key)
+    (analysis_run_id)
+  }
+}
+
+Table comparison_baseline_period {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
   routine_version_id integer [not null]
-  promoted_by_assessment_id integer [not null]
+  confirmed_by_experience_record_id integer [not null]
   started_at text [not null, note: 'UTC ISO 8601']
   ended_at text [note: 'UTC ISO 8601']
 
@@ -569,11 +608,59 @@ Table stable_routine_period {
   }
 }
 
+Table personal_pattern {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  pattern_key text [not null]
+  revision_no integer [not null]
+  status pattern_status [not null]
+  statement text [not null]
+  uncertainty_text text
+  supporting_record_count integer [not null]
+  opposing_record_count integer [not null]
+  analysis_run_id integer [not null]
+  created_at text [not null, note: 'UTC ISO 8601']
+  superseded_at text [note: 'UTC ISO 8601']
+
+  indexes {
+    (id, user_id) [unique]
+    (user_id, pattern_key, revision_no) [unique]
+    (user_id, status, created_at)
+  }
+}
+
+Table pattern_evidence {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  personal_pattern_id integer [not null]
+  experience_record_id integer [not null]
+  relation evidence_relation [not null]
+  explanation text [not null]
+
+  indexes {
+    (personal_pattern_id, experience_record_id) [unique]
+    (experience_record_id)
+  }
+}
+
+Table pattern_feedback {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > app_user.id]
+  personal_pattern_id integer [not null]
+  feedback pattern_feedback_type [not null]
+  created_at text [not null, note: 'UTC ISO 8601']
+
+  indexes {
+    (personal_pattern_id, user_id) [unique]
+  }
+}
+
 Table rescue_case {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
+  source_experience_record_id integer
   start_routine_version_id integer
-  stable_routine_version_id integer
+  comparison_baseline_routine_version_id integer
   status rescue_case_status [not null]
   final_action rescue_final_action
   created_at text [not null, note: 'UTC ISO 8601']
@@ -753,7 +840,8 @@ Table analysis_evidence {
   claim_key text [not null]
   relation evidence_relation [not null]
   evidence_snapshot_id integer [ref: > evidence_snapshot.id]
-  routine_assessment_id integer
+  experience_record_id integer
+  personal_pattern_id integer
   rescue_case_id integer
   ai_memory_id integer
   summary text [not null]
@@ -761,7 +849,8 @@ Table analysis_evidence {
   indexes {
     (analysis_run_id, claim_key)
     (evidence_snapshot_id)
-    (routine_assessment_id)
+    (experience_record_id)
+    (personal_pattern_id)
     (rescue_case_id)
     (ai_memory_id)
   }
@@ -798,7 +887,7 @@ Table notification {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
   type notification_type [not null]
-  assessment_schedule_id integer
+  experience_review_schedule_id integer
   ai_job_id integer
   title text [not null]
   body text
@@ -874,15 +963,23 @@ Ref: routine_version.(based_on_routine_version_id, user_id) > routine_version.(i
 Ref: routine_item.(routine_version_id, user_id) > routine_version.(id, user_id)
 Ref: routine_item.(user_product_id, user_id) > user_product.(id, user_id)
 
-Ref: routine_assessment_schedule.(routine_version_id, user_id) > routine_version.(id, user_id)
-Ref: routine_assessment_schedule.(created_from_assessment_id, user_id, routine_version_id) > routine_assessment.(id, user_id, routine_version_id)
-Ref: routine_assessment.(routine_version_id, user_id) > routine_version.(id, user_id)
-Ref: routine_assessment.(schedule_id, user_id, routine_version_id) > routine_assessment_schedule.(id, user_id, routine_version_id)
-Ref: stable_routine_period.(routine_version_id, user_id) > routine_version.(id, user_id)
-Ref: stable_routine_period.(promoted_by_assessment_id, user_id, routine_version_id) > routine_assessment.(id, user_id, routine_version_id)
+Ref: experience_review_schedule.(routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: experience_review_schedule.(completed_experience_record_id, user_id, routine_version_id) > experience_record.(id, user_id, routine_version_id)
+Ref: experience_record.(routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: experience_record.(user_product_id, user_id) > user_product.(id, user_id)
+Ref: experience_record.(review_schedule_id, user_id, routine_version_id) > experience_review_schedule.(id, user_id, routine_version_id)
+Ref: experience_observation.(experience_record_id, user_id) > experience_record.(id, user_id)
+Ref: experience_observation.(analysis_run_id, user_id) > analysis_run.(id, user_id)
+Ref: comparison_baseline_period.(routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: comparison_baseline_period.(confirmed_by_experience_record_id, user_id, routine_version_id) > experience_record.(id, user_id, routine_version_id)
+Ref: personal_pattern.(analysis_run_id, user_id) > analysis_run.(id, user_id)
+Ref: pattern_evidence.(personal_pattern_id, user_id) > personal_pattern.(id, user_id)
+Ref: pattern_evidence.(experience_record_id, user_id) > experience_record.(id, user_id)
+Ref: pattern_feedback.(personal_pattern_id, user_id) > personal_pattern.(id, user_id)
 
 Ref: rescue_case.(start_routine_version_id, user_id) > routine_version.(id, user_id)
-Ref: rescue_case.(stable_routine_version_id, user_id) > routine_version.(id, user_id)
+Ref: rescue_case.(source_experience_record_id, user_id) > experience_record.(id, user_id)
+Ref: rescue_case.(comparison_baseline_routine_version_id, user_id) > routine_version.(id, user_id)
 Ref: rescue_message.(rescue_case_id, user_id) > rescue_case.(id, user_id)
 Ref: rescue_safety_event.(rescue_case_id, user_id) > rescue_case.(id, user_id)
 Ref: rescue_safety_event.(source_message_id, user_id, rescue_case_id) > rescue_message.(id, user_id, rescue_case_id)
@@ -903,7 +1000,8 @@ Ref: ai_memory.(source_conversation_message_id, user_id) > conversation_message.
 Ref: ai_memory.(created_by_analysis_run_id, user_id) > analysis_run.(id, user_id)
 Ref: rescue_message.(analysis_run_id, user_id) > analysis_run.(id, user_id)
 Ref: analysis_evidence.(analysis_run_id, user_id) > analysis_run.(id, user_id)
-Ref: analysis_evidence.(routine_assessment_id, user_id) > routine_assessment.(id, user_id)
+Ref: analysis_evidence.(experience_record_id, user_id) > experience_record.(id, user_id)
+Ref: analysis_evidence.(personal_pattern_id, user_id) > personal_pattern.(id, user_id)
 Ref: analysis_evidence.(rescue_case_id, user_id) > rescue_case.(id, user_id)
 Ref: analysis_evidence.(ai_memory_id, user_id) > ai_memory.(id, user_id)
 
@@ -911,7 +1009,7 @@ Ref: ai_job.(analysis_request_id, user_id) > analysis_request.(id, user_id)
 Ref: ai_job.(analysis_run_id, user_id) > analysis_run.(id, user_id)
 Ref: ai_job.(retry_of_job_id, user_id) > ai_job.(id, user_id)
 
-Ref: notification.(assessment_schedule_id, user_id) > routine_assessment_schedule.(id, user_id)
+Ref: notification.(experience_review_schedule_id, user_id) > experience_review_schedule.(id, user_id)
 Ref: notification.(ai_job_id, user_id) > ai_job.(id, user_id)
 
 Ref: receipt_upload.(ai_job_id, user_id) > ai_job.(id, user_id)

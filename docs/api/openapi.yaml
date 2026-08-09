@@ -1,487 +1,312 @@
 openapi: 3.1.0
 info:
-  title: SkinCause API
-  version: 3.2.0
+  title: SKN API
+  version: 0.3.0
   description: |
-    제품 카탈로그, 내 화장품, 제품 의견·추천, 버전 루틴, 7일 결과와 AI Rescue 계약이다.
-    AI 결과는 제안이며 서버가 실제 제품·사용자 기록·상태 전이를 검증한다.
-    이 파일은 P0·P1·P2의 전체 계약이다. 실제 구현 우선순위는 기능별 요구사항과 GitHub Feature 명세를 따른다.
+    개인 스킨케어 경험을 제품·루틴과 연결하고, 원본 기반 패턴을 다음 탐색과 Rescue에 재사용하는 계약이다.
+    AI 문장은 사용자 원문이나 시스템 상태의 권위가 아니다.
 servers:
   - url: /api/v1
 security:
   - bearerAuth: []
 tags:
   - { name: Auth, description: 계정과 세션 }
-  - { name: Profile, description: 온보딩과 AI 기억 }
-  - { name: Catalog, description: 국내 제품 카탈로그 }
-  - { name: MyProducts, description: 내 화장품과 찜 }
-  - { name: Receipts, description: 영수증 OCR 등록 }
-  - { name: Decisions, description: 제품 의견과 추천 }
-  - { name: Routines, description: 현재·안정 루틴과 버전 }
-  - { name: Assessments, description: 7일·조기 결과 }
-  - { name: Rescue, description: 불편 대화와 다음 루틴 }
-  - { name: Jobs, description: 비동기 AI 작업 }
-  - { name: Notifications, description: 앱 안 알림 }
-
+  - { name: Catalog, description: 제품 카탈로그 }
+  - { name: Collection, description: 내 화장품 }
+  - { name: Routines, description: 실제 사용 맥락 }
+  - { name: Experiences, description: 경험 원문과 회고 }
+  - { name: Patterns, description: 원본 기반 개인 패턴 }
+  - { name: Exploration, description: AI 제품 탐색 }
+  - { name: Conversations, description: 공통 AI 채팅 }
+  - { name: Rescue, description: 불편 경험의 AI 모드 }
+  - { name: Jobs, description: 비동기 AI 실행 }
 paths:
   /auth/sign-up:
     post:
-      tags: [Auth]
-      summary: 가입한다
-      operationId: signUp
+      summary: 이메일로 가입한다
       security: []
+      tags: [Auth]
+      operationId: signUp
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Credentials' } } } }
       responses:
         '201': { description: 가입됨, content: { application/json: { schema: { $ref: '#/components/schemas/AuthSession' } } } }
-        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Validation' }
   /auth/login:
     post:
-      tags: [Auth]
-      summary: 로그인한다
-      operationId: login
+      summary: 이메일로 로그인한다
       security: []
+      tags: [Auth]
+      operationId: login
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Credentials' } } } }
       responses:
         '200': { description: 로그인됨, content: { application/json: { schema: { $ref: '#/components/schemas/AuthSession' } } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /me:
     get:
-      tags: [Profile]
-      summary: 내 계정과 온보딩 상태를 본다
+      summary: 내 계정을 조회한다
+      tags: [Auth]
       operationId: getMe
       responses:
         '200': { description: 내 계정, content: { application/json: { schema: { $ref: '#/components/schemas/Profile' } } } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-    patch:
-      tags: [Profile]
-      summary: 시간대와 온보딩 답을 고친다
-      operationId: updateMe
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProfileUpdate' } } } }
-      responses:
-        '200': { description: 수정됨, content: { application/json: { schema: { $ref: '#/components/schemas/Profile' } } } }
-        '422': { $ref: '#/components/responses/Validation' }
     delete:
-      tags: [Profile]
-      summary: 계정과 연결 데이터를 영구 삭제한다
+      summary: 계정과 개인 데이터를 삭제한다
+      tags: [Auth]
       operationId: deleteMe
       parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [confirmation]
-              properties: { confirmation: { type: string, const: DELETE } }
       responses:
         '202': { description: 삭제 시작, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
-        '409': { $ref: '#/components/responses/Conflict' }
-  /me/ai-memories:
+  /me/home:
     get:
-      tags: [Profile]
-      summary: AI가 기억하는 자연어 맥락을 본다
-      operationId: listAiMemories
+      summary: 경험 중심 홈을 조회한다
+      tags: [Experiences, Patterns]
+      operationId: getHome
       responses:
-        '200': { description: 기억 목록, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AiMemory' } } } } }
-    post:
-      tags: [Profile]
-      summary: AI 기억을 직접 추가한다
-      operationId: createAiMemory
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AiMemoryWrite' } } } }
-      responses:
-        '201': { description: 추가됨, content: { application/json: { schema: { $ref: '#/components/schemas/AiMemory' } } } }
-  /me/ai-memories/{memoryId}:
-    parameters: [ { $ref: '#/components/parameters/MemoryId' } ]
-    patch:
-      tags: [Profile]
-      summary: AI 기억을 고친다
-      operationId: updateAiMemory
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AiMemoryWrite' } } } }
-      responses:
-        '200': { description: 수정됨, content: { application/json: { schema: { $ref: '#/components/schemas/AiMemory' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
-    delete:
-      tags: [Profile]
-      summary: AI 기억을 삭제한다
-      operationId: deleteAiMemory
-      responses:
-        '204': { description: 삭제됨 }
-        '404': { $ref: '#/components/responses/NotFound' }
-
+        '200': { description: 경험 중심 홈, content: { application/json: { schema: { $ref: '#/components/schemas/Home' } } } }
   /products:
     get:
+      summary: 제품명으로 카탈로그를 검색한다
       tags: [Catalog]
-      summary: 국내 제품 버전을 제목으로 검색한다
       operationId: searchProducts
       parameters:
-        - { name: query, in: query, required: true, schema: { type: string, minLength: 1 } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 20, default: 10 } }
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }
       responses:
-        '200': { description: 검색 결과, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProductSummary' } } } } }
+        '200': { description: 제품 검색 결과, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProductSummary' } } } } }
   /products/{productVersionId}:
     get:
+      summary: 확인된 제품 버전을 조회한다
       tags: [Catalog]
-      summary: 제품 버전과 확인된 사실을 본다
       operationId: getProduct
       parameters: [ { $ref: '#/components/parameters/ProductVersionId' } ]
       responses:
-        '200': { description: 제품 상세, content: { application/json: { schema: { $ref: '#/components/schemas/ProductDetail' } } } }
+        '200': { description: 확인된 제품 상세, content: { application/json: { schema: { $ref: '#/components/schemas/ProductDetail' } } } }
         '404': { $ref: '#/components/responses/NotFound' }
-  /products/{productVersionId}/similar:
-    get:
-      tags: [Catalog]
-      summary: 비슷한 제품을 최대 5개 본다
-      operationId: listSimilarProducts
-      parameters: [ { $ref: '#/components/parameters/ProductVersionId' } ]
-      responses:
-        '200': { description: 비슷한 제품, content: { application/json: { schema: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/SimilarProduct' } } } } }
-  /catalog-review-requests:
-    post:
-      tags: [Catalog]
-      summary: 검색되지 않거나 버전이 불확실한 제품 검수를 요청한다
-      operationId: requestCatalogReview
-      requestBody:
-        required: true
-        content: { application/json: { schema: { type: object, required: [query], properties: { query: { type: string }, purchaseDate: { type: string, format: date }, volumeOption: { type: string }, packageImageObjectKey: { type: string } } } } }
-      responses:
-        '202':
-          description: 접수됨
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [requestId, status]
-                properties:
-                  requestId: { type: integer }
-                  status: { type: string, const: RECEIVED }
-
   /me/products:
     get:
-      tags: [MyProducts]
-      summary: 미사용·현재 루틴·안정 루틴 기준 내 화장품을 본다
+      summary: 내 화장품을 조회한다
+      tags: [Collection]
       operationId: listMyProducts
+      parameters:
+        - { name: relation, in: query, schema: { type: string, enum: [ALL, CURRENT_ROUTINE, UNUSED] } }
       responses:
-        '200': { description: 내 화장품, content: { application/json: { schema: { $ref: '#/components/schemas/MyProductGroups' } } } }
+        '200': { description: 내 화장품, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/MyProduct' } } } } }
     post:
-      tags: [MyProducts]
-      summary: 제품을 미사용 화장품으로 추가한다
+      summary: 내 화장품에 제품을 추가한다
+      tags: [Collection]
       operationId: createMyProduct
       parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody:
-        required: true
-        content: { application/json: { schema: { type: object, properties: { productVersionId: { type: integer }, enteredName: { type: string } }, anyOf: [ { required: [productVersionId] }, { required: [enteredName] } ] } } }
-      responses:
-        '201': { description: 추가됨, content: { application/json: { schema: { $ref: '#/components/schemas/MyProduct' } } } }
-        '409': { $ref: '#/components/responses/Conflict' }
-  /me/products/{myProductId}:
-    parameters: [ { $ref: '#/components/parameters/MyProductId' } ]
-    get:
-      tags: [MyProducts]
-      summary: 제품별 정보·메모·연결 루틴을 본다
-      operationId: getMyProduct
-      responses:
-        '200': { description: 내 제품 상세, content: { application/json: { schema: { $ref: '#/components/schemas/MyProductDetail' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
-    delete:
-      tags: [MyProducts]
-      summary: 내 화장품에서 제품을 삭제한다
-      operationId: deleteMyProduct
-      responses:
-        '204': { description: 삭제됨 }
-        '409': { description: 현재 루틴에 있어 먼저 루틴 편집 필요, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
-  /me/products/{myProductId}/memo:
-    put:
-      tags: [MyProducts]
-      summary: 제품 메모를 저장한다
-      operationId: putProductMemo
-      parameters: [ { $ref: '#/components/parameters/MyProductId' } ]
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string, maxLength: 1000 } } } } } }
-      responses:
-        '200': { description: 저장됨, content: { application/json: { schema: { type: object, required: [text, updatedAt], properties: { text: { type: string }, updatedAt: { type: string, format: date-time } } } } } }
-  /me/wishlist:
-    get:
-      tags: [MyProducts]
-      summary: 찜한 제품을 본다
-      operationId: listWishlist
-      responses:
-        '200': { description: 찜 목록, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProductSummary' } } } } }
-    post:
-      tags: [MyProducts]
-      summary: 제품을 찜한다
-      operationId: addWishlist
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [productVersionId], properties: { productVersionId: { type: integer } } } } } }
-      responses:
-        '201': { description: 찜함 }
-        '409': { $ref: '#/components/responses/Conflict' }
-
-  /receipts:
-    post:
-      tags: [Receipts]
-      summary: 영수증 원본을 올리고 OCR을 시작한다
-      operationId: createReceipt
-      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [image]
-              properties: { image: { type: string, format: binary } }
-      responses:
-        '202': { description: OCR 시작, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/JobAccepted' }, { type: object, required: [receiptId], properties: { receiptId: { type: integer } } } ] } } } }
-  /receipts/{receiptId}:
-    get:
-      tags: [Receipts]
-      summary: OCR 후보와 확인 상태를 본다
-      operationId: getReceipt
-      parameters: [ { $ref: '#/components/parameters/ReceiptId' } ]
-      responses:
-        '200': { description: OCR 결과, content: { application/json: { schema: { $ref: '#/components/schemas/Receipt' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /receipts/{receiptId}/confirm:
-    post:
-      tags: [Receipts]
-      summary: 확인한 영수증 제품을 모두 미사용 화장품으로 넣는다
-      operationId: confirmReceipt
-      parameters: [ { $ref: '#/components/parameters/ReceiptId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { type: object, required: [receiptItemId, include], properties: { receiptItemId: { type: integer }, include: { type: boolean }, productVersionId: { type: integer } } } } } } } } }
-      responses:
-        '201': { description: 등록됨, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/MyProduct' } } } } }
-
-  /product-opinions:
-    post:
-      tags: [Decisions]
-      summary: 한 제품의 구매 의견 조사를 시작한다
-      operationId: createProductOpinion
-      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [productVersionId], properties: { productVersionId: { type: integer }, goalText: { type: string }, includeMemo: { type: boolean, default: false } } } } } }
-      responses:
-        '202': { description: 조사 시작, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
-  /product-opinions/{opinionId}:
-    get:
-      tags: [Decisions]
-      summary: 제품 의견과 근거를 본다
-      operationId: getProductOpinion
-      parameters: [ { name: opinionId, in: path, required: true, schema: { type: integer } } ]
-      responses:
-        '200': { description: 제품 의견, content: { application/json: { schema: { $ref: '#/components/schemas/ProductOpinion' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /recommendations:
-    post:
-      tags: [Decisions]
-      summary: 자연어 조건으로 제품 추천 조사를 시작한다
-      operationId: createRecommendation
-      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [requestText], properties: { requestText: { type: string, minLength: 2 }, confirmedContext: { type: array, items: { type: string } } } } } } }
-      responses:
-        '202': { description: 조사 또는 추가 질문 시작, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
-  /recommendations/{recommendationId}:
-    get:
-      tags: [Decisions]
-      summary: 추가 질문 또는 최대 5개 추천 결과를 본다
-      operationId: getRecommendation
-      parameters: [ { name: recommendationId, in: path, required: true, schema: { type: integer } } ]
-      responses:
-        '200': { description: 추천, content: { application/json: { schema: { $ref: '#/components/schemas/Recommendation' } } } }
-  /conversations/{conversationId}/messages:
-    post:
-      tags: [Decisions]
-      summary: 제품 의견·추천의 후속 질문을 이어간다
-      operationId: createConversationMessage
-      parameters: [ { name: conversationId, in: path, required: true, schema: { type: integer } }, { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string }, remember: { type: boolean, default: false } } } } } }
-      responses:
-        '202': { description: 답변 생성 중, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
-
-  /me/home:
-    get:
-      tags: [Profile]
-      summary: 현재 상태에서 가장 중요한 홈 행동을 본다
-      operationId: getHome
-      responses:
-        '200': { description: 홈 상태, content: { application/json: { schema: { $ref: '#/components/schemas/Home' } } } }
-
-  /me/routines/current:
-    get:
-      tags: [Routines]
-      summary: 현재 루틴과 7일 상태를 본다
-      operationId: getCurrentRoutine
-      responses:
-        '200': { description: 현재 루틴, content: { application/json: { schema: { $ref: '#/components/schemas/Routine' } } } }
-        '404': { description: 아직 루틴 없음, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
-  /me/routines:
-    post:
-      tags: [Routines]
-      summary: 새 현재 루틴 버전과 7일 일정을 만든다
-      operationId: createRoutine
-      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RoutineWrite' } } } }
-      responses:
-        '202': { description: 루틴 저장·AI 분석 시작, content: { application/json: { schema: { allOf: [ { $ref: '#/components/schemas/JobAccepted' }, { type: object, required: [routineId], properties: { routineId: { type: integer } } } ] } } } }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/Validation' }
-  /me/routines/history:
-    get:
-      tags: [Routines]
-      summary: 루틴 버전 이력을 본다
-      operationId: listRoutineHistory
-      responses:
-        '200': { description: 루틴 이력, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/RoutineSummary' } } } } }
-  /me/routines/{routineId}:
-    get:
-      tags: [Routines]
-      summary: 과거 루틴 버전과 결과를 본다
-      operationId: getRoutine
-      parameters: [ { $ref: '#/components/parameters/RoutineId' } ]
-      responses:
-        '200': { description: 루틴 상세, content: { application/json: { schema: { $ref: '#/components/schemas/Routine' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /me/routines/compare:
-    get:
-      tags: [Routines]
-      summary: 두 루틴 버전의 제품·순서·빈도를 비교한다
-      operationId: compareRoutines
-      parameters:
-        - { name: from, in: query, required: true, schema: { type: integer } }
-        - { name: to, in: query, required: true, schema: { type: integer } }
-      responses:
-        '200': { description: 변경 목록, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/RoutineChange' } } } } }
-  /routine-order-proposals:
-    post:
-      tags: [Routines]
-      summary: 편집 중인 루틴의 AI 순서·빈도 제안을 시작한다
-      operationId: createRoutineOrderProposal
-      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RoutineWrite' } } } }
-      responses:
-        '202': { description: 제안 생성 중, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
-  /routine-order-proposals/{proposalId}:
-    get:
-      tags: [Routines]
-      summary: 검증된 AI 순서·빈도 제안을 본다
-      operationId: getRoutineOrderProposal
-      parameters: [ { name: proposalId, in: path, required: true, schema: { type: integer } } ]
-      responses:
-        '200': { description: 순서 제안, content: { application/json: { schema: { $ref: '#/components/schemas/RoutineOrderProposal' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /me/routines/{routineId}/assessment:
-    get:
-      tags: [Assessments]
-      summary: 7일 결과 질문 상태를 본다
-      operationId: getRoutineAssessment
-      parameters: [ { $ref: '#/components/parameters/RoutineId' } ]
-      responses:
-        '200': { description: 결과 질문 상태, content: { application/json: { schema: { $ref: '#/components/schemas/AssessmentState' } } } }
-    post:
-      tags: [Assessments]
-      summary: 7일 또는 조기 결과를 남긴다
-      operationId: createRoutineAssessment
-      parameters: [ { $ref: '#/components/parameters/RoutineId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AssessmentWrite' } } } }
-      responses:
-        '201': { description: 저장됨, content: { application/json: { schema: { $ref: '#/components/schemas/Assessment' } } } }
-        '409': { $ref: '#/components/responses/Conflict' }
-
-  /rescues:
-    post:
-      tags: [Rescue]
-      summary: 현재 기록을 연결해 Rescue 대화를 시작한다
-      operationId: createRescue
-      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [message], properties: { message: { type: string, minLength: 1 }, routineId: { type: integer } } } } } }
-      responses:
-        '201': { description: 대화 시작, content: { application/json: { schema: { $ref: '#/components/schemas/Rescue' } } } }
-  /rescues/{rescueId}:
-    get:
-      tags: [Rescue]
-      summary: 전체 Rescue 대화와 현재 제안을 본다
-      operationId: getRescue
-      parameters: [ { $ref: '#/components/parameters/RescueId' } ]
-      responses:
-        '200': { description: Rescue, content: { application/json: { schema: { $ref: '#/components/schemas/Rescue' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /rescues/{rescueId}/messages:
-    post:
-      tags: [Rescue]
-      summary: Rescue 대화를 아래로 이어간다
-      operationId: createRescueMessage
-      parameters: [ { $ref: '#/components/parameters/RescueId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string }, structuredAnswer: { type: object, additionalProperties: true } } } } } }
-      responses:
-        '202': { description: 답변·분석 생성 중, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
-  /rescues/{rescueId}/apply:
-    post:
-      tags: [Rescue]
-      summary: 제안 루틴을 적용하거나 기록만 남긴다
-      operationId: applyRescue
-      parameters: [ { $ref: '#/components/parameters/RescueId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               oneOf:
-                - type: object
-                  required: [action, rescuePlanId]
-                  properties:
-                    action: { type: string, const: CREATE_ROUTINE }
-                    rescuePlanId: { type: integer }
-                    editedRoutine: { $ref: '#/components/schemas/RoutineWrite' }
-                - type: object
-                  required: [action]
-                  properties:
-                    action: { type: string, const: RECORD_ONLY }
+                - { type: object, required: [productVersionId], properties: { productVersionId: { type: integer } } }
+                - { type: object, required: [enteredName], properties: { enteredName: { type: string, minLength: 1, maxLength: 150 } } }
       responses:
-        '201': { description: 적용됨, content: { application/json: { schema: { $ref: '#/components/schemas/RescueApplyResult' } } } }
+        '201': { description: 추가됨, content: { application/json: { schema: { $ref: '#/components/schemas/MyProduct' } } } }
         '409': { $ref: '#/components/responses/Conflict' }
-
+  /me/products/{myProductId}:
+    get:
+      summary: 제품과 연결된 경험을 조회한다
+      tags: [Collection]
+      operationId: getMyProduct
+      parameters: [ { $ref: '#/components/parameters/MyProductId' } ]
+      responses:
+        '200': { description: 제품과 연결된 경험, content: { application/json: { schema: { $ref: '#/components/schemas/MyProductDetail' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /me/routines/current:
+    get:
+      summary: 현재 실제 사용 루틴을 조회한다
+      tags: [Routines]
+      operationId: getCurrentRoutine
+      responses:
+        '200': { description: 현재 실제 사용 루틴, content: { application/json: { schema: { $ref: '#/components/schemas/Routine' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /me/routines:
+    post:
+      summary: 새 루틴 버전을 시작한다
+      tags: [Routines]
+      operationId: createRoutine
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RoutineWrite' } } } }
+      responses:
+        '201': { description: 새 사용 맥락 시작, content: { application/json: { schema: { $ref: '#/components/schemas/Routine' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /me/routines/{routineId}:
+    get:
+      summary: 루틴 버전을 조회한다
+      tags: [Routines]
+      operationId: getRoutine
+      parameters: [ { $ref: '#/components/parameters/RoutineId' } ]
+      responses:
+        '200': { description: 루틴 버전, content: { application/json: { schema: { $ref: '#/components/schemas/Routine' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /me/experiences:
+    get:
+      summary: 경험 원문 이력을 조회한다
+      tags: [Experiences]
+      operationId: listExperiences
+      parameters:
+        - { name: myProductId, in: query, schema: { type: integer } }
+        - { name: routineId, in: query, schema: { type: integer } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 경험 원문 이력, content: { application/json: { schema: { $ref: '#/components/schemas/ExperiencePage' } } } }
+    post:
+      summary: 제품 또는 루틴 경험을 기록한다
+      tags: [Experiences]
+      operationId: createExperience
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ExperienceWrite' } } } }
+      responses:
+        '201': { description: 원문 저장됨, content: { application/json: { schema: { $ref: '#/components/schemas/ExperienceRecord' } } } }
+        '422': { $ref: '#/components/responses/Validation' }
+  /me/experiences/{experienceId}:
+    get:
+      summary: 경험 원문과 구조화 관찰을 조회한다
+      tags: [Experiences]
+      operationId: getExperience
+      parameters: [ { $ref: '#/components/parameters/ExperienceId' } ]
+      responses:
+        '200': { description: 원문·구조화 관찰·맥락, content: { application/json: { schema: { $ref: '#/components/schemas/ExperienceRecord' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /me/experience-reviews/{scheduleId}:
+    get:
+      summary: 기본 회고 시점과 상태를 조회한다
+      tags: [Experiences]
+      operationId: getExperienceReview
+      parameters: [ { name: scheduleId, in: path, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: 7일 기본 회고 상태, content: { application/json: { schema: { $ref: '#/components/schemas/ExperienceReviewState' } } } }
+  /me/patterns:
+    get:
+      summary: 현재 개인 패턴을 조회한다
+      tags: [Patterns]
+      operationId: listPatterns
+      responses:
+        '200': { description: 현재 패턴 후보와 근거 수, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PersonalPattern' } } } } }
+  /me/patterns/{patternId}:
+    get:
+      summary: 패턴과 원본 근거를 조회한다
+      tags: [Patterns]
+      operationId: getPattern
+      parameters: [ { $ref: '#/components/parameters/PatternId' } ]
+      responses:
+        '200': { description: 패턴과 원본 근거, content: { application/json: { schema: { $ref: '#/components/schemas/PersonalPatternDetail' } } } }
+  /me/patterns/{patternId}/feedback:
+    put:
+      summary: 패턴 관련성 피드백을 저장한다
+      tags: [Patterns]
+      operationId: putPatternFeedback
+      parameters: [ { $ref: '#/components/parameters/PatternId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [feedback], properties: { feedback: { type: string, enum: [RELEVANT, NOT_RELEVANT, UNSURE] } } } } } }
+      responses:
+        '204': { description: 저장됨 }
+  /explorations:
+    post:
+      summary: 제품과 개인 경험 비교를 시작한다
+      tags: [Exploration]
+      operationId: createExploration
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ExplorationWrite' } } } }
+      responses:
+        '202': { description: 제품과 개인 경험 비교 시작, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+  /explorations/{explorationId}:
+    get:
+      summary: 제품 탐색 결과를 조회한다
+      tags: [Exploration]
+      operationId: getExploration
+      parameters: [ { name: explorationId, in: path, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: 비교 결과, content: { application/json: { schema: { $ref: '#/components/schemas/Exploration' } } } }
+  /conversations:
+    post:
+      summary: 공통 AI 대화를 시작한다
+      tags: [Conversations]
+      operationId: createConversation
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ConversationWrite' } } } }
+      responses:
+        '201': { description: 공통 AI 대화 시작, content: { application/json: { schema: { $ref: '#/components/schemas/Conversation' } } } }
+  /conversations/{conversationId}/messages:
+    post:
+      summary: 공통 AI 대화에 메시지를 보낸다
+      tags: [Conversations]
+      operationId: createConversationMessage
+      parameters:
+        - { name: conversationId, in: path, required: true, schema: { type: integer } }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [content], properties: { content: { type: string, minLength: 1, maxLength: 3000 } } } } } }
+      responses:
+        '202': { description: 사용자 메시지 저장·답변 생성 중, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+  /rescues:
+    post:
+      summary: 불편 경험에서 Rescue를 시작한다
+      tags: [Rescue]
+      operationId: createRescue
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [initialText]
+              properties:
+                sourceExperienceId: { type: [integer, 'null'] }
+                initialText: { type: string, minLength: 1, maxLength: 3000 }
+      responses:
+        '201': { description: 같은 AI UI에서 Rescue 모드 시작, content: { application/json: { schema: { $ref: '#/components/schemas/Rescue' } } } }
+  /rescues/{rescueId}/messages:
+    post:
+      summary: Rescue 대화에 메시지를 보낸다
+      tags: [Rescue]
+      operationId: createRescueMessage
+      parameters:
+        - { $ref: '#/components/parameters/RescueId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [content], properties: { content: { type: string, minLength: 1, maxLength: 3000 } } } } } }
+      responses:
+        '202': { description: 메시지 저장·답변 생성 중, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+  /rescues/{rescueId}/apply:
+    post:
+      summary: 승인한 Rescue 루틴을 적용한다
+      tags: [Rescue]
+      operationId: applyRescue
+      parameters:
+        - { $ref: '#/components/parameters/RescueId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planId, expectedCurrentRoutineId]
+              properties:
+                planId: { type: integer }
+                expectedCurrentRoutineId: { type: integer }
+      responses:
+        '201': { description: 새 독립 루틴 적용, content: { application/json: { schema: { $ref: '#/components/schemas/Routine' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
   /ai-jobs/{jobId}:
     get:
+      summary: AI 작업 상태를 조회한다
       tags: [Jobs]
-      summary: 비동기 AI 작업 상태와 결과 참조를 본다
       operationId: getAiJob
       parameters: [ { $ref: '#/components/parameters/JobId' } ]
       responses:
         '200': { description: 작업 상태, content: { application/json: { schema: { $ref: '#/components/schemas/AiJob' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /ai-jobs/{jobId}/retry:
-    post:
-      tags: [Jobs]
-      summary: 실패한 AI 작업을 같은 입력으로 다시 실행한다
-      operationId: retryAiJob
-      parameters: [ { $ref: '#/components/parameters/JobId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
-      responses:
-        '202': { description: 재시도 시작, content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
-        '409': { $ref: '#/components/responses/Conflict' }
-  /notifications:
-    get:
-      tags: [Notifications]
-      summary: 앱 안 알림을 본다
-      operationId: listNotifications
-      responses:
-        '200': { description: 알림, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Notification' } } } } }
-  /notifications/{notificationId}/read:
-    post:
-      tags: [Notifications]
-      summary: 알림을 읽음 처리한다
-      operationId: readNotification
-      parameters: [ { name: notificationId, in: path, required: true, schema: { type: integer } } ]
-      responses:
-        '204': { description: 읽음 }
-
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
   parameters:
     IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 8, maxLength: 100 } }
-    MemoryId: { name: memoryId, in: path, required: true, schema: { type: integer } }
     ProductVersionId: { name: productVersionId, in: path, required: true, schema: { type: integer } }
     MyProductId: { name: myProductId, in: path, required: true, schema: { type: integer } }
-    ReceiptId: { name: receiptId, in: path, required: true, schema: { type: integer } }
     RoutineId: { name: routineId, in: path, required: true, schema: { type: integer } }
+    ExperienceId: { name: experienceId, in: path, required: true, schema: { type: integer } }
+    PatternId: { name: patternId, in: path, required: true, schema: { type: integer } }
     RescueId: { name: rescueId, in: path, required: true, schema: { type: integer } }
     JobId: { name: jobId, in: path, required: true, schema: { type: integer } }
   responses:
@@ -500,123 +325,61 @@ components:
       properties: { accessToken: { type: string }, user: { $ref: '#/components/schemas/Profile' } }
     Profile:
       type: object
-      required: [id, email, timezone, onboardingComplete]
+      required: [id, email, timezone]
       properties:
         id: { type: integer }
         email: { type: string, format: email }
         timezone: { type: string, example: Asia/Seoul }
-        onboardingComplete: { type: boolean }
-        currentRoutineId: { type: [integer, 'null'], description: routine_version의 유일한 ACTIVE 행에서 파생 }
-        stableRoutineId: { type: [integer, 'null'], description: 종료되지 않은 stable_routine_period에서 파생 }
-    ProfileUpdate:
-      type: object
-      properties:
-        timezone: { type: string }
-        onboardingAnswers: { type: object, additionalProperties: { type: string } }
-        onboardingComplete: { type: boolean }
-    AiMemory:
-      allOf:
-        - { $ref: '#/components/schemas/AiMemoryWrite' }
-        - { type: object, required: [id, source, updatedAt], properties: { id: { type: integer }, source: { type: string, enum: [ONBOARDING, CONVERSATION, USER_EDIT] }, updatedAt: { type: string, format: date-time } } }
-    AiMemoryWrite:
-      type: object
-      required: [text]
-      properties: { text: { type: string, minLength: 1, maxLength: 1000 } }
+        currentRoutineId: { type: [integer, 'null'] }
+        comparisonBaselineRoutineId: { type: [integer, 'null'] }
     ProductSummary:
       type: object
-      required: [productVersionId, brand, name, category, verificationStatus, lifecycleStatus]
+      required: [productVersionId, brand, name, verificationStatus]
       properties:
         productVersionId: { type: integer }
         brand: { type: string }
         name: { type: string }
         category: { type: string, enum: [SKINCARE, CLEANSING, SUNCARE] }
         volumeOption: { type: [string, 'null'] }
-        imageUrl: { type: [string, 'null'], format: uri }
         verificationStatus: { type: string, enum: [UNVERIFIED, VERIFIED, CONFLICTED] }
-        lifecycleStatus: { type: string, enum: [ACTIVE, DISCONTINUED, UNKNOWN] }
-    Source:
+    ProductFact:
       type: object
-      required: [type, title, organization, url, checkedAt]
+      required: [type, text, snapshotId]
       properties:
-        type: { type: string, enum: [BRAND, REGULATOR, OFFICIAL_DB, PAPER, PERSONAL_RECORD] }
-        title: { type: string }
-        organization: { type: string }
-        publishedAt: { type: [string, 'null'], format: date }
-        url: { type: [string, 'null'], format: uri }
+        type: { type: string, enum: [DIRECTIONS, CLAIM, TEXTURE, CAUTION] }
+        text: { type: string }
+        snapshotId: { type: integer }
+        sourceUrl: { type: string, format: uri }
         checkedAt: { type: string, format: date-time }
-        snapshotId: { type: [integer, 'null'] }
-        contentHash: { type: [string, 'null'] }
     ProductDetail:
       allOf:
         - { $ref: '#/components/schemas/ProductSummary' }
         - type: object
-          required: [facts, ingredientLabel, sources, referenceOffers]
-          properties:
-            facts: { type: array, items: { type: object, required: [type, text, sourceIndex], properties: { type: { type: string, enum: [DIRECTIONS, CLAIM, TEXTURE, CAUTION] }, text: { type: string }, sourceIndex: { type: integer } } } }
-            ingredientLabel: { type: array, items: { type: string } }
-            sources: { type: array, items: { $ref: '#/components/schemas/Source' } }
-            referenceOffers: { type: array, items: { type: object, required: [retailer, priceKrw, checkedAt], properties: { retailer: { type: string }, priceKrw: { type: integer }, url: { type: string, format: uri }, checkedAt: { type: string, format: date-time }, usedForDecision: { type: boolean, const: false } } } }
-    SimilarProduct:
-      allOf:
-        - { $ref: '#/components/schemas/ProductSummary' }
-        - { type: object, required: [reason, owned], properties: { reason: { type: string }, owned: { type: boolean } } }
+          required: [facts]
+          properties: { facts: { type: array, items: { $ref: '#/components/schemas/ProductFact' } } }
     MyProduct:
       type: object
-      required: [id, verificationStatus, lifecycleStatus, registeredAt]
+      required: [id, registeredAt, experienceCount, inCurrentRoutine]
       properties:
         id: { type: integer }
         product: { anyOf: [ { $ref: '#/components/schemas/ProductSummary' }, { type: 'null' } ] }
         enteredName: { type: [string, 'null'] }
-        verificationStatus: { type: string, enum: [UNVERIFIED, VERIFIED, CONFLICTED] }
-        lifecycleStatus: { type: string, enum: [ACTIVE, DISCONTINUED, UNKNOWN] }
         registeredAt: { type: string, format: date-time }
+        experienceCount: { type: integer, minimum: 0 }
+        inCurrentRoutine: { type: boolean }
     MyProductDetail:
       allOf:
         - { $ref: '#/components/schemas/MyProduct' }
-        - { type: object, properties: { memo: { type: [string, 'null'] }, routineHistory: { type: array, items: { $ref: '#/components/schemas/RoutineSummary' } }, latestAnalysisRequestId: { type: [integer, 'null'] } } }
-    MyProductGroups:
+        - type: object
+          required: [recentExperiences]
+          properties: { recentExperiences: { type: array, items: { $ref: '#/components/schemas/ExperienceRecord' } } }
+    RoutineFrequency:
       type: object
-      required: [unused, currentRoutine, lastStableRoutine]
+      required: [mode]
       properties:
-        unused: { type: array, items: { $ref: '#/components/schemas/MyProduct' } }
-        currentRoutine: { type: array, items: { $ref: '#/components/schemas/MyProduct' } }
-        lastStableRoutine: { type: array, items: { $ref: '#/components/schemas/MyProduct' } }
-    Receipt:
-      type: object
-      required: [id, status, originalRetained, items]
-      properties:
-        id: { type: integer }
-        status: { type: string, enum: [QUEUED, RUNNING, NEEDS_CONFIRMATION, CONFIRMED, FAILED] }
-        originalRetained: { type: boolean, const: true }
-        items: { type: array, items: { type: object, required: [id, rawText, candidates], properties: { id: { type: integer }, rawText: { type: string }, candidates: { type: array, items: { $ref: '#/components/schemas/ProductSummary' } } } } }
-    EvidenceItem:
-      type: object
-      required: [relation, statement, source]
-      properties:
-        relation: { type: string, enum: [SUPPORT, OPPOSE, UNCERTAIN] }
-        statement: { type: string }
-        source: { $ref: '#/components/schemas/Source' }
-    ProductOpinion:
-      type: object
-      required: [id, product, conclusion, conclusionLabel, evidence, uncertainties, conversationId, disclaimer]
-      properties:
-        id: { type: integer }
-        product: { $ref: '#/components/schemas/ProductSummary' }
-        conclusion: { type: string, enum: [CONSIDER, OVERLAP, LOW_RELEVANCE, INSUFFICIENT] }
-        conclusionLabel: { type: string }
-        evidence: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } }
-        uncertainties: { type: array, items: { type: string } }
-        routineChange: { type: [string, 'null'] }
-        conversationId: { type: integer }
-        disclaimer: { type: string }
-    Recommendation:
-      type: object
-      required: [id, state, candidates]
-      properties:
-        id: { type: integer }
-        state: { type: string, enum: [NEEDS_CONTEXT, READY] }
-        question: { type: [string, 'null'] }
-        candidates: { type: array, maxItems: 5, items: { type: object, required: [rank, product, reason, evidence, uncertainties], properties: { rank: { type: integer, minimum: 1, maximum: 5 }, product: { $ref: '#/components/schemas/ProductSummary' }, reason: { type: string }, hesitation: { type: [string, 'null'] }, uncertainties: { type: array, items: { type: string } }, routineChange: { type: [string, 'null'] }, observationPoint: { type: [string, 'null'] }, evidence: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } } } } }
+        mode: { type: string, enum: [DAILY, DAYS_PER_WEEK, AS_NEEDED, CUSTOM] }
+        daysPerWeek: { type: [integer, 'null'], minimum: 1, maximum: 6 }
+        displayText: { type: [string, 'null'], maxLength: 100 }
     RoutineItem:
       type: object
       required: [myProductId, period, position, frequency]
@@ -625,183 +388,194 @@ components:
         period: { type: string, enum: [MORNING, EVENING] }
         position: { type: integer, minimum: 1 }
         frequency: { $ref: '#/components/schemas/RoutineFrequency' }
-        aiNote: { type: [string, 'null'] }
-    RoutineFrequency:
-      oneOf:
-        - { type: object, required: [mode], properties: { mode: { type: string, const: DAILY }, displayText: { type: [string, 'null'], maxLength: 100 } } }
-        - { type: object, required: [mode, daysPerWeek], properties: { mode: { type: string, const: DAYS_PER_WEEK }, daysPerWeek: { type: integer, minimum: 1, maximum: 6 }, displayText: { type: [string, 'null'], maxLength: 100 } } }
-        - { type: object, required: [mode], properties: { mode: { type: string, const: AS_NEEDED }, displayText: { type: [string, 'null'], maxLength: 100 } } }
-        - { type: object, required: [mode, displayText], properties: { mode: { type: string, const: CUSTOM }, displayText: { type: string, minLength: 1, maxLength: 100 } } }
     RoutineWrite:
       type: object
       required: [items]
       properties:
         expectedCurrentRoutineId: { type: [integer, 'null'] }
+        sourceType: { type: string, enum: [USER_EDIT, RESCUE_PLAN], default: USER_EDIT }
         items: { type: array, minItems: 1, items: { $ref: '#/components/schemas/RoutineItem' } }
-    RoutineSummary:
+    Routine:
       type: object
-      required: [id, versionNo, sourceType, status, startedLocalDate, isCurrent]
+      required: [id, versionNo, status, startedLocalDate, dayNumber, items]
       properties:
         id: { type: integer }
-        versionNo: { type: integer }
-        sourceType: { type: string, enum: [USER_EDIT, RESCUE_PLAN] }
+        versionNo: { type: integer, minimum: 1 }
         status: { type: string, enum: [ACTIVE, SUPERSEDED, CANCELLED] }
         startedLocalDate: { type: string, format: date }
-        assessmentDueAt: { type: [string, 'null'], format: date-time, description: 열린 assessment schedule에서 파생 }
-        isCurrent: { type: boolean, description: status가 ACTIVE인지 파생 }
-        isStable: { type: boolean, description: 열린 stable period가 이 routine을 가리키는지 파생 }
-        outcome: { type: [string, 'null'], enum: [NO_DISCOMFORT, DISCOMFORT, UNKNOWN, null] }
-        assessmentDecision: { type: [string, 'null'], enum: [COMPLETE, EXTEND, UPDATE_ROUTINE, START_RESCUE, RECORD_ONLY, null] }
-    Routine:
-      allOf:
-        - { $ref: '#/components/schemas/RoutineSummary' }
-        - { type: object, required: [items, dayNumber, aiAnalysisStatus], properties: { items: { type: array, items: { $ref: '#/components/schemas/RoutineItem' } }, dayNumber: { type: integer, minimum: 1 }, aiAnalysisStatus: { type: string, enum: [QUEUED, RUNNING, SUCCEEDED, FAILED] }, rescueRecordWithoutChange: { type: boolean } } }
-    RoutineOrderProposal:
+        dayNumber: { type: integer, minimum: 1 }
+        reviewDueAt: { type: [string, 'null'], format: date-time }
+        isComparisonBaseline: { type: boolean }
+        items: { type: array, items: { $ref: '#/components/schemas/RoutineItem' } }
+    ExperienceWrite:
       type: object
-      required: [id, items, changes, uncertainties]
+      required: [sourceType, sentiment, discomfort, adherence]
+      anyOf:
+        - { required: [routineId] }
+        - { required: [myProductId] }
       properties:
-        id: { type: integer }
-        items: { type: array, minItems: 1, items: { $ref: '#/components/schemas/RoutineItem' } }
-        changes:
-          type: array
-          items:
-            type: object
-            required: [myProductId, toPeriod, toPosition, reason]
-            properties:
-              myProductId: { type: integer }
-              fromPeriod: { type: [string, 'null'], enum: [MORNING, EVENING, null] }
-              fromPosition: { type: [integer, 'null'] }
-              toPeriod: { type: string, enum: [MORNING, EVENING] }
-              toPosition: { type: integer, minimum: 1 }
-              frequencySuggestion: { type: [string, 'null'] }
-              reason: { type: string }
-              evidence: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } }
-        uncertainties: { type: array, items: { type: string } }
-    RoutineChange:
+        routineId: { type: [integer, 'null'] }
+        myProductId: { type: [integer, 'null'] }
+        reviewScheduleId: { type: [integer, 'null'] }
+        sourceType: { type: string, enum: [IN_USE, DAY_7_REVIEW, PRODUCT_NOTE, RESCUE] }
+        sentiment: { type: string, enum: [LIKED, DISAPPOINTED, UNSURE] }
+        discomfort: { type: string, enum: [NONE_REPORTED, REPORTED, UNKNOWN] }
+        adherence: { type: string, enum: [MATCHED, PARTIAL, MISMATCHED, UNKNOWN] }
+        originalText: { type: [string, 'null'], maxLength: 3000 }
+        observationTags: { type: array, maxItems: 10, items: { type: string, maxLength: 50 } }
+        confirmAsComparisonBaseline: { type: boolean, default: false }
+    ExperienceObservation:
       type: object
-      required: [type, description]
-      properties: { type: { type: string, enum: [PRODUCT_ADDED, PRODUCT_REMOVED, ORDER_CHANGED, FREQUENCY_CHANGED, PERIOD_CHANGED] }, myProductId: { type: [integer, 'null'] }, description: { type: string } }
-    AssessmentWrite:
-      oneOf:
-        - type: object
-          required: [kind, assessmentScheduleId, adherence, outcome, decision]
-          properties:
-            kind: { type: string, const: SCHEDULED_REVIEW }
-            assessmentScheduleId: { type: integer }
-            adherence: { type: string, enum: [MATCHED, PARTIAL, MISMATCHED, UNKNOWN] }
-            outcome: { type: string, enum: [NO_DISCOMFORT, DISCOMFORT, UNKNOWN] }
-            decision: { type: string, enum: [COMPLETE, EXTEND, UPDATE_ROUTINE, START_RESCUE, RECORD_ONLY] }
-            responseText: { type: [string, 'null'] }
-        - type: object
-          required: [kind, adherence, outcome, decision]
-          properties:
-            kind: { type: string, const: EARLY_CHECK }
-            adherence: { type: string, enum: [MATCHED, PARTIAL, MISMATCHED, UNKNOWN] }
-            outcome: { type: string, enum: [NO_DISCOMFORT, DISCOMFORT, UNKNOWN] }
-            decision: { type: string, const: RECORD_ONLY }
-            responseText: { type: [string, 'null'] }
-    Assessment:
-      allOf:
-        - { $ref: '#/components/schemas/AssessmentWrite' }
-        - { type: object, required: [id, routineId, sequenceNo, assessedAt, promotedToStable], properties: { id: { type: integer }, routineId: { type: integer }, sequenceNo: { type: integer, minimum: 0 }, assessedAt: { type: string, format: date-time }, promotedToStable: { type: boolean }, nextAssessmentScheduleId: { type: [integer, 'null'] }, nextDueAt: { type: [string, 'null'], format: date-time } } }
-    AssessmentState:
-      type: object
-      required: [routine, assessmentScheduleId, sequenceNo, dueAt, due, extensionCount]
+      required: [key, text, sourceSpan, polarity]
       properties:
+        key: { type: string }
+        text: { type: string }
+        sourceSpan: { type: string }
+        polarity: { type: string, enum: [POSITIVE, NEGATIVE, NEUTRAL, UNKNOWN] }
+    ExperienceRecord:
+      allOf:
+        - { $ref: '#/components/schemas/ExperienceWrite' }
+        - type: object
+          required: [id, recordedAt, observations, aiStatus]
+          properties:
+            id: { type: integer }
+            recordedAt: { type: string, format: date-time }
+            observations: { type: array, items: { $ref: '#/components/schemas/ExperienceObservation' } }
+            aiStatus: { type: string, enum: [NOT_REQUESTED, QUEUED, RUNNING, SUCCEEDED, FAILED] }
+    ExperiencePage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/ExperienceRecord' } }
+        nextCursor: { type: [string, 'null'] }
+    ExperienceReviewState:
+      type: object
+      required: [scheduleId, routine, dueAt, due]
+      properties:
+        scheduleId: { type: integer }
         routine: { $ref: '#/components/schemas/Routine' }
-        assessmentScheduleId: { type: integer }
-        sequenceNo: { type: integer, minimum: 1 }
         dueAt: { type: string, format: date-time }
         due: { type: boolean }
-        extensionCount: { type: integer, minimum: 0, maximum: 2 }
-        latestAssessment: { anyOf: [ { $ref: '#/components/schemas/Assessment' }, { type: 'null' } ] }
-    RescueMessage:
+        completedExperienceId: { type: [integer, 'null'] }
+    PatternEvidence:
+      type: object
+      required: [experienceId, relation, excerpt, recordedAt]
+      properties:
+        experienceId: { type: integer }
+        relation: { type: string, enum: [SUPPORT, OPPOSE, UNCERTAIN] }
+        excerpt: { type: string }
+        productName: { type: [string, 'null'] }
+        recordedAt: { type: string, format: date-time }
+    PersonalPattern:
+      type: object
+      required: [id, revisionNo, status, statement, supportingCount, opposingCount]
+      properties:
+        id: { type: integer }
+        revisionNo: { type: integer, minimum: 1 }
+        status: { type: string, enum: [CANDIDATE, ACTIVE, SUPERSEDED, REJECTED] }
+        statement: { type: string }
+        uncertainty: { type: [string, 'null'] }
+        supportingCount: { type: integer, minimum: 0 }
+        opposingCount: { type: integer, minimum: 0 }
+    PersonalPatternDetail:
+      allOf:
+        - { $ref: '#/components/schemas/PersonalPattern' }
+        - type: object
+          required: [evidence]
+          properties: { evidence: { type: array, minItems: 2, items: { $ref: '#/components/schemas/PatternEvidence' } } }
+    ExplorationWrite:
+      type: object
+      required: [query]
+      properties:
+        query: { type: string, minLength: 1, maxLength: 1000 }
+        productVersionId: { type: [integer, 'null'] }
+    Exploration:
+      type: object
+      required: [id, summary, similarities, differences, watchPoints, uncertainties, evidence, conversationId, disclaimer]
+      properties:
+        id: { type: integer }
+        summary: { type: string }
+        similarities: { type: array, items: { type: string } }
+        differences: { type: array, items: { type: string } }
+        watchPoints: { type: array, items: { type: string } }
+        uncertainties: { type: array, items: { type: string } }
+        evidence: { type: array, items: { $ref: '#/components/schemas/PatternEvidence' } }
+        conversationId: { type: integer }
+        disclaimer: { type: string }
+    ConversationWrite:
+      type: object
+      required: [kind, initialText]
+      properties:
+        kind: { type: string, enum: [GENERAL, PRODUCT_EXPLORATION, PATTERN, RESCUE] }
+        initialText: { type: string, minLength: 1, maxLength: 3000 }
+        subjectType: { type: [string, 'null'], enum: [PRODUCT, EXPERIENCE, PATTERN, ROUTINE, null] }
+        subjectId: { type: [integer, 'null'] }
+    ConversationMessage:
       type: object
       required: [id, role, content, createdAt]
-      properties: { id: { type: integer }, role: { type: string, enum: [USER, ASSISTANT] }, content: { type: string }, choices: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }, createdAt: { type: string, format: date-time } }
+      properties:
+        id: { type: integer }
+        role: { type: string, enum: [USER, ASSISTANT] }
+        content: { type: string }
+        suggestedReplies: { type: array, maxItems: 3, items: { type: string } }
+        createdAt: { type: string, format: date-time }
+    Conversation:
+      type: object
+      required: [id, kind, messages]
+      properties:
+        id: { type: integer }
+        kind: { type: string, enum: [GENERAL, PRODUCT_EXPLORATION, PATTERN, RESCUE] }
+        messages: { type: array, items: { $ref: '#/components/schemas/ConversationMessage' } }
     RescuePlan:
       type: object
-      required: [id, versionNo, status, baseRoutineId, ranking, routine, basisStrength]
+      required: [id, versionNo, status, baseRoutineId, ranking, proposedRoutine]
       properties:
         id: { type: integer }
         versionNo: { type: integer, minimum: 1 }
         status: { type: string, enum: [GENERATED, VALIDATED, CONFIRMED, APPLIED, STALE, REJECTED] }
-        baseRoutineId: { type: [integer, 'null'] }
-        ranking: { type: array, maxItems: 3, items: { type: object, required: [rank, label, support, opposition, uncertainty], properties: { rank: { type: integer, minimum: 1, maximum: 3 }, myProductId: { type: [integer, 'null'] }, label: { type: string }, support: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } }, opposition: { type: array, items: { $ref: '#/components/schemas/EvidenceItem' } }, uncertainty: { type: array, items: { type: string } } } } }
-        routine: { $ref: '#/components/schemas/RoutineWrite' }
-        basisStrength: { type: string, enum: [NORMAL, WEAK_NO_STABLE_ROUTINE, NONE_NO_ROUTINE] }
+        baseRoutineId: { type: integer }
+        ranking:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            required: [rank, label, support, opposition, uncertainty]
+            properties:
+              rank: { type: integer, minimum: 1, maximum: 3 }
+              label: { type: string }
+              support: { type: array, items: { type: string } }
+              opposition: { type: array, items: { type: string } }
+              uncertainty: { type: array, items: { type: string } }
+        proposedRoutine: { $ref: '#/components/schemas/RoutineWrite' }
     Rescue:
       type: object
-      required: [id, status, messages, changes, safetyBoundaryReached]
+      required: [id, status, conversationId, safetyBoundaryReached]
       properties:
         id: { type: integer }
         status: { type: string, enum: [CONVERSATION, ANALYZING, READY, CLOSED] }
-        startRoutineId: { type: [integer, 'null'] }
-        stableRoutineId: { type: [integer, 'null'] }
-        messages: { type: array, items: { $ref: '#/components/schemas/RescueMessage' } }
-        changes: { type: array, items: { $ref: '#/components/schemas/RoutineChange' } }
-        plan: { anyOf: [ { $ref: '#/components/schemas/RescuePlan' }, { type: 'null' } ] }
+        conversationId: { type: integer }
+        sourceExperienceId: { type: [integer, 'null'] }
         safetyBoundaryReached: { type: boolean }
-    RescueApplyResult:
-      type: object
-      required: [action]
-      properties:
-        action: { type: string, enum: [CREATE_ROUTINE, RECORD_ONLY] }
-        routineId: { type: [integer, 'null'] }
-        assessmentDueAt: { type: [string, 'null'], format: date-time }
-        rescueRecordWithoutChange: { type: boolean }
+        plan: { anyOf: [ { $ref: '#/components/schemas/RescuePlan' }, { type: 'null' } ] }
     Home:
       type: object
-      required: [primaryAction, secondaryActions]
+      required: [currentExperience, newPatterns, quickActions]
       properties:
-        primaryAction:
-          type: object
-          required: [type, label]
-          properties:
-            type: { type: string, enum: [CONTINUE_RESCUE, SUBMIT_ASSESSMENT, RETRY_AI, VIEW_ROUTINE_PROGRESS, EXPLORE_PRODUCTS, CREATE_FIRST_ROUTINE, ADD_FIRST_PRODUCT] }
-            label: { type: string }
-            targetType: { type: [string, 'null'] }
-            targetId: { type: [integer, 'null'] }
-            dueAt: { type: [string, 'null'], format: date-time }
-        secondaryActions:
-          type: array
-          items:
-            type: object
-            required: [type, label]
-            properties:
-              type: { type: string }
-              label: { type: string }
-              targetType: { type: [string, 'null'] }
-              targetId: { type: [integer, 'null'] }
+        currentExperience: { anyOf: [ { $ref: '#/components/schemas/Routine' }, { type: 'null' } ] }
+        newPatterns: { type: array, maxItems: 3, items: { $ref: '#/components/schemas/PersonalPattern' } }
+        quickActions: { type: array, items: { type: string, enum: [RECORD_EXPERIENCE, EXPLORE_PRODUCT, START_ROUTINE] } }
     JobAccepted:
       type: object
       required: [jobId, status]
-      properties: { jobId: { type: integer }, status: { type: string, enum: [QUEUED, RUNNING] } }
+      properties: { jobId: { type: integer }, status: { type: string, const: QUEUED } }
     AiJob:
       type: object
-      required: [id, type, status, createdAt]
+      required: [id, type, status]
       properties:
         id: { type: integer }
-        type: { type: string, enum: [RECEIPT_OCR, PRODUCT_OPINION, RECOMMENDATION, PRODUCT_RESEARCH, ROUTINE_ANALYSIS, ROUTINE_ORDER, RESCUE, ACCOUNT_DELETE] }
+        type: { type: string, enum: [EXPERIENCE_EXTRACTION, PATTERN_DISCOVERY, PRODUCT_EXPLORATION, RESCUE, ACCOUNT_DELETE] }
         status: { type: string, enum: [QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED] }
-        resultType: { type: [string, 'null'] }
-        resultId: { type: [integer, 'null'] }
         errorCode: { type: [string, 'null'] }
-        retryable: { type: boolean }
-        createdAt: { type: string, format: date-time }
-        finishedAt: { type: [string, 'null'], format: date-time }
-    Notification:
-      type: object
-      required: [id, type, title, targetType, targetId, dueAt]
-      properties:
-        id: { type: integer }
-        type: { type: string, enum: [ASSESSMENT_DUE, AI_JOB_SUCCEEDED, AI_JOB_FAILED] }
-        title: { type: string }
-        body: { type: string }
-        targetType: { type: string }
-        targetId: { type: integer }
-        dueAt: { type: string, format: date-time }
-        readAt: { type: [string, 'null'], format: date-time }
     Problem:
       type: object
       required: [type, title, status, code]
@@ -809,6 +583,5 @@ components:
         type: { type: string, format: uri-reference }
         title: { type: string }
         status: { type: integer }
-        code: { type: string, examples: [ROUTINE_VERSION_CONFLICT] }
-        detail: { type: string }
-        fields: { type: object, additionalProperties: { type: array, items: { type: string } } }
+        code: { type: string }
+        detail: { type: [string, 'null'] }
