@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: skn-api
+  config:
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:.env[.properties]
+  datasource:
+    url: jdbc:sqlite:${SKN_DB_PATH:./data/skn.db}?foreign_keys=on&busy_timeout=5000&journal_mode=WAL
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 4
+      connection-timeout: 5000
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  jackson:
+    default-property-inclusion: non_null
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+  error:
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  test-harness:
+    enabled: ${TEST_HARNESS_ENABLED:false}
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_MODEL:gpt-5.6-terra}
+    reasoning-effort: ${OPENAI_REASONING_EFFORT:low}
+    connect-timeout: 3s
+    read-timeout: 25s
+    max-output-tokens: 650
+
+logging:
+  level:
+    root: INFO
+    app.skn: INFO
+    org.springframework.jdbc.core: WARN

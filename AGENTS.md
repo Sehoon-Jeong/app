@@ -2,22 +2,23 @@
 
 구현 전에 아래 순서대로 읽는다.
 
-1. 담당 GitHub Task와 부모 Feature 이슈
-2. Feature가 링크한 [기능별 요구사항](./docs/04-requirements/README.md)
+1. 사용자의 현재 요청과 작업 트리
+2. 관련 [기능별 요구사항](./docs/04-requirements/README.md)
 3. [제품 규칙과 AI 경계](./docs/product/product-rules.md)
 4. [OpenAPI](./docs/api/openapi.yaml)
 5. [데이터 모델](./docs/06-data-model/README.md)
 
-GitHub Feature 이슈가 흐름·분기·실패·수용 조건의 기능명세 원본이다. 저장소에 같은 기능명세를 복제하지 않는다.
+GitHub Issues와 Projects는 작업 관리나 기능명세 원본으로 사용하지 않는다. 사용자의 현재 요청과 저장소 문서를 기준으로 작업하며, 별도 요청 없이 이슈를 만들거나 갱신하지 않는다.
 
 ## 작업 원칙
 
-- `Ready`인 Task만 착수한다. Task의 결과·예외·완료 조건은 지키되 내부 구현은 현재 코드에 맞게 정한다.
-- API 변경은 OpenAPI와 계약 테스트를, 데이터 의미 변경은 ERD·데이터 사전·Flyway migration 테스트를 같은 PR에서 수정한다.
+- 사용자가 요청한 결과·예외·완료 조건을 지키되 내부 구현은 현재 코드에 맞게 정한다.
+- API 변경은 OpenAPI와 계약 테스트를, 데이터 의미 변경은 ERD·데이터 사전·`schema.sql`을 같이 수정한다. 현재 해커톤 범위에서는 Flyway를 두지 않고, 운영 배포 단계에서 도입한다.
 - SQLite 모든 연결에서 FK를 켜고 AI·Object Storage 호출을 쓰기 트랜잭션 밖에서 수행한다.
 - 다른 사용자의 데이터 접근, 빈 상태, AI 실패, 중복 제출과 재시도를 정상 흐름과 함께 확인한다.
-- 제품 결정이 필요하면 Feature에 배경·선택지·영향을 남긴다.
+- 제품 결정이 필요하면 관련 제품 문서에 배경·선택지·영향을 남긴다.
 - 비밀값과 실제 사용자 기록을 저장소·로그·fixture·프롬프트 예시에 넣지 않는다.
+- 공개 저장소에는 인스턴스 주소·OCID·SSH 사용자·키 경로·인증서 원문을 기록하지 않는다. 배포 자격 증명은 GitHub Actions Secrets에, 런타임 비밀값은 서버의 권한 제한된 환경 파일에만 둔다.
 
 ## 바꾸면 안 되는 제품 경계
 

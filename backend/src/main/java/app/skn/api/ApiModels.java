@@ -1,0 +1,275 @@
+package app.skn.api;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import java.util.List;
+
+public final class ApiModels {
+    private ApiModels() {}
+
+    public record ProductView(
+            long id,
+            String brand,
+            String name,
+            String category,
+            String volume,
+            String versionLabel,
+            boolean verified,
+            ProductGuide guide,
+            List<ProductFact> facts,
+            int personalRecordCount,
+            boolean owned,
+            String imageUrl
+    ) {}
+
+    public record ProductGuide(
+            String summary,
+            String routineStep,
+            String usageType,
+            List<String> usageTiming,
+            List<String> usageInstructions,
+            List<ProductHighlight> highlights,
+            String origin,
+            String generatedAt
+    ) {}
+
+    public record ProductHighlight(
+            String title,
+            String detail
+    ) {}
+
+    public record ProductFact(
+            String type,
+            String text,
+            String sourceLabel,
+            String sourceUrl,
+            String checkedAt
+    ) {}
+
+    public record ProductPageView(
+            List<ProductView> items,
+            String nextCursor,
+            boolean hasMore
+    ) {}
+
+    public record UserProductView(
+            long id,
+            ProductView product,
+            String customBrand,
+            String customName,
+            String customCategory,
+            String memo,
+            String addedAt
+    ) {
+        public String displayName() {
+            return product != null ? product.name() : customName;
+        }
+    }
+
+    public record RoutineItemView(
+            long userProductId,
+            String productName,
+            String brand,
+            String category,
+            String timeSlot,
+            int position,
+            String frequency
+    ) {}
+
+    public record RoutineItemInput(
+            @NotNull Long userProductId,
+            @NotBlank String timeSlot,
+            @NotBlank @Size(max = 20) String frequency
+    ) {}
+
+    public record RoutineView(
+            long id,
+            String name,
+            String dayPart,
+            String status,
+            String startedAt,
+            List<RoutineItemView> items
+    ) {}
+
+    public record ExperienceView(
+            long id,
+            String subjectType,
+            Long routineId,
+            Long userProductId,
+            String title,
+            String subtitle,
+            String status,
+            String startedAt,
+            String reviewDueAt,
+            int day,
+            int daysUntilReview,
+            boolean reviewDue,
+            RoutineView routine,
+            UserProductView product,
+            ExperienceRecordView latestRecord
+    ) {}
+
+    public record ExperienceRecordView(
+            long id,
+            Long sessionId,
+            Long userProductId,
+            String productName,
+            String sentiment,
+            String note,
+            String discomfort,
+            String adherence,
+            List<String> tags,
+            String createdAt
+    ) {}
+
+    public record PatternEvidenceView(
+            long recordId,
+            String productName,
+            String note,
+            String sentiment,
+            String polarity,
+            String createdAt
+    ) {}
+
+    public record PatternView(
+            long id,
+            String title,
+            String summary,
+            String confidenceNote,
+            int supportingCount,
+            int contradictingCount,
+            List<PatternEvidenceView> evidence
+    ) {}
+
+    public record HomeView(
+            String displayName,
+            ExperienceView currentExperience,
+            List<PatternView> patterns,
+            int productCount,
+            int recordCount,
+            String primaryAction
+    ) {}
+
+    public record StartExperienceRequest(
+            @NotNull Long userProductId,
+            @NotBlank String mode,
+            String dayPart,
+            @NotBlank String clientRequestId
+    ) {}
+
+    public record RecordExperienceRequest(
+            @NotBlank String sentiment,
+            @Size(max = 1200) String note,
+            List<@NotBlank String> tags,
+            @NotBlank String discomfort,
+            String adherence,
+            @NotBlank String clientRequestId
+    ) {}
+
+    public record SavedExperienceRecord(
+            ExperienceRecordView record,
+            Long linkedPatternId,
+            boolean rescueSuggested
+    ) {}
+
+    public record AddUserProductRequest(
+            Long productId,
+            String customBrand,
+            String customName,
+            String customCategory,
+            String memo
+    ) {}
+
+    public record UpdateRoutineRequest(
+            @NotBlank String name,
+            @NotEmpty List<@NotNull RoutineItemInput> items
+    ) {}
+
+    public record CreateConversationRequest(
+            @NotBlank String mode,
+            Long productId,
+            Long experienceId,
+            @NotBlank @Size(max = 1500) String initialPrompt,
+            @NotBlank String clientRequestId
+    ) {}
+
+    public record SendMessageRequest(
+            @NotBlank @Size(max = 1500) String text,
+            @NotBlank String clientRequestId
+    ) {}
+
+    public record MessageView(
+            long id,
+            String role,
+            String content,
+            List<String> suggestedReplies,
+            List<String> evidenceRefs,
+            String status,
+            String createdAt
+    ) {}
+
+    public record RescuePlanView(
+            long id,
+            Long baseRoutineId,
+            String title,
+            String rationale,
+            Long removeUserProductId,
+            String removeProductName,
+            String status,
+            Long appliedExperienceId
+    ) {}
+
+    public record ConversationView(
+            long id,
+            String mode,
+            Long productId,
+            Long experienceId,
+            String status,
+            List<MessageView> messages,
+            List<String> quickReplies,
+            RescuePlanView rescuePlan,
+            boolean safetyBoundary
+    ) {}
+
+    public record ApplyRescueRequest(@NotBlank String clientRequestId) {}
+
+    public record ApiMessage(String message) {}
+
+    public record SignUpRequest(
+            @NotBlank @Size(min = 4, max = 24) String username,
+            @NotBlank @Size(min = 8, max = 72) String password
+    ) {}
+
+    public record LoginRequest(
+            @NotBlank String username,
+            @NotBlank String password
+    ) {}
+
+    public record AuthView(
+            long userId,
+            String username,
+            String displayName,
+            boolean demo,
+            boolean onboardingCompleted
+    ) {}
+
+    public record QuickAccountView(
+            String username,
+            String displayName
+    ) {}
+
+    public record CompleteOnboardingRequest(
+            @Size(max = 8) List<@NotNull Long> productIds,
+            @NotBlank String entryChoice,
+            Long focusProductId,
+            @NotBlank String clientRequestId
+    ) {}
+
+    public record OnboardingResult(
+            AuthView user,
+            ExperienceView experience
+    ) {}
+}

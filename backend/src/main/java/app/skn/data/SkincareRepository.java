@@ -1,0 +1,800 @@
+package app.skn.data;
+
+import app.skn.api.ApiModels.*;
+import app.skn.auth.CurrentUser;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+
+@Repository
+public class SkincareRepository {
+    public static final long DEMO_USER_ID = 1L;
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+
+    private final JdbcTemplate jdbc;
+    private final ObjectMapper objectMapper;
+    private final CurrentUser currentUser;
+
+    public SkincareRepository(JdbcTemplate jdbc, ObjectMapper objectMapper, CurrentUser currentUser) {
+        this.jdbc = jdbc;
+        this.objectMapper = objectMapper;
+        this.currentUser = currentUser;
+    }
+
+    public String displayName() {
+        return jdbc.queryForObject("SELECT display_name FROM app_user WHERE id = ?", String.class, userId());
+    }
+
+    public List<ProductView> findProducts(String query) {
+        String value = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        String like = "%" + value + "%";
+        return jdbc.query("""
+                SELECT p.*,
+                       EXISTS(SELECT 1 FROM user_product up WHERE up.user_id = ? AND up.product_id = p.id) AS owned,
+                       (SELECT COUNT(DISTINCT er.id) FROM experience_record er
+                          LEFT JOIN user_product eup ON eup.id = er.user_product_id
+                          LEFT JOIN experience_session es ON es.id = er.session_id
+                         WHERE er.user_id = ? AND (
+                               eup.product_id = p.id OR EXISTS (
+                                   SELECT 1 FROM routine_item eri
+                                   JOIN user_product rup ON rup.id = eri.user_product_id
+                                   WHERE eri.routine_id = es.routine_id AND rup.product_id = p.id
+                               )
+                         )) AS personal_record_count
+                  FROM product_catalog_public p
+                 WHERE ? = '' OR lower(p.name) LIKE ? OR lower(p.brand) LIKE ? OR lower(p.category) LIKE ?
+                 ORDER BY owned DESC, p.id
+                """, this::mapProduct, userId(), userId(), value, like, like, like);
+    }
+
+    public List<ProductView> findProductsPage(String query, Integer cursorOwned, Long cursorId, int fetchLimit) {
+        String value = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        String like = "%" + value + "%";
+        return jdbc.query("""
+                WITH catalog AS (
+                    SELECT p.*,
+                           EXISTS(SELECT 1 FROM user_product up WHERE up.user_id = ? AND up.product_id = p.id) AS owned,
+                           (SELECT COUNT(DISTINCT er.id) FROM experience_record er
+                              LEFT JOIN user_product eup ON eup.id = er.user_product_id
+                              LEFT JOIN experience_session es ON es.id = er.session_id
+                             WHERE er.user_id = ? AND (
+                                   eup.product_id = p.id OR EXISTS (
+                                       SELECT 1 FROM routine_item eri
+                                       JOIN user_product rup ON rup.id = eri.user_product_id
+                                       WHERE eri.routine_id = es.routine_id AND rup.product_id = p.id
+                                   )
+                             )) AS personal_record_count
+                      FROM product_catalog_public p
+                     WHERE ? = '' OR lower(p.name) LIKE ? OR lower(p.brand) LIKE ? OR lower(p.category) LIKE ?
+                )
+                SELECT * FROM catalog
+                 WHERE ? IS NULL OR owned < ? OR (owned = ? AND id > ?)
+                 ORDER BY owned DESC, id
+                 LIMIT ?
+                """, this::mapProduct,
+                userId(), userId(), value, like, like, like,
+                cursorOwned, cursorOwned, cursorOwned, cursorId, fetchLimit);
+    }
+
+    public Optional<ProductView> findProduct(long productId) {
+        return jdbc.query("""
+                SELECT p.*,
+                       EXISTS(SELECT 1 FROM user_product up WHERE up.user_id = ? AND up.product_id = p.id) AS owned,
+                       (SELECT COUNT(DISTINCT er.id) FROM experience_record er
+                          LEFT JOIN user_product eup ON eup.id = er.user_product_id
+                          LEFT JOIN experience_session es ON es.id = er.session_id
+                         WHERE er.user_id = ? AND (
+                               eup.product_id = p.id OR EXISTS (
+                                   SELECT 1 FROM routine_item eri
+                                   JOIN user_product rup ON rup.id = eri.user_product_id
+                                   WHERE eri.routine_id = es.routine_id AND rup.product_id = p.id
+                               )
+                         )) AS personal_record_count
+                  FROM product_catalog_public p WHERE p.id = ?
+                """, this::mapProduct, userId(), userId(), productId).stream().findFirst();
+    }
+
+    public List<UserProductView> findUserProducts() {
+        return jdbc.query("""
+                SELECT up.id AS user_product_id, up.custom_brand, up.custom_name, up.custom_category,
+                       up.memo, up.added_at, p.*,
+                       CASE WHEN p.id IS NULL THEN 0 ELSE 1 END AS owned,
+                       (SELECT COUNT(DISTINCT er.id) FROM experience_record er
+                          LEFT JOIN experience_session es ON es.id = er.session_id
+                         WHERE er.user_id = up.user_id AND (
+                               er.user_product_id = up.id OR EXISTS (
+                                   SELECT 1 FROM routine_item eri
+                                   WHERE eri.routine_id = es.routine_id AND eri.user_product_id = up.id
+                               )
+                         )) AS personal_record_count
+                  FROM user_product up
+                  LEFT JOIN product_catalog_public p ON p.id = up.product_id
+                 WHERE up.user_id = ?
+                 ORDER BY up.added_at DESC, up.id DESC
+                """, this::mapUserProduct, userId());
+    }
+
+    public Optional<UserProductView> findUserProduct(long userProductId) {
+        return jdbc.query("""
+                SELECT up.id AS user_product_id, up.custom_brand, up.custom_name, up.custom_category,
+                       up.memo, up.added_at, p.*,
+                       CASE WHEN p.id IS NULL THEN 0 ELSE 1 END AS owned,
+                       (SELECT COUNT(DISTINCT er.id) FROM experience_record er
+                          LEFT JOIN experience_session es ON es.id = er.session_id
+                         WHERE er.user_id = up.user_id AND (
+                               er.user_product_id = up.id OR EXISTS (
+                                   SELECT 1 FROM routine_item eri
+                                   WHERE eri.routine_id = es.routine_id AND eri.user_product_id = up.id
+                               )
+                         )) AS personal_record_count
+                  FROM user_product up
+                  LEFT JOIN product_catalog_public p ON p.id = up.product_id
+                 WHERE up.user_id = ? AND up.id = ?
+                """, this::mapUserProduct, userId(), userProductId).stream().findFirst();
+    }
+
+    public Optional<UserProductView> findOwnedCatalogProduct(long productId) {
+        return jdbc.query("""
+                SELECT up.id AS user_product_id, up.custom_brand, up.custom_name, up.custom_category,
+                       up.memo, up.added_at, p.*, 1 AS owned,
+                       (SELECT COUNT(DISTINCT er.id) FROM experience_record er
+                          LEFT JOIN experience_session es ON es.id = er.session_id
+                         WHERE er.user_id = up.user_id AND (
+                               er.user_product_id = up.id OR EXISTS (
+                                   SELECT 1 FROM routine_item eri
+                                   WHERE eri.routine_id = es.routine_id AND eri.user_product_id = up.id
+                               )
+                         )) AS personal_record_count
+                  FROM user_product up JOIN product_catalog_public p ON p.id = up.product_id
+                 WHERE up.user_id = ? AND p.id = ?
+                """, this::mapUserProduct, userId(), productId).stream().findFirst();
+    }
+
+    public long insertCatalogUserProduct(long productId, String memo) {
+        Long id = jdbc.queryForObject("""
+                INSERT INTO user_product(user_id, product_id, memo) VALUES (?, ?, ?) RETURNING id
+                """, Long.class, userId(), productId, blankToNull(memo));
+        return id == null ? 0 : id;
+    }
+
+    public long insertCustomUserProduct(String brand, String name, String category, String memo) {
+        Long id = jdbc.queryForObject("""
+                INSERT INTO user_product(user_id, custom_brand, custom_name, custom_category, memo)
+                VALUES (?, ?, ?, ?, ?) RETURNING id
+                """, Long.class, userId(), blankToNull(brand), name.trim(), blankToNull(category), blankToNull(memo));
+        return id == null ? 0 : id;
+    }
+
+    public Optional<RoutineView> findCurrentRoutine() {
+        return findRoutineByStatus("CURRENT");
+    }
+
+    public Optional<RoutineView> findBaselineRoutine() {
+        return jdbc.query("""
+                SELECT r.id, r.name, r.day_part, r.status, r.started_at
+                  FROM comparison_baseline cb
+                  JOIN routine r ON r.id = cb.routine_id
+                 WHERE cb.user_id = ? AND cb.ended_at IS NULL
+                 ORDER BY cb.id DESC LIMIT 1
+                """, (rs, rowNum) -> mapRoutine(rs), userId()).stream().findFirst();
+    }
+
+    private Optional<RoutineView> findRoutineByStatus(String status) {
+        return jdbc.query("""
+                SELECT id, name, day_part, status, started_at
+                  FROM routine WHERE user_id = ? AND status = ? ORDER BY id DESC LIMIT 1
+                """, (rs, rowNum) -> mapRoutine(rs), userId(), status).stream().findFirst();
+    }
+
+    public Optional<RoutineView> findRoutine(long routineId) {
+        return jdbc.query("""
+                SELECT id, name, day_part, status, started_at
+                  FROM routine WHERE user_id = ? AND id = ?
+                """, (rs, rowNum) -> mapRoutine(rs), userId(), routineId).stream().findFirst();
+    }
+
+    public List<Long> findRoutineUserProductIds(long routineId) {
+        return jdbc.query("""
+                SELECT ri.user_product_id FROM routine_item ri
+                JOIN routine r ON r.id = ri.routine_id
+                WHERE r.user_id = ? AND r.id = ? ORDER BY ri.position
+                """, (rs, rowNum) -> rs.getLong(1), userId(), routineId);
+    }
+
+    public List<RoutineItemInput> findRoutineItemInputs(long routineId) {
+        return jdbc.query("""
+                SELECT ri.user_product_id, ri.time_slot, ri.frequency FROM routine_item ri
+                JOIN routine r ON r.id = ri.routine_id
+                WHERE r.user_id = ? AND r.id = ?
+                ORDER BY ri.position
+                """, (rs, rowNum) -> new RoutineItemInput(
+                rs.getLong("user_product_id"), rs.getString("time_slot"), rs.getString("frequency")
+        ), userId(), routineId);
+    }
+
+    public void archiveCurrentRoutine() {
+        jdbc.update("UPDATE routine SET status = 'PAST', ended_at = datetime('now') WHERE user_id = ? AND status = 'CURRENT'", userId());
+    }
+
+    public long insertRoutine(String name, String dayPart, Long basedOnRoutineId, List<RoutineItemInput> items) {
+        Long id = jdbc.queryForObject("""
+                INSERT INTO routine(user_id, name, day_part, status, based_on_routine_id)
+                VALUES (?, ?, ?, 'CURRENT', ?) RETURNING id
+        """, Long.class, userId(), name, dayPart, basedOnRoutineId);
+        if (id == null) throw new IllegalStateException("루틴 ID를 만들 수 없습니다.");
+        for (int index = 0; index < items.size(); index++) {
+            RoutineItemInput item = items.get(index);
+            int position = index + 1;
+            jdbc.update("""
+                    INSERT INTO routine_item(routine_id, user_product_id, time_slot, position, frequency)
+                    VALUES (?, ?, ?, ?, ?)
+                    """, id, item.userProductId(), item.timeSlot(), position, item.frequency());
+        }
+        return id;
+    }
+
+    public void closeActiveExperience(String reason) {
+        jdbc.update("""
+                UPDATE experience_session
+                   SET status = 'CANCELLED', ended_at = datetime('now'), end_reason = ?
+                 WHERE user_id = ? AND status = 'ACTIVE'
+                """, reason, userId());
+    }
+
+    public Optional<Long> findSessionIdByClientRequest(String clientRequestId) {
+        return jdbc.query("SELECT id FROM experience_session WHERE user_id = ? AND client_request_id = ?",
+                (rs, rowNum) -> rs.getLong(1), userId(), clientRequestId).stream().findFirst();
+    }
+
+    public long insertExperienceSession(String subjectType, Long routineId, Long userProductId, String title, String clientRequestId) {
+        Long id = jdbc.queryForObject("""
+                INSERT INTO experience_session(
+                    user_id, subject_type, routine_id, user_product_id, title, status,
+                    started_at, review_due_at, client_request_id
+                ) VALUES (?, ?, ?, ?, ?, 'ACTIVE', datetime('now'), datetime('now', '+6 day'), ?) RETURNING id
+                """, Long.class, userId(), subjectType, routineId, userProductId, title, clientRequestId);
+        return id == null ? 0 : id;
+    }
+
+    public Optional<ExperienceView> findActiveExperience() {
+        return jdbc.query("""
+                SELECT * FROM experience_session
+                 WHERE user_id = ? AND status = 'ACTIVE' ORDER BY id DESC LIMIT 1
+                """, (rs, rowNum) -> mapExperience(rs), userId()).stream().findFirst();
+    }
+
+    public Optional<ExperienceView> findExperience(long id) {
+        return jdbc.query("SELECT * FROM experience_session WHERE user_id = ? AND id = ?",
+                (rs, rowNum) -> mapExperience(rs), userId(), id).stream().findFirst();
+    }
+
+    public void completeExperience(long sessionId, String reason) {
+        jdbc.update("""
+                UPDATE experience_session SET status = 'COMPLETED', ended_at = datetime('now'), end_reason = ?
+                 WHERE id = ? AND user_id = ? AND status = 'ACTIVE'
+                """, reason, sessionId, userId());
+    }
+
+    public void promoteComparisonBaseline(long routineId, long recordId) {
+        jdbc.update("UPDATE comparison_baseline SET ended_at = datetime('now') WHERE user_id = ? AND ended_at IS NULL", userId());
+        jdbc.update("""
+                INSERT INTO comparison_baseline(user_id, routine_id, confirmed_record_id)
+                VALUES (?, ?, ?)
+                """, userId(), routineId, recordId);
+    }
+
+    public Optional<Long> findRecordIdByClientRequest(String clientRequestId) {
+        return jdbc.query("SELECT id FROM experience_record WHERE user_id = ? AND client_request_id = ?",
+                (rs, rowNum) -> rs.getLong(1), userId(), clientRequestId).stream().findFirst();
+    }
+
+    public long insertExperienceRecord(long sessionId, Long userProductId, String sentiment, String note,
+                                       String discomfort, String adherence, String clientRequestId, List<String> tags) {
+        Long id = jdbc.queryForObject("""
+                INSERT INTO experience_record(
+                    user_id, session_id, user_product_id, sentiment, note, discomfort, adherence, client_request_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
+                """, Long.class, userId(), sessionId, userProductId, sentiment, note, discomfort, adherence, clientRequestId);
+        if (id == null) throw new IllegalStateException("경험 기록 ID를 만들 수 없습니다.");
+        for (String tag : tags) {
+            if (tag != null && !tag.isBlank()) {
+                jdbc.update("INSERT OR IGNORE INTO experience_tag(record_id, label) VALUES (?, ?)", id, tag.trim());
+            }
+        }
+        return id;
+    }
+
+    public List<ExperienceRecordView> findExperienceRecords() {
+        return jdbc.query("""
+                SELECT er.*,
+                       COALESCE(p.name, up.custom_name,
+                           (SELECT es.title FROM experience_session es WHERE es.id = er.session_id)) AS product_name
+                  FROM experience_record er
+                  LEFT JOIN user_product up ON up.id = er.user_product_id
+                  LEFT JOIN product p ON p.id = up.product_id
+                 WHERE er.user_id = ? ORDER BY er.created_at DESC, er.id DESC
+                """, this::mapExperienceRecord, userId());
+    }
+
+    public Optional<ExperienceRecordView> findExperienceRecord(long recordId) {
+        return jdbc.query("""
+                SELECT er.*,
+                       COALESCE(p.name, up.custom_name,
+                           (SELECT es.title FROM experience_session es WHERE es.id = er.session_id)) AS product_name
+                  FROM experience_record er
+                  LEFT JOIN user_product up ON up.id = er.user_product_id
+                  LEFT JOIN product p ON p.id = up.product_id
+                 WHERE er.user_id = ? AND er.id = ?
+                """, this::mapExperienceRecord, userId(), recordId).stream().findFirst();
+    }
+
+    public Optional<ExperienceRecordView> findLatestRecordForSession(long sessionId) {
+        return jdbc.query("""
+                SELECT er.*, es.title AS product_name
+                  FROM experience_record er JOIN experience_session es ON es.id = er.session_id
+                 WHERE er.user_id = ? AND er.session_id = ? ORDER BY er.id DESC LIMIT 1
+                """, this::mapExperienceRecord, userId(), sessionId).stream().findFirst();
+    }
+
+    public int recordCount() {
+        Integer value = jdbc.queryForObject("SELECT COUNT(*) FROM experience_record WHERE user_id = ?", Integer.class, userId());
+        return value == null ? 0 : value;
+    }
+
+    public int productCount() {
+        Integer value = jdbc.queryForObject("SELECT COUNT(*) FROM user_product WHERE user_id = ?", Integer.class, userId());
+        return value == null ? 0 : value;
+    }
+
+    public List<PatternView> findPatterns() {
+        return jdbc.query("""
+                SELECT * FROM personal_pattern WHERE user_id = ? AND status = 'ACTIVE' ORDER BY updated_at DESC, id
+                """, (rs, rowNum) -> mapPattern(rs), userId());
+    }
+
+    public Optional<PatternView> findPattern(long patternId) {
+        return jdbc.query("SELECT * FROM personal_pattern WHERE user_id = ? AND id = ? AND status = 'ACTIVE'",
+                (rs, rowNum) -> mapPattern(rs), userId(), patternId).stream().findFirst();
+    }
+
+    public Long connectRecordToPattern(long recordId, List<String> tags, String sentiment) {
+        if (tags.isEmpty() || sentiment.equals("UNSURE")) return null;
+        boolean liked = sentiment.equals("LIKED");
+        for (String tag : tags) {
+            String supportingTitle = patternTitle(tag, liked);
+            String contradictingTitle = patternTitle(tag, !liked);
+            Long supporting = findPatternIdByTitle(supportingTitle).orElse(null);
+            Long contradicting = findPatternIdByTitle(contradictingTitle).orElse(null);
+
+            List<Long> sameDirection = findTaggedRecordIds(tag, sentiment);
+            if (supporting == null && sameDirection.size() >= 2) {
+                supporting = insertPattern(
+                        supportingTitle,
+                        "서로 다른 기록에서 ‘" + tag + "’을 선택하고 "
+                                + (liked ? "마음에 든다고" : "아쉽다고") + " 남긴 경험이 반복됐어요."
+                );
+                for (Long evidenceId : sameDirection) connectPatternEvidence(supporting, evidenceId, "SUPPORTS");
+                String oppositeSentiment = liked ? "DISAPPOINTED" : "LIKED";
+                for (Long evidenceId : findTaggedRecordIds(tag, oppositeSentiment)) {
+                    connectPatternEvidence(supporting, evidenceId, "CONTRADICTS");
+                }
+            } else if (supporting != null) {
+                connectPatternEvidence(supporting, recordId, "SUPPORTS");
+            }
+            if (contradicting != null) connectPatternEvidence(contradicting, recordId, "CONTRADICTS");
+
+            if (supporting != null) refreshPatternConfidence(supporting);
+            if (contradicting != null) refreshPatternConfidence(contradicting);
+            if (supporting != null) return supporting;
+            if (contradicting != null) return contradicting;
+        }
+        return null;
+    }
+
+    private Optional<Long> findPatternIdByTitle(String title) {
+        return jdbc.query("SELECT id FROM personal_pattern WHERE user_id = ? AND title = ? AND status = 'ACTIVE'",
+                (rs, rowNum) -> rs.getLong(1), userId(), title).stream().findFirst();
+    }
+
+    private List<Long> findTaggedRecordIds(String tag, String sentiment) {
+        return jdbc.query("""
+                SELECT er.id FROM experience_record er
+                JOIN experience_tag et ON et.record_id = er.id
+                WHERE er.user_id = ? AND et.label = ? AND er.sentiment = ?
+                ORDER BY er.created_at, er.id
+                """, (rs, rowNum) -> rs.getLong(1), userId(), tag, sentiment);
+    }
+
+    private long insertPattern(String title, String summary) {
+        Long id = jdbc.queryForObject("""
+                INSERT INTO personal_pattern(user_id, title, summary, confidence_note)
+                VALUES (?, ?, ?, '지지 0건 · 반대 0건 · 피부 타입 판정이 아님') RETURNING id
+                """, Long.class, userId(), title, summary);
+        if (id == null) throw new IllegalStateException("패턴 ID를 만들 수 없습니다.");
+        return id;
+    }
+
+    private void connectPatternEvidence(long patternId, long recordId, String polarity) {
+        jdbc.update("""
+                INSERT INTO pattern_evidence(pattern_id, record_id, polarity) VALUES (?, ?, ?)
+                ON CONFLICT(pattern_id, record_id) DO UPDATE SET polarity = excluded.polarity
+                """, patternId, recordId, polarity);
+    }
+
+    private void refreshPatternConfidence(long patternId) {
+        Map<String, Object> counts = jdbc.queryForMap("""
+                SELECT SUM(CASE WHEN polarity = 'SUPPORTS' THEN 1 ELSE 0 END) AS supports,
+                       SUM(CASE WHEN polarity = 'CONTRADICTS' THEN 1 ELSE 0 END) AS contradicts
+                FROM pattern_evidence WHERE pattern_id = ?
+                """, patternId);
+        int supports = counts.get("supports") == null ? 0 : ((Number) counts.get("supports")).intValue();
+        int contradicts = counts.get("contradicts") == null ? 0 : ((Number) counts.get("contradicts")).intValue();
+        jdbc.update("""
+                UPDATE personal_pattern
+                   SET confidence_note = ?, updated_at = datetime('now')
+                 WHERE id = ? AND user_id = ?
+                """, "지지 " + supports + "건 · 반대 " + contradicts + "건 · 피부 타입 판정이 아님",
+                patternId, userId());
+    }
+
+    private static String patternTitle(String tag, boolean liked) {
+        return tag + "을 " + (liked ? "좋게" : "아쉽게") + " 느낀 경험이 반복됐어요";
+    }
+
+    public long insertConversation(String mode, Long productId, Long experienceId) {
+        Long id = jdbc.queryForObject("""
+                INSERT INTO conversation(user_id, mode, product_id, experience_id)
+                VALUES (?, ?, ?, ?) RETURNING id
+                """, Long.class, userId(), mode, productId, experienceId);
+        return id == null ? 0 : id;
+    }
+
+    public Optional<Map<String, Object>> findConversationRow(long conversationId) {
+        return jdbc.queryForList("SELECT * FROM conversation WHERE id = ? AND user_id = ?", conversationId, userId())
+                .stream().findFirst();
+    }
+
+    public void updateConversationMode(long conversationId, String mode) {
+        jdbc.update("""
+                UPDATE conversation
+                   SET mode = ?, updated_at = datetime('now')
+                 WHERE id = ? AND user_id = ?
+                """, mode, conversationId, userId());
+    }
+
+    public Optional<String> findLatestAssistantClientRequestId(long conversationId) {
+        return jdbc.query("""
+                SELECT cm.client_request_id
+                  FROM conversation_message cm
+                  JOIN conversation c ON c.id = cm.conversation_id
+                 WHERE cm.conversation_id = ? AND c.user_id = ? AND cm.role = 'ASSISTANT'
+                 ORDER BY cm.id DESC LIMIT 1
+                """, (rs, rowNum) -> rs.getString(1), conversationId, userId()).stream().findFirst();
+    }
+
+    public Optional<Long> findMessageIdByClientRequest(long conversationId, String clientRequestId) {
+        return jdbc.query("SELECT id FROM conversation_message WHERE conversation_id = ? AND client_request_id = ?",
+                (rs, rowNum) -> rs.getLong(1), conversationId, clientRequestId).stream().findFirst();
+    }
+
+    public long insertMessage(long conversationId, String role, String content, String status,
+                              String clientRequestId, List<String> suggestedReplies) {
+        return insertMessage(conversationId, role, content, status, clientRequestId, suggestedReplies, List.of());
+    }
+
+    public long insertMessage(long conversationId, String role, String content, String status,
+                              String clientRequestId, List<String> suggestedReplies, List<String> evidenceRefs) {
+        Long id = jdbc.queryForObject("""
+                INSERT INTO conversation_message(
+                    conversation_id, role, content, status, client_request_id,
+                    suggested_replies_json, evidence_refs_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
+                """, Long.class, conversationId, role, content, status, clientRequestId,
+                writeJson(suggestedReplies == null ? List.of() : suggestedReplies),
+                writeJson(evidenceRefs == null ? List.of() : evidenceRefs));
+        jdbc.update("UPDATE conversation SET updated_at = datetime('now') WHERE id = ?", conversationId);
+        return id == null ? 0 : id;
+    }
+
+    public List<MessageView> findMessages(long conversationId) {
+        return jdbc.query("""
+                SELECT cm.* FROM conversation_message cm
+                JOIN conversation c ON c.id = cm.conversation_id
+                WHERE cm.conversation_id = ? AND c.user_id = ? ORDER BY cm.id
+                """, (rs, rowNum) -> new MessageView(
+                rs.getLong("id"), rs.getString("role"), rs.getString("content"),
+                parseStringList(rs.getString("suggested_replies_json")),
+                parseStringList(rs.getString("evidence_refs_json")),
+                rs.getString("status"), rs.getString("created_at")
+        ), conversationId, userId());
+    }
+
+    public List<ConversationView> findConversations() {
+        return jdbc.query("SELECT id FROM conversation WHERE user_id = ? ORDER BY updated_at DESC",
+                (rs, rowNum) -> rs.getLong(1), userId()).stream().map(this::conversationView).toList();
+    }
+
+    public ConversationView conversationView(long conversationId) {
+        Map<String, Object> row = findConversationRow(conversationId).orElseThrow();
+        String mode = String.valueOf(row.get("mode"));
+        RescuePlanView plan = findRescuePlan(conversationId).orElse(null);
+        List<MessageView> messages = findMessages(conversationId);
+        boolean safety = plan != null && "BLOCKED".equals(plan.status());
+        List<String> quickReplies = messages.stream()
+                .filter(message -> message.role().equals("ASSISTANT") && !message.suggestedReplies().isEmpty())
+                .reduce((first, second) -> second)
+                .map(MessageView::suggestedReplies)
+                .orElseGet(() -> initialQuickReplies(mode));
+        return new ConversationView(
+                ((Number) row.get("id")).longValue(),
+                mode,
+                nullableLong(row.get("product_id")),
+                nullableLong(row.get("experience_id")),
+                String.valueOf(row.get("status")),
+                messages,
+                quickReplies,
+                plan,
+                safety
+        );
+    }
+
+    public Optional<RescuePlanView> findRescuePlan(long conversationId) {
+        return jdbc.query("""
+                SELECT rp.*, COALESCE(p.name, up.custom_name) AS remove_product_name
+                  FROM rescue_plan rp
+                  JOIN conversation c ON c.id = rp.conversation_id
+                  LEFT JOIN user_product up ON up.id = rp.remove_user_product_id
+                  LEFT JOIN product p ON p.id = up.product_id
+                 WHERE rp.conversation_id = ? AND c.user_id = ?
+                """, (rs, rowNum) -> new RescuePlanView(
+                rs.getLong("id"), nullableLong(rs, "base_routine_id"),
+                rs.getString("title"), rs.getString("rationale"),
+                nullableLong(rs, "remove_user_product_id"), rs.getString("remove_product_name"),
+                rs.getString("status"), nullableLong(rs, "applied_experience_id")
+        ), conversationId, userId()).stream().findFirst();
+    }
+
+    public void upsertRescuePlan(long conversationId, Long baseRoutineId, Long removeUserProductId,
+                                 String title, String rationale, String status) {
+        jdbc.update("""
+                INSERT INTO rescue_plan(conversation_id, base_routine_id, remove_user_product_id, title, rationale, status)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(conversation_id) DO UPDATE SET
+                    base_routine_id = excluded.base_routine_id,
+                    remove_user_product_id = excluded.remove_user_product_id,
+                    title = excluded.title,
+                    rationale = excluded.rationale,
+                    status = excluded.status
+                """, conversationId, baseRoutineId, removeUserProductId, title, rationale, status);
+    }
+
+    public void markRescuePlanApplied(long planId, long experienceId) {
+        jdbc.update("UPDATE rescue_plan SET status = 'APPLIED', applied_experience_id = ? WHERE id = ?", experienceId, planId);
+    }
+
+    public List<ExperienceRecordView> findRelevantRecords(Long productId, int limit) {
+        if (productId == null) return findExperienceRecords().stream().limit(limit).toList();
+        return jdbc.query("""
+                SELECT er.*, COALESCE(p.name, up.custom_name, es.title) AS product_name
+                  FROM experience_record er
+                  LEFT JOIN user_product up ON up.id = er.user_product_id
+                  LEFT JOIN product p ON p.id = up.product_id
+                  LEFT JOIN experience_session es ON es.id = er.session_id
+                 WHERE er.user_id = ?
+                 ORDER BY CASE WHEN p.id = ? OR EXISTS (
+                            SELECT 1 FROM experience_session target_es
+                            JOIN routine_item target_ri ON target_ri.routine_id = target_es.routine_id
+                            JOIN user_product target_up ON target_up.id = target_ri.user_product_id
+                            WHERE target_es.id = er.session_id AND target_up.product_id = ?
+                          ) THEN 0 ELSE 1 END,
+                          er.created_at DESC
+                 LIMIT ?
+                """, this::mapExperienceRecord, userId(), productId, productId, limit);
+    }
+
+    public void deleteDemoUserData() {
+        jdbc.update("DELETE FROM app_user WHERE id = ?", userId());
+    }
+
+    public void clearExperiencesForEmptyScenario() {
+        jdbc.update("DELETE FROM conversation WHERE user_id = ?", userId());
+        jdbc.update("DELETE FROM comparison_baseline WHERE user_id = ?", userId());
+        jdbc.update("DELETE FROM personal_pattern WHERE user_id = ?", userId());
+        jdbc.update("DELETE FROM experience_record WHERE user_id = ?", userId());
+        jdbc.update("DELETE FROM experience_session WHERE user_id = ?", userId());
+        jdbc.update("DELETE FROM routine WHERE user_id = ?", userId());
+    }
+
+    public void clearAllPersonalDataForColdStart() {
+        clearExperiencesForEmptyScenario();
+        jdbc.update("DELETE FROM user_product WHERE user_id = ?", userId());
+    }
+
+    private ProductView mapProduct(ResultSet rs, int rowNum) throws SQLException {
+        ProductGuide guide = new ProductGuide(
+                rs.getString("guide_summary"),
+                rs.getString("guide_routine_step"),
+                rs.getString("guide_usage_type"),
+                parseStringList(rs.getString("guide_usage_timing_json")),
+                parseStringList(rs.getString("guide_usage_tips_json")),
+                parseProductHighlights(rs.getString("guide_observation_points_json")),
+                rs.getString("guide_origin"),
+                rs.getString("guide_generated_at")
+        );
+        return new ProductView(
+                rs.getLong("id"), rs.getString("brand"), rs.getString("name"), rs.getString("category"),
+                rs.getString("volume"), rs.getString("version_label"), rs.getInt("public_verified") == 1,
+                guide, parseSourceFacts(rs.getString("source_facts_json")),
+                rs.getInt("personal_record_count"), rs.getInt("owned") == 1, rs.getString("image_url")
+        );
+    }
+
+    private UserProductView mapUserProduct(ResultSet rs, int rowNum) throws SQLException {
+        ProductView product = rs.getObject("id") == null ? null : mapProduct(rs, rowNum);
+        return new UserProductView(
+                rs.getLong("user_product_id"), product, rs.getString("custom_brand"),
+                rs.getString("custom_name"), rs.getString("custom_category"), rs.getString("memo"),
+                rs.getString("added_at")
+        );
+    }
+
+    private RoutineView mapRoutine(ResultSet rs) throws SQLException {
+        long routineId = rs.getLong("id");
+        List<RoutineItemView> items = jdbc.query("""
+                SELECT ri.user_product_id, ri.time_slot, ri.position, ri.frequency,
+                       COALESCE(p.name, up.custom_name) AS product_name,
+                       COALESCE(p.brand, up.custom_brand, '') AS brand,
+                       COALESCE(p.category, up.custom_category, '기타') AS category
+                  FROM routine_item ri
+                  JOIN user_product up ON up.id = ri.user_product_id
+                  LEFT JOIN product p ON p.id = up.product_id
+                 WHERE ri.routine_id = ?
+                 ORDER BY ri.position
+                """, (itemRs, rowNum) -> new RoutineItemView(
+                itemRs.getLong("user_product_id"), itemRs.getString("product_name"),
+                itemRs.getString("brand"), itemRs.getString("category"),
+                itemRs.getString("time_slot"),
+                itemRs.getInt("position"), itemRs.getString("frequency")
+        ), routineId);
+        return new RoutineView(routineId, rs.getString("name"), rs.getString("day_part"),
+                rs.getString("status"), rs.getString("started_at"), items);
+    }
+
+    private ExperienceView mapExperience(ResultSet rs) throws SQLException {
+        long id = rs.getLong("id");
+        String subjectType = rs.getString("subject_type");
+        Long routineId = nullableLong(rs, "routine_id");
+        Long userProductId = nullableLong(rs, "user_product_id");
+        RoutineView routine = routineId == null ? null : findRoutine(routineId).orElse(null);
+        UserProductView product = userProductId == null ? null : findUserProduct(userProductId).orElse(null);
+        String startedAt = rs.getString("started_at");
+        String reviewDueAt = rs.getString("review_due_at");
+        int day = Math.max(1, daysBetween(startedAt, nowSql()) + 1);
+        int untilReview = daysBetween(nowSql(), reviewDueAt);
+        String subtitle = subjectType.equals("ROUTINE") && routine != null
+                ? routine.items().stream().map(RoutineItemView::productName).limit(2).reduce((a, b) -> a + " · " + b).orElse("")
+                    + (routine.items().size() > 2 ? " 외 " + (routine.items().size() - 2) + "개" : "")
+                : product == null ? "제품 경험" : product.displayName();
+        return new ExperienceView(
+                id, subjectType, routineId, userProductId, rs.getString("title"), subtitle,
+                rs.getString("status"), startedAt, reviewDueAt, day, Math.max(0, untilReview),
+                untilReview <= 0, routine, product, findLatestRecordForSession(id).orElse(null)
+        );
+    }
+
+    private ExperienceRecordView mapExperienceRecord(ResultSet rs, int rowNum) throws SQLException {
+        long id = rs.getLong("id");
+        List<String> tags = jdbc.query("SELECT label FROM experience_tag WHERE record_id = ? ORDER BY label",
+                (tagRs, tagRow) -> tagRs.getString(1), id);
+        return new ExperienceRecordView(
+                id, nullableLong(rs, "session_id"), nullableLong(rs, "user_product_id"),
+                rs.getString("product_name"), rs.getString("sentiment"), rs.getString("note"),
+                rs.getString("discomfort"), rs.getString("adherence"), tags, rs.getString("created_at")
+        );
+    }
+
+    private PatternView mapPattern(ResultSet rs) throws SQLException {
+        long id = rs.getLong("id");
+        List<PatternEvidenceView> evidence = jdbc.query("""
+                SELECT pe.polarity, er.id AS record_id, er.note, er.sentiment, er.created_at,
+                       COALESCE(p.name, up.custom_name, es.title) AS product_name
+                  FROM pattern_evidence pe
+                  JOIN experience_record er ON er.id = pe.record_id
+                  LEFT JOIN user_product up ON up.id = er.user_product_id
+                  LEFT JOIN product p ON p.id = up.product_id
+                  LEFT JOIN experience_session es ON es.id = er.session_id
+                 WHERE pe.pattern_id = ? ORDER BY er.created_at DESC
+                """, (evidenceRs, rowNum) -> new PatternEvidenceView(
+                evidenceRs.getLong("record_id"), evidenceRs.getString("product_name"),
+                evidenceRs.getString("note"), evidenceRs.getString("sentiment"),
+                evidenceRs.getString("polarity"), evidenceRs.getString("created_at")
+        ), id);
+        int supports = (int) evidence.stream().filter(item -> item.polarity().equals("SUPPORTS")).count();
+        int contradicts = evidence.size() - supports;
+        return new PatternView(id, rs.getString("title"), rs.getString("summary"),
+                rs.getString("confidence_note"), supports, contradicts, evidence);
+    }
+
+    private List<String> parseStringList(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    private List<ProductHighlight> parseProductHighlights(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    private List<ProductFact> parseSourceFacts(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    private static Long nullableLong(ResultSet rs, String column) throws SQLException {
+        long value = rs.getLong(column);
+        return rs.wasNull() ? null : value;
+    }
+
+    private static Long nullableLong(Object value) {
+        return value == null ? null : ((Number) value).longValue();
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static int daysBetween(String from, String to) {
+        try {
+            LocalDateTime start = LocalDateTime.parse(from.replace(' ', 'T'));
+            LocalDateTime end = LocalDateTime.parse(to.replace(' ', 'T'));
+            return (int) ChronoUnit.DAYS.between(start.toLocalDate(), end.toLocalDate());
+        } catch (Exception ignored) {
+            return 0;
+        }
+    }
+
+    private static String nowSql() {
+        return LocalDateTime.now(SEOUL).withNano(0).toString().replace('T', ' ');
+    }
+
+    private static List<String> initialQuickReplies(String mode) {
+        if ("RESCUE".equals(mode)) return List.of("심하거나 빠르게 악화되진 않아요", "잘 모르겠어요", "빠르게 심해지고 있어요");
+        if ("PRODUCT".equals(mode)) return List.of("현재 루틴과 겹쳐?", "비슷한 내 기록 보여줘", "써보면 뭘 기록할까?");
+        if ("RECOMMEND".equals(mode)) return List.of("1번 후보를 자세히 볼래", "후보들의 차이는 뭐야?", "내 기록이 부족한 부분은?");
+        if ("PATTERN".equals(mode)) return List.of("반대 기록도 보여줘", "다음 제품에 어떻게 써?", "이 패턴 숨기기");
+        return List.of("내 최근 기록 요약해줘", "다음에 볼 제품 기준은?", "불편했던 경험 찾기");
+    }
+
+    private String writeJson(List<String> values) {
+        try {
+            return objectMapper.writeValueAsString(values);
+        } catch (Exception ignored) {
+            return "[]";
+        }
+    }
+
+    private long userId() {
+        return currentUser.id();
+    }
+}

@@ -1,0 +1,39 @@
+services:
+  skn-api:
+    image: ${SKN_IMAGE:?SKN_IMAGE is required}
+    container_name: skn-api
+    restart: unless-stopped
+    user: ${SKN_RUNTIME_UID:?SKN_RUNTIME_UID is required}:${SKN_RUNTIME_GID:?SKN_RUNTIME_GID is required}
+    env_file:
+      - ${SKN_ENV_FILE:?SKN_ENV_FILE is required}
+    environment:
+      PORT: '8080'
+      SKN_DB_PATH: /app/data/skn.db
+      TEST_HARNESS_ENABLED: 'false'
+    volumes:
+      - ${SKN_DATA_DIR:?SKN_DATA_DIR is required}:/app/data
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --show-error, http://127.0.0.1:8080/actuator/health]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+networks:
+  edge:
+    external: true
+    name: edge

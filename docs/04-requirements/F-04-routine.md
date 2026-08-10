@@ -1,6 +1,6 @@
 # F-04 루틴·사용 맥락 요구사항
 
-[Feature #160](https://github.com/sksksksksksss/skn-app/issues/160)
+[Feature #160](https://github.com/skn-labs/app/issues/160)
 
 ## P0
 

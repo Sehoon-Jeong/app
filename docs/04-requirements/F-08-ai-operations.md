@@ -1,6 +1,6 @@
 # F-08 AI·보안·운영 요구사항
 
-[Feature #164](https://github.com/sksksksksksss/skn-app/issues/164)
+[Feature #164](https://github.com/skn-labs/app/issues/164)
 
 ## P0
 
@@ -12,7 +12,7 @@
 | AI-04 | AI가 실패해도 제품·루틴·경험 원문·사용자 메시지는 남고 직접 기록과 재시도를 제공한다. | 외부 장애가 개인 기록을 잃게 하지 않는다. |
 | SEC-01 | 모든 개인 자식 데이터는 복합 FK와 서비스 검사로 같은 사용자 부모만 참조한다. | API 실수로도 교차 사용자 연결을 저장하지 않는다. |
 | SEC-02 | 사용자가 요청한 질문에 필요한 기록만 AI 공급자에게 보내고 메모·이미지 원문을 임의로 포함하지 않는다. | 최소 전송 원칙을 지킨다. |
-| OPS-01 | SQLite schema는 Flyway migration으로만 변경하고 FK·CHECK·UNIQUE·필요한 trigger를 켠다. | 모순된 경험과 상태를 저장하지 않는다. |
+| OPS-01 | 해커톤 구현의 SQLite schema 원본은 `schema.sql` 하나로 두고 FK·CHECK·UNIQUE를 켠다. 기존 사용자 데이터를 운영하기 시작할 때 Flyway를 도입한다. | 지금은 계약을 단순하게 유지하고, 운영 데이터가 생긴 뒤에는 안전하게 승격한다. |
 | OPS-02 | AI·Object Storage 호출은 DB 쓰기 트랜잭션 밖에서 수행한다. | SQLite 쓰기 잠금을 오래 잡지 않는다. |
 | OPS-03 | 한 번만 반영할 쓰기는 멱등 키를 쓰고 AI 제안 적용 전 기준 버전을 비교한다. | 중복 기록과 오래된 제안 적용을 막는다. |
 

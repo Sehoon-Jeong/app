@@ -1,0 +1,107 @@
+name: Deploy backend to OCI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - backend/**
+      - deploy/oci/**
+      - .github/workflows/deploy-backend.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-api
+  cancel-in-progress: false
+
+env:
+  API_HEALTH_URL: https://api.leafeep.com/actuator/health
+
+jobs:
+  test-and-deploy:
+    name: Test and deploy backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production-api
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Test backend and build executable JAR
+        working-directory: backend
+        run: |
+          chmod +x gradlew
+          ./gradlew test bootJar
+
+      - name: Assemble deployment artifact
+        run: |
+          install -d release
+          cp backend/build/libs/skn-api.jar release/skn-api.jar
+          cp backend/src/main/resources/schema.sql release/schema.sql
+          cp deploy/oci/Dockerfile release/Dockerfile
+          cp deploy/oci/compose.yml release/compose.yml
+          cp deploy/oci/backup_sqlite.py release/backup_sqlite.py
+          tar -C release -czf "skn-api-${GITHUB_SHA}.tgz" .
+
+      - name: Configure SSH
+        env:
+          OCI_SSH_PRIVATE_KEY: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          OCI_SSH_KNOWN_HOSTS: ${{ secrets.OCI_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$OCI_SSH_PRIVATE_KEY" > "$HOME/.ssh/oci_deploy_key"
+          printf '%s\n' "$OCI_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/oci_deploy_key" "$HOME/.ssh/known_hosts"
+
+      - name: Upload release
+        env:
+          OCI_SSH_HOST: ${{ secrets.OCI_SSH_HOST }}
+          OCI_SSH_USER: ${{ secrets.OCI_SSH_USER }}
+        run: |
+          scp \
+            -i "$HOME/.ssh/oci_deploy_key" \
+            -o IdentitiesOnly=yes \
+            "skn-api-${GITHUB_SHA}.tgz" \
+            "$OCI_SSH_USER@$OCI_SSH_HOST:/tmp/skn-api-${GITHUB_SHA}.tgz"
+
+      - name: Deploy and verify internal health
+        env:
+          OCI_SSH_HOST: ${{ secrets.OCI_SSH_HOST }}
+          OCI_SSH_USER: ${{ secrets.OCI_SSH_USER }}
+        run: |
+          ssh \
+            -i "$HOME/.ssh/oci_deploy_key" \
+            -o IdentitiesOnly=yes \
+            "$OCI_SSH_USER@$OCI_SSH_HOST" \
+            "bash -s -- '$GITHUB_SHA' '/tmp/skn-api-${GITHUB_SHA}.tgz'" \
+            < deploy/oci/deploy.sh
+
+      - name: Verify public health
+        run: |
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent --show-error \
+              --connect-timeout 5 --max-time 10 \
+              "$API_HEALTH_URL" > /dev/null; then
+              printf 'public health check passed\n'
+              exit 0
+            fi
+            printf 'public health check pending (%s/12)\n' "$attempt"
+            sleep 5
+          done
+          printf 'public health check failed\n' >&2
+          exit 1
+
+      - name: Remove runner credentials
+        if: always()
+        run: rm -f "$HOME/.ssh/oci_deploy_key" "$HOME/.ssh/known_hosts"

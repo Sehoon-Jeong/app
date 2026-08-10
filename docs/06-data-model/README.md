@@ -1,145 +1,116 @@
 # 데이터 모델과 사전
 
-SQLite 단일 API 인스턴스를 기준으로 한다. 실제 DDL은 Flyway migration이 원본이며 [DBML](./schema.dbml)은 사람이 읽는 관계 계약이다.
+현재 해커톤 구현은 단일 Spring Boot API와 SQLite 파일 하나를 쓴다. 실제 DDL의 원본은 [`schema.sql`](../../backend/src/main/resources/schema.sql)이고, [DBML](./schema.dbml)은 사람이 관계를 빠르게 읽기 위한 동기화된 표현이다.
 
-## 핵심 원칙
+Flyway는 놓지 않았다. 시연용 스키마가 자주 바뀌는 현재 단계에서는 하나의 기준 스키마로 복잡도를 줄였고, 실제 운영 배포를 시작할 때 마이그레이션을 도입한다.
 
-1. 개인 자식 행은 `user_id`와 부모 ID의 복합 FK로 같은 사용자 소유권을 보장한다.
-2. 사용자 원문과 AI 구조화·패턴을 분리한다. AI 결과가 원문을 덮지 않는다.
-3. 루틴 버전은 한 번의 실제 사용기간이며 ACTIVE 이후 수정하지 않는다.
-4. 회고 due는 일정일 뿐 결과가 아니다. 7일 미응답을 만족·불편 없음으로 추정하지 않는다.
-5. 전반적 인상, 불편 여부, 실제 사용 일치와 다음 행동을 서로 다른 필드로 저장한다.
-6. 패턴은 여러 경험을 참조하는 AI 해석이며 원본 근거·반대 근거·실행 버전을 가진다.
-7. AI 제안과 실제 적용 상태를 분리하고 적용 직전 기준 버전을 다시 확인한다.
-8. 외부 근거는 URL이 아니라 확인 당시 snapshot을 참조한다.
-9. SQLite JSON은 `TEXT + json_valid() + schema_version`을 쓰며 핵심 상태를 JSON에만 두지 않는다.
-
-## P0 핵심 관계
+## 핵심 관계
 
 ```mermaid
 erDiagram
-  USER ||--o{ USER_PRODUCT : owns
-  USER ||--o{ ROUTINE_VERSION : owns
-  ROUTINE_VERSION ||--o{ ROUTINE_ITEM : contains
-  USER_PRODUCT ||--o{ ROUTINE_ITEM : uses
-  ROUTINE_VERSION ||--o{ EXPERIENCE_REVIEW_SCHEDULE : schedules
-  USER ||--o{ EXPERIENCE_RECORD : writes
-  ROUTINE_VERSION o|--o{ EXPERIENCE_RECORD : contextualizes
-  USER_PRODUCT o|--o{ EXPERIENCE_RECORD : targets
-  EXPERIENCE_RECORD ||--o{ EXPERIENCE_OBSERVATION : contains
-  EXPERIENCE_RECORD ||--o{ PATTERN_EVIDENCE : supports
+  APP_USER ||--o| USER_ONBOARDING : completes
+  APP_USER ||--o{ USER_PRODUCT : owns
+  PRODUCT ||--o{ USER_PRODUCT : identifies
+  PRODUCT ||--|| PRODUCT_CATALOG_CONTENT : guides
+  PRODUCT ||--o{ PRODUCT_SOURCE_FACT : supports
+  APP_USER ||--o{ ROUTINE : owns
+  ROUTINE ||--o{ ROUTINE_ITEM : contains
+  USER_PRODUCT ||--o{ ROUTINE_ITEM : places
+  APP_USER ||--o{ EXPERIENCE_SESSION : starts
+  ROUTINE o|--o{ EXPERIENCE_SESSION : contextualizes
+  USER_PRODUCT o|--o{ EXPERIENCE_SESSION : targets
+  EXPERIENCE_SESSION ||--o{ EXPERIENCE_RECORD : receives
+  EXPERIENCE_RECORD ||--o{ EXPERIENCE_TAG : labels
+  ROUTINE ||--o{ COMPARISON_BASELINE : becomes
+  APP_USER ||--o{ PERSONAL_PATTERN : has
   PERSONAL_PATTERN ||--o{ PATTERN_EVIDENCE : connects
-  EXPERIENCE_RECORD o|--o{ COMPARISON_BASELINE_PERIOD : confirms
-  EXPERIENCE_RECORD o|--o{ RESCUE_CASE : starts
-  RESCUE_CASE ||--o{ RESCUE_PLAN : versions
-  ANALYSIS_REQUEST ||--o{ ANALYSIS_RUN : attempts
-  ANALYSIS_RUN ||--o{ ANALYSIS_EVIDENCE : cites
+  EXPERIENCE_RECORD ||--o{ PATTERN_EVIDENCE : supports
+  APP_USER ||--o{ CONVERSATION : chats
+  CONVERSATION ||--o{ CONVERSATION_MESSAGE : contains
+  CONVERSATION ||--o| RESCUE_PLAN : proposes
 ```
 
-## 엔터티 사전
+## 용어
 
-### 계정·제품
-
-| 테이블 | 의미 | 불변식 |
+| 테이블 | 의미 | 중요한 규칙 |
 | --- | --- | --- |
-| `app_user` | 계정과 시간대 | 정규화 이메일 유일, 전역 AI lock 없음 |
-| `idempotency_record` | 한 번만 반영할 쓰기 재시도 | 사용자·operation·key 유일 |
-| `product_version` | 같은 처방·용량·포장·시장의 출시판 | 검증 상태와 판매 상태 분리 |
-| `user_product` | 사용자가 보유·사용한 제품 | 카탈로그 미확인 제품도 입력 이름으로 존재 가능 |
-| `evidence_snapshot` | 확인 당시 외부 원문 | URL, 확인 시각, content hash 보존 |
+| `app_user` | 아이디·비밀번호 계정 | 아이디는 대소문자 무관 유일, 비밀번호는 BCrypt hash만 저장 |
+| `user_onboarding` | 최초 설정의 완료와 선택한 시작 방식 | 행이 있어야 온보딩 완료로 보며, 제품 개수와 무관하게 재접속 후에도 유지 |
+| `product` | 검색 가능한 카탈로그 제품 식별 정보 | 기존 `description`, `facts_json`은 호환용 legacy로 API·AI 근거에서 제외. `texture`는 비사실 가이드의 등록 제형 표시에만 사용 |
+| `product_catalog_content` | 모든 제품에 제공하는 제품 안내 | 제품명·category·등록 제형을 바탕으로 제품 종류·일반 사용법·특징을 설명하며, 적합성·효능·성분을 만들지 않고 생성 출처와 시각을 저장 |
+| `product_source_fact` | 출처를 다시 열 수 있는 제품 사실 | 출처명·URL·확인 시각이 모두 있는 행만 API와 AI의 `출처 확인 사실`로 노출 |
+| `user_product` | 사용자가 가진 화장품 | 카탈로그 제품 또는 사용자 직접 입력 이름 중 하나는 필수 |
+| `routine` | 특정 기간 실제로 사용한 조합 | 사용자별 `CURRENT` 하나, 수정은 기존 행 보존 후 새 행 생성 |
+| `routine_item` | 루틴의 제품·아침/저녁·순서·빈도 | 루틴 안에서 제품은 하나이며 `BOTH`로 아침·저녁 사용을 함께 표현 |
+| `experience_session` | 제품 하나 또는 루틴을 써보는 한 번의 기간 | 사용자별 `ACTIVE` 하나, 시작 7일 후가 기본 전체 확인 시점 |
+| `experience_record` | 만족·아쉬움·모름, 원문, 불편 여부 | 만족도와 불편함은 별도 축, 중복 제출은 `client_request_id`로 차단 |
+| `comparison_baseline` | Rescue 변경점 비교의 기준 루틴 | 7일 기록에서 불편함이 보고되지 않은 루틴을 현재 기준으로 연결 |
+| `personal_pattern` | 여러 경험에서 반복된 선호·차이의 표현 | 피부 타입이나 원인 판정이 아님 |
+| `pattern_evidence` | 패턴을 지지하거나 반대하는 원본 기록 | `SUPPORTS` 또는 `CONTRADICTS` |
+| `conversation` | 제품·패턴·Rescue·자율 질문을 담는 공통 채팅 | 모드만 다르고 UI와 메시지 계약은 공통 |
+| `conversation_message` | 사용자/AI 메시지 | AI 답변마다 동적 후속 입력 1~3개와 검증된 근거 참조를 JSON으로 저장 |
+| `rescue_plan` | 사용자 승인 전 루틴 제안 | 제안 기준 루틴가 현재 루틴과 같을 때만 적용 |
 
-### 루틴·경험
+## 상태 전이
 
-| 테이블 | 의미 | 불변식 |
-| --- | --- | --- |
-| `routine_version` | 한 번의 실제 사용기간의 제품 조합 | 사용자당 ACTIVE 하나, 과거 재활성화 금지 |
-| `routine_item` | 제품·아침/저녁·순서·빈도 | 같은 사용자의 `user_product`만 참조 |
-| `experience_review_schedule` | 기본 회고 due | SCHEDULED·COMPLETED·CANCELLED·MISSED, 결과의 원본이 아님 |
-| `experience_record` | 사용자가 남긴 경험 원본 | 제품 또는 루틴 중 하나 이상과 연결, 원문 불변 revision |
-| `experience_observation` | AI가 원문에서 추출한 관찰 | 사용자 표현 span과 schema/model 추적, 원문에 없는 사실 금지 |
-| `comparison_baseline_period` | Rescue 변경 비교에 쓰는 루틴 기간 | 실제 사용 일치와 불편 없음이 명시된 경험만 승격 가능 |
+### 사용 경험
 
-`experience_record`의 주요 축은 다음과 같다.
+```text
+ACTIVE
+├─ 7일 전체 경험 저장 → COMPLETED
+├─ 사용자가 마침 → COMPLETED
+└─ 새 경험·루틴·Rescue 적용 → CANCELLED
+```
 
-| 축 | 값 | 의미 |
-| --- | --- | --- |
-| `sentiment` | `LIKED`, `DISAPPOINTED`, `UNSURE` | 전반적 개인 인상 |
-| `discomfort` | `NONE_REPORTED`, `REPORTED`, `UNKNOWN` | 불편 관찰 여부 |
-| `adherence` | `MATCHED`, `PARTIAL`, `MISMATCHED`, `UNKNOWN` | 기록된 사용 맥락과 실제 사용 일치 |
-| `source` | `IN_USE`, `DAY_7_REVIEW`, `PRODUCT_NOTE`, `RESCUE` | 기록이 생긴 진입점 |
+경험 기간 중에 느낌을 여러 번 남겨도 `ACTIVE`를 유지한다. 7일 확인 기록을 남기면 서버가 별도 종료 버튼 없이 완료한다.
 
-`LIKED + REPORTED`와 `DISAPPOINTED + NONE_REPORTED`를 모두 허용한다. 만족과 불편은 같은 축이 아니다.
+### Rescue 제안
 
-### 개인 패턴
+```text
+PROPOSED → APPLIED
+         → DECLINED
+BLOCKED  (안전 경계·비교 정보 부족)
+```
 
-| 테이블 | 의미 | 불변식 |
-| --- | --- | --- |
-| `personal_pattern` | AI가 여러 경험을 연결한 해석 revision | 상태·분석 run·근거 수·문구·불확실성 저장 |
-| `pattern_evidence` | 패턴과 경험의 관계 | `SUPPORT`, `OPPOSE`, `UNCERTAIN` 중 하나 |
-| `pattern_feedback` | 사용자의 관련성 피드백 | 패턴 revision과 사용자당 하나의 최신 피드백 |
+AI가 적용했다고 말하는 것으로는 상태가 바뀌지 않는다. `/rescue/apply`를 사용자가 누르면 서버가 기준 루틴을 다시 검사한 뒤 새 루틴·새 경험을 함께 만든다.
 
-P0에서는 서로 다른 experience record 2건 이상이 연결돼야 패턴 후보를 노출한다. 같은 제품 반복과 서로 다른 제품 반복을 구분한다. 근거 한 건은 `experience_observation`으로만 표시한다.
+## 무결성과 소유권
 
-원문이 수정·삭제되거나 사용자가 `관련 없음`을 표시하면 현재 패턴을 덮어쓰지 않고 새 revision을 계산한다. 과거 revision과 analysis run은 감사 이력으로 남긴다.
+- 모든 개인 조회는 현재 세션의 `user_id`를 조건으로 사용한다.
+- 다른 사용자의 `user_product`, `routine`, `experience`, `pattern`, `conversation`은 ID를 알아도 조회·적용할 수 없다.
+- 외래 키는 모든 SQLite 연결에서 켜고, 사용자 삭제 시 개인 행은 cascade한다.
+- 사용자별 현재 루틴, 활성 경험, 열린 비교 기준은 부분 유니크 인덱스로 하나만 허용한다.
+- AI 호출은 DB 쓰기 트랜잭션 밖에서 수행하고, 메시지 입력을 먼저 저장해 실패해도 잃지 않는다.
 
-### Rescue
+## JSON으로 두는 것
 
-| 테이블 | 의미 | 불변식 |
-| --- | --- | --- |
-| `rescue_case` | 불편 경험에서 시작한 한 대화 | 시작 경험·ACTIVE·비교 기준을 snapshot으로 고정 |
-| `rescue_message` | 순서가 보존된 채팅 메시지 | assistant는 생성 analysis run 참조 |
-| `rescue_safety_event` | 순위와 제안을 멈춘 안전 경계 | 사용자 메시지·규칙/모델 버전·조치 보존 |
-| `rescue_plan` | 버전화된 다음 루틴 제안 | 기준 ACTIVE가 같을 때만 적용 |
-| `rescue_change` | plan의 순서 있는 구조 변경 | case가 아니라 plan을 참조 |
+해커톤 범위의 JSON TEXT는 아래처럼 표시용 배열과 AI 메시지 보조 데이터에만 쓴다.
 
-사용자 승인 시 짧은 트랜잭션에서 기준 ACTIVE를 비교하고 새 루틴을 만든다. AI 호출 중 사용자 쓰기 lock이나 DB 쓰기 트랜잭션을 유지하지 않는다.
+- `product_catalog_content.usage_timing_json`: 사용 시점 문구 배열
+- `product_catalog_content.usage_tips_json`: API의 `usageInstructions`에 대응하는 일반 사용법 배열. 기존 DB 호환을 위해 물리 컬럼명은 유지
+- `product_catalog_content.observation_points_json`: API의 `highlights`에 대응하는 `title`, `detail` 제품 특징 배열. 기존 DB 호환을 위해 물리 컬럼명은 유지
+- `conversation_message.suggested_replies_json`: AI 답변의 다음 추천 입력 1~3개
+- `conversation_message.evidence_refs_json`: 서버 맥락에 실제로 있던 근거 ID만 저장
 
-### AI 실행과 근거
+`product.facts_json`은 과거 fixture를 기존 SQLite와 함께 읽기 위해 남겨둔 값이다. 근거 정보가 없으므로 `product_source_fact`로 자동 복사하지 않고 Product API와 AI 컨텍스트에서 제외한다.
 
-| 테이블 | 의미 | 불변식 |
-| --- | --- | --- |
-| `analysis_request` | 하나의 논리적 AI 요청 | 입력 snapshot·hash·schema와 채택 run 보존 |
-| `analysis_run` | 모델 호출 한 번 | 모델·prompt·출력·검증 오류·token 불변 보존 |
-| `conversation` | 제품·패턴·Rescue를 잇는 공통 채팅 | kind는 맥락이며 UI는 하나 |
-| `analysis_evidence` | AI 주장과 정확히 한 근거 연결 | 외부 snapshot 또는 개인 experience/pattern/rescue 중 하나 |
-| `ai_job` | 실행 queue와 worker lease | 분석 내용의 원본이 아님 |
+## 제품 상세의 권위 순서
 
-권위 순서는 `사용자 원문 → 검증된 구조화/AI proposal → 사용자가 확정한 상태`다. AI 원본 출력은 사용자 사실이 아니다.
+1. `product`는 이름·브랜드·category 같은 식별 정보를 제공한다.
+2. `product_catalog_content`는 제품명·category·등록 제형을 바탕으로 제품이 무엇인지, 루틴의 일반 위치와 사용법, 구분 가능한 특징을 설명하는 정적 가이드다. `summary`에는 제품명과 제형이 포함되고, `highlights`는 제형을 첫 항목으로 제공한다. SQL fallback은 `EDITORIAL`, 생성 파이프라인 성공 결과만 `AI_GENERATED`이며 둘 다 출처 확인 사실이나 개인 적합 판정이 아니다.
+3. `product_source_fact`만 출처 확인 사실이다. 근거 행이 없으면 API의 `facts`는 빈 배열이다.
+4. `owned`, 연결 경험 수와 원문은 사용자별 조회에서 계산하며 정적 카탈로그에 저장하지 않는다.
 
-## DB 제약
+API의 `verified`는 legacy `product.verified=1`만으로 true가 되지 않는다. source-backed fact가 하나 이상 있을 때만 public projection에서 true가 되어, 기존 seed 11건에 근거 없는 확인 badge가 나타나지 않는다.
 
-### 부분 유니크
+기존 DB에서는 `schema.sql` 마지막 backfill이 가이드가 없는 제품을 채운다. 생성 출처와 관계없이 과거 기록 유도형 문구가 남은 가이드는 새 제품 안내 계약의 `EDITORIAL` fallback으로 교체한다. 새 계약으로 생성된 `AI_GENERATED` 가이드와 개인 기록은 덮어쓰거나 초기화하지 않는다.
 
-- 사용자당 ACTIVE routine 하나
-- 사용자당 열린 comparison baseline period 하나
-- 사용자당 열린 Rescue case 하나
-- Rescue case당 APPLIED plan 하나
-- 사용자·job type·input hash당 열린 AI job 하나
+루틴 순서·경험 결과·Rescue 적용 상태 같은 핵심 상태는 JSON 안에만 두지 않는다.
 
-### CHECK와 trigger
+## 이후 운영 배포 전에 보강할 것
 
-- 모든 상태·역할·주요 type은 허용 값만 저장한다.
-- 순서·근거 수·token은 음수가 아니다.
-- 필수 JSON은 `json_valid()`를 통과한다.
-- `experience_record`는 제품 또는 루틴 중 하나 이상을 가진다.
-- 패턴 근거는 같은 사용자 experience만 참조한다.
-- ACTIVE 이후 routine 핵심 필드와 item의 UPDATE·DELETE를 거절한다.
-- 회고 schedule 완료와 experience 생성은 멱등하게 연결한다.
-- 비교 기준 승격 조건과 Rescue plan 기준 루틴을 전용 서비스와 trigger가 함께 검증한다.
-
-## 인덱스
-
-- 사용자별 ACTIVE routine과 버전 이력
-- 사용자별 최신 experience와 제품·루틴별 experience
-- due가 지난 review schedule
-- 사용자별 현재 pattern과 pattern evidence
-- 사용자별 열린 Rescue case
-- worker의 QUEUED·만료 RUNNING job
-- 제품별 최신 evidence snapshot
-
-## 시간과 삭제
-
-- 실제 시점은 UTC ISO 8601, 사용자에게 보여주는 지역 날짜는 `YYYY-MM-DD`, 시간대는 IANA 이름을 쓴다.
-- 7일 due는 루틴 활성화 당시 시간대로 계산하고 이후 시간대 변경으로 소급 수정하지 않는다.
-- 계정 영구 삭제는 모든 개인 경험·패턴·대화·AI 실행과 원본 객체를 제거한다.
-- 제품 카탈로그와 외부 근거는 개인 기록이 참조할 수 있어 상태와 snapshot으로 보존한다.
+1. Flyway 마이그레이션과 기존 DB 승격 검증
+2. 개인 자식 행의 `user_id`를 복합 FK로 더 강하게 결박
+3. AI 요청·실행·토큰·프롬프트 버전 이력 테이블
+4. 패턴 재생성 및 revision 이력
+5. 카탈로그 출처 snapshot과 제품 리뉴얼 버전

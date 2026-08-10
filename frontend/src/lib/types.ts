@@ -1,0 +1,98 @@
+export type Auth = { userId: number; username: string; displayName: string; demo: boolean; onboardingCompleted: boolean }
+export type QuickAccount = { username: string; displayName: string }
+
+export type ProductGuide = {
+  summary: string;
+  routineStep: string;
+  usageType: string;
+  usageTiming: string[];
+  usageInstructions: string[];
+  highlights: { title: string; detail: string }[];
+  origin: 'AI_GENERATED' | 'EDITORIAL';
+  generatedAt: string;
+}
+
+export type ProductFact = {
+  type: string;
+  text: string;
+  sourceLabel: string;
+  sourceUrl: string;
+  checkedAt: string;
+}
+
+export type Product = {
+  id: number; brand: string; name: string; category: string; volume?: string;
+  versionLabel?: string; description?: string; texture?: string; verified: boolean;
+  guide?: ProductGuide | null; facts: ProductFact[];
+  personalRecordCount: number; owned: boolean; imageUrl?: string;
+}
+
+export type ProductPage = { items: Product[]; nextCursor?: string; hasMore: boolean }
+
+export type UserProduct = {
+  id: number; product?: Product; customBrand?: string; customName?: string;
+  customCategory?: string; memo?: string; addedAt: string;
+}
+
+export type RoutineItem = {
+  userProductId: number; productName: string; brand: string; category: string;
+  timeSlot: 'MORNING' | 'EVENING' | 'BOTH'; position: number; frequency: string;
+}
+
+export type RoutineItemInput = { userProductId: number; timeSlot: 'MORNING' | 'EVENING' | 'BOTH'; frequency: string }
+
+export type Routine = {
+  id: number; name: string; dayPart: 'MORNING' | 'EVENING' | 'ANYTIME';
+  status: string; startedAt: string; items: RoutineItem[];
+}
+
+export type ExperienceRecord = {
+  id: number; sessionId?: number; userProductId?: number; productName: string;
+  sentiment: 'LIKED' | 'DISAPPOINTED' | 'UNSURE'; note: string;
+  discomfort: 'NOT_REPORTED' | 'REPORTED' | 'UNKNOWN'; adherence: string;
+  tags: string[]; createdAt: string;
+}
+
+export type Experience = {
+  id: number; subjectType: 'ROUTINE' | 'PRODUCT'; routineId?: number; userProductId?: number;
+  title: string; subtitle: string; status: string; startedAt: string; reviewDueAt: string;
+  day: number; daysUntilReview: number; reviewDue: boolean; routine?: Routine;
+  product?: UserProduct; latestRecord?: ExperienceRecord;
+}
+
+export type PatternEvidence = {
+  recordId: number; productName: string; note: string; sentiment: string;
+  polarity: 'SUPPORTS' | 'CONTRADICTS'; createdAt: string;
+}
+
+export type Pattern = {
+  id: number; title: string; summary: string; confidenceNote: string;
+  supportingCount: number; contradictingCount: number; evidence: PatternEvidence[];
+}
+
+export type Home = {
+  displayName: string; currentExperience?: Experience; patterns: Pattern[];
+  productCount: number; recordCount: number; primaryAction: string;
+}
+
+export type Message = {
+  id: number; role: 'USER' | 'ASSISTANT'; content: string; suggestedReplies: string[];
+  evidenceRefs: string[];
+  status: 'READY' | 'FALLBACK' | 'FAILED'; createdAt: string;
+}
+
+export type RescuePlan = {
+  id: number; baseRoutineId?: number; title: string; rationale: string;
+  removeUserProductId?: number; removeProductName?: string;
+  status: 'PROPOSED' | 'APPLIED' | 'BLOCKED' | 'DECLINED'; appliedExperienceId?: number;
+}
+
+export type Conversation = {
+  id: number; mode: 'GENERAL' | 'PRODUCT' | 'RECOMMEND' | 'PATTERN' | 'RESCUE'; productId?: number;
+  experienceId?: number; status: string; messages: Message[]; quickReplies: string[];
+  rescuePlan?: RescuePlan; safetyBoundary: boolean;
+}
+
+export type SavedRecord = { record: ExperienceRecord; linkedPatternId?: number; rescueSuggested: boolean }
+export type OnboardingResult = { user: Auth; experience?: Experience }
+export type Problem = { detail?: string; code?: string; status?: number; retryable?: boolean }

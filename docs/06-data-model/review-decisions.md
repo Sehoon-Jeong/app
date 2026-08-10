@@ -1,63 +1,52 @@
 # 데이터 모델 결정 기록
 
-## 실행 환경
+## 2026-08-10 · 해커톤 구현 범위
 
-- 운영 DB는 PostgreSQL이 아니라 단일 API 인스턴스의 SQLite다.
-- 실제 schema는 Flyway migration이 원본이고 DBML은 관계 설명이다.
-- SQLite 모든 연결에서 FK를 켠다.
-- 외부 AI 호출 동안 DB 쓰기 트랜잭션이나 사용자 전체 lock을 유지하지 않는다.
+- DB는 단일 Spring Boot 인스턴스가 쓰는 SQLite 파일 하나다.
+- 실제 DDL의 원본은 [`schema.sql`](../../backend/src/main/resources/schema.sql)이다.
+- 지금은 운영 사용자 데이터가 없으므로 Flyway를 두지 않는다. 운영 배포와 기존 DB 승격이 필요해질 때 도입한다.
+- 모든 연결은 FK를 켜고, AI 호출 동안 쓰기 트랜잭션을 유지하지 않는다.
 
-## 2026-08-10 · 제품 정체성 변경
+## 제품 모델
 
-기존 `7일 평가 → 불편 없음이면 안정 루틴 승격` 모델을 `경험 기록 → 개인 패턴 → 다음 탐색 재사용` 모델로 바꿨다.
+이전의 `7일 심사 → 안정 루틴 승격`을 `사용 경험 → 반복 패턴 → 다음 탐색 재사용`으로 바꿨다.
 
-| 이전 | 변경 |
+| 결정 | 이유 |
 | --- | --- |
-| `routine_assessment`가 불편 여부 중심 결과를 저장 | `experience_record`가 만족·아쉬움·모름, 불편 여부, 원문과 실제 사용 일치를 분리 저장 |
-| `routine_assessment_schedule`이 평가를 예약 | `experience_review_schedule`이 기본 회고 due만 예약하며 결과를 의미하지 않음 |
-| `stable_routine_period`가 성공 루틴을 표현 | `comparison_baseline_period`가 Rescue 변경 비교 기준만 표현 |
-| 결과 한 건이 다음 추천 근거가 됨 | `personal_pattern`이 여러 experience와 반대 evidence를 연결해 탐색 근거가 됨 |
-| AI 해석이 assessment를 직접 참조 | 모든 주장이 원본 experience 또는 pattern revision을 참조 |
+| `routine`은 실제 조합을 바꿀 때마다 새 행으로 만든다. | 과거 경험의 사용 조건을 덮지 않는다. |
+| `experience_session`은 제품 하나 또는 루틴을 써보는 기간이다. | 루틴 입력 없이 남긴 짧은 제품 경험도 보존한다. |
+| 만족도와 피부 불편을 `experience_record`의 별도 필드로 둔다. | 불편이 없어도 아쉬울 수 있고, 반대도 가능하다. |
+| 7일은 `review_due_at`일 뿐 안전·효능 판정 기준이 아니다. | 기억을 한 번 회수하는 UX 시점으로만 쓴다. |
+| 비교 기준 루틴은 `comparison_baseline`으로 별도 연결한다. | Rescue의 변경 비교에만 쓰고 성공 루틴으로 과장하지 않는다. |
+| 패턴은 `personal_pattern`과 지지·반대 `pattern_evidence`로 표현한다. | 한 번의 경험을 피부 타입이나 영구 취향으로 만들지 않는다. |
+| 제품·패턴·Rescue는 공통 `conversation`과 메시지 계약을 쓴다. | 화면마다 다른 챗봇과 상태 모델을 만들지 않는다. |
+| Rescue 적용은 기존 루틴을 수정하지 않고 새 루틴과 새 경험을 만든다. | 제안 전후와 반복 Rescue 이력을 분리한다. |
 
-기존 이름을 호환 alias로 유지하지 않는다. 아직 운영 migration과 데이터가 없으므로 새 의미로 첫 migration을 만든다.
+## AI 데이터 경계
 
-## 유지한 무결성 결정
+- 사용자 메시지를 먼저 저장한 뒤 AI를 호출한다.
+- AI에는 서버가 선별한 source-backed 제품 사실, 루틴, 평가·태그처럼 구조화된 경험만 전달한다.
+- 모든 제품에는 `product_catalog_content` 가이드가 있지만, 가이드는 출처 확인 사실이 아니다. 제품명·category·등록 제형을 바탕으로 제품 종류, 일반 사용법(`usageInstructions`), 제품 특징(`highlights`)을 설명하는 정적 콘텐츠로 명시한다.
+- legacy `product.facts_json`, `description`은 출처가 없으므로 Product API의 facts와 AI의 `확인 사실`에서 제외한다. `texture`는 비사실 제품 가이드의 등록 제형 표시에만 사용하며 source-backed fact로 승격하지 않는다.
+- SQL fallback 가이드는 `EDITORIAL`, 별도 생성 파이프라인 성공 결과만 `AI_GENERATED`로 저장한다.
+- 기존 DB의 구 계약 가이드가 기록·비교·느낌을 유도하는 문구를 포함하면 과거 origin과 관계없이 `EDITORIAL` fallback으로 교체한다. 새 계약의 AI 재생성을 기다리는 동안 구 화면을 노출하지 않기 위한 호환 규칙이다.
+- AI 답변의 `evidenceRefs`는 서버 맥락에 실제로 포함된 ID만 저장한다.
+- AI 답변은 다음 추천 입력 1~3개를 함께 저장한다.
+- AI가 실패하면 사용자 메시지와 기존 기록은 남고 fallback 답변을 추가한다.
 
-1. 모든 개인 자식 행은 `(id, user_id)` 복합 FK로 소유권을 검증한다.
-2. `routine_version.status=ACTIVE`만 현재 루틴의 원본이며 사용자당 하나다.
-3. 한 routine version은 한 번의 실제 사용기간이고 ACTIVE 이후 item을 수정하지 않는다.
-4. 과거 루틴으로 돌아가도 새 버전으로 복사한다.
-5. AI `analysis_request`와 모델 시도 `analysis_run`을 분리한다.
-6. Rescue plan은 생성 당시 기준 ACTIVE가 여전히 같을 때만 적용한다.
-7. 제품 검증 상태와 판매 상태를 분리한다.
-8. 외부 근거는 URL identity와 시점 snapshot을 분리한다.
-9. SQLite JSON은 TEXT와 `json_valid()`를 사용하고 핵심 상태는 정규화한다.
-10. 모든 주요 FK 조회 인덱스와 부분 유니크 인덱스를 migration에 명시한다.
+## 현재 무결성
 
-## 첫 migration에 필요한 부분 유니크
+1. 개인 조회와 쓰기는 세션의 `user_id`를 항상 조건으로 사용한다.
+2. 사용자별 현재 루틴, 활성 경험, 열린 비교 기준은 부분 유니크 인덱스로 하나만 허용한다.
+3. 루틴 항목의 위치와 제품은 한 루틴 안에서 중복될 수 없다.
+4. 경험·메시지 생성은 `client_request_id`로 중복 제출을 막는다.
+5. Rescue 적용 시 제안이 만들어진 기준 루틴과 현재 루틴을 다시 비교한다.
+6. 일반 계정은 데모 초기화 API를 호출할 수 없다.
 
-```sql
-CREATE UNIQUE INDEX uq_routine_one_active
-ON routine_version(user_id)
-WHERE status = 'ACTIVE';
+## 운영 배포 전에 추가할 것
 
-CREATE UNIQUE INDEX uq_baseline_one_open
-ON comparison_baseline_period(user_id)
-WHERE ended_at IS NULL;
-
-CREATE UNIQUE INDEX uq_rescue_one_open
-ON rescue_case(user_id)
-WHERE status IN ('CONVERSATION', 'ANALYZING', 'READY');
-
-CREATE UNIQUE INDEX uq_pattern_one_current_revision
-ON personal_pattern(user_id, pattern_key)
-WHERE status IN ('CANDIDATE', 'ACTIVE');
-```
-
-## 아직 만들지 않는 것
-
-- PostgreSQL, RLS와 분산 lock
-- formula version과 SKU의 완전 분리
-- 모든 피부 상태·사용감을 통제하는 정적 enum 사전
-- 다른 사용자 cohort 기반 피부 적합 추정
-- 브랜드 파일럿 전용 연구 데이터 모델
+- Flyway와 기존 SQLite 승격 테스트
+- 개인 자식 행의 소유권을 복합 FK로 한 번 더 보장
+- AI request/run, 토큰, 프롬프트 버전 감사 이력
+- 카탈로그 출처 snapshot과 제품 리뉴얼 버전
+- 패턴 수정·숨김·재생성 revision
