@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  API_HEALTH_URL: https://api.leafeep.com/actuator/health
+  API_HEALTH_URL: http://api.leafeep.com/actuator/health
 
 jobs:
   test-and-deploy:
