@@ -1,6 +1,6 @@
 # F-07 홈·기록·패턴 요구사항
 
-[Feature #163](https://github.com/sksksksksksss/service/issues/163)
+[Feature #163](https://github.com/sksksksksksss/skn-app/issues/163)
 
 ## P0
 

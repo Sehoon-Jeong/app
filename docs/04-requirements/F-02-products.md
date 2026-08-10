@@ -1,6 +1,6 @@
 # F-02 카탈로그·내 화장품 요구사항
 
-[Feature #158](https://github.com/sksksksksksss/service/issues/158)
+[Feature #158](https://github.com/sksksksksksss/skn-app/issues/158)
 
 ## P0
 

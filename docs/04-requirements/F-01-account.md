@@ -1,6 +1,6 @@
 # F-01 계정·데이터 경계 요구사항
 
-[Feature #157](https://github.com/sksksksksksss/service/issues/157)
+[Feature #157](https://github.com/sksksksksksss/skn-app/issues/157)
 
 ## P0
 

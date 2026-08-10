@@ -276,7 +276,7 @@
         const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml' }));
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'skincause-user-flow.svg';
+        link.download = 'skn-user-flow.svg';
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         notify('SVG 파일을 내려받았습니다.');

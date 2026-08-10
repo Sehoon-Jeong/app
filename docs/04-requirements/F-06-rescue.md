@@ -1,6 +1,6 @@
 # F-06 AI Rescue 요구사항
 
-[Feature #162](https://github.com/sksksksksksss/service/issues/162)
+[Feature #162](https://github.com/sksksksksksss/skn-app/issues/162)
 
 ## P0
 

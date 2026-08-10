@@ -1,6 +1,6 @@
 # F-03 AI 제품 탐색 요구사항
 
-[Feature #159](https://github.com/sksksksksksss/service/issues/159)
+[Feature #159](https://github.com/sksksksksksss/skn-app/issues/159)
 
 ## P0
 

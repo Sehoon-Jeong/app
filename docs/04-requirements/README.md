@@ -4,13 +4,13 @@
 
 | 순서 | 영역 | 요구사항 | Feature |
 | --- | --- | --- | --- |
-| 1 | 계정·데이터 경계 | [F-01](./F-01-account.md) | [#157](https://github.com/sksksksksksss/service/issues/157) |
-| 2 | 카탈로그·내 화장품 | [F-02](./F-02-products.md) | [#158](https://github.com/sksksksksksss/service/issues/158) |
-| 3 | AI 제품 탐색 | [F-03](./F-03-product-decisions.md) | [#159](https://github.com/sksksksksksss/service/issues/159) |
-| 4 | 루틴·사용 맥락 | [F-04](./F-04-routine.md) | [#160](https://github.com/sksksksksksss/service/issues/160) |
-| 5 | 경험 기록·회고 | [F-05](./F-05-observation.md) | [#161](https://github.com/sksksksksksss/service/issues/161) |
-| 6 | AI Rescue | [F-06](./F-06-rescue.md) | [#162](https://github.com/sksksksksksss/service/issues/162) |
-| 7 | 홈·기록·패턴 | [F-07](./F-07-home-history.md) | [#163](https://github.com/sksksksksksss/service/issues/163) |
+| 1 | 계정·데이터 경계 | [F-01](./F-01-account.md) | [#157](https://github.com/sksksksksksss/skn-app/issues/157) |
+| 2 | 카탈로그·내 화장품 | [F-02](./F-02-products.md) | [#158](https://github.com/sksksksksksss/skn-app/issues/158) |
+| 3 | AI 제품 탐색 | [F-03](./F-03-product-decisions.md) | [#159](https://github.com/sksksksksksss/skn-app/issues/159) |
+| 4 | 루틴·사용 맥락 | [F-04](./F-04-routine.md) | [#160](https://github.com/sksksksksksss/skn-app/issues/160) |
+| 5 | 경험 기록·회고 | [F-05](./F-05-observation.md) | [#161](https://github.com/sksksksksksss/skn-app/issues/161) |
+| 6 | AI Rescue | [F-06](./F-06-rescue.md) | [#162](https://github.com/sksksksksksss/skn-app/issues/162) |
+| 7 | 홈·기록·패턴 | [F-07](./F-07-home-history.md) | [#163](https://github.com/sksksksksksss/skn-app/issues/163) |
 | 8 | AI·보안·운영 | [F-08](./F-08-ai-operations.md) | [#164](https://github.com/sksksksksss/service/issues/164) |
 
 ## 우선순위

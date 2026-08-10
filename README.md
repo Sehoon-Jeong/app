@@ -4,7 +4,7 @@
 
 화장품을 자주 탐색하는 사람은 제품을 많이 써도 지난 사용감, 조합과 피부 반응을 대부분 기억에만 남긴다. SKN은 그 경험을 제품·루틴·시점과 연결해 보존하고, AI가 반복된 선호와 패턴을 원본 기록과 함께 다시 찾아 다음 탐색에 쓰게 한다.
 
-[프로토타입](https://sksksksksksss.github.io/service/prototype/) · [사용자 흐름](https://sksksksksksss.github.io/service/flow/) · [API](https://sksksksksksss.github.io/service/api/) · [작업판](https://github.com/orgs/sksksksksksss/projects/2)
+[프로토타입](https://sksksksksksss.github.io/skn-app/prototype/) · [사용자 흐름](https://sksksksksksss.github.io/skn-app/flow/) · [API](https://sksksksksksss.github.io/skn-app/api/) · [작업판](https://github.com/orgs/sksksksksksss/projects/2)
 
 ## 한 바퀴
 

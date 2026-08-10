@@ -1,6 +1,6 @@
 # F-08 AI·보안·운영 요구사항
 
-[Feature #164](https://github.com/sksksksksksss/service/issues/164)
+[Feature #164](https://github.com/sksksksksksss/skn-app/issues/164)
 
 ## P0
 

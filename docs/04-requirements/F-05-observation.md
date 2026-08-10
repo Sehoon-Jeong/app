@@ -1,6 +1,6 @@
 # F-05 경험 기록·회고 요구사항
 
-[Feature #161](https://github.com/sksksksksksss/service/issues/161)
+[Feature #161](https://github.com/sksksksksksss/skn-app/issues/161)
 
 ## P0
 
