@@ -17,6 +17,14 @@
 - TLS 종료와 외부 80/443 처리는 공유 reverse proxy가 맡는다.
 - SQLite 파일과 백업은 애플리케이션 이미지 및 release 디렉터리 밖의 영속 저장소에 둔다.
 
+## 프론트엔드 연결
+
+- 운영 프론트엔드는 <https://skn-labs.vercel.app>에서 제공한다.
+- 브라우저는 환경과 관계없이 같은 출처의 상대 경로 `/api/...`만 호출한다.
+- Vercel에서는 [`frontend/vercel.json`](../frontend/vercel.json)이 `/api/*`를 `https://api.leafeep.com/api/*`로 프록시한다. 따라서 세션 쿠키를 교차 출처 쿠키로 만들지 않는다.
+- 로컬에서는 Vite 개발 서버가 `/api/*`를 기본적으로 `http://localhost:8080`에 프록시한다. 필요할 때만 로컬 환경 변수 `VITE_API_PROXY`로 대상을 바꾼다.
+- Vercel의 나머지 경로는 `index.html`로 rewrite하여 React Router의 직접 진입과 새로고침을 지원한다.
+
 ## 자동 배포
 
 `main`에 `backend/`, `deploy/oci/` 또는 백엔드 배포 workflow 변경이 푸시되면 다음 순서로 배포한다.
