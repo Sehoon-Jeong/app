@@ -21,10 +21,10 @@ Table product {
   category text [not null]
   volume text
   version_label text
-  description text [not null, note: 'legacy fixture, API/AI 근거로 사용하지 않음']
+  description text [not null, note: '출처 미확인 카탈로그 설명, 제품별 AI 가이드 입력으로만 사용']
   texture text [note: '등록 제형 label; 비사실 guide 생성에만 사용하며 source-backed fact가 아님']
   verified integer [not null, note: 'legacy flag; public verified는 source fact 존재를 함께 검사']
-  facts_json text [not null, note: 'legacy fixture, source fact로 승격하지 않음']
+  facts_json text [not null, note: '출처 미확인 카탈로그 특징, 가이드 입력으로만 사용하며 source fact로 승격하지 않음']
   image_url text
 }
 

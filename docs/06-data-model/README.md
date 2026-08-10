@@ -36,8 +36,8 @@ erDiagram
 | --- | --- | --- |
 | `app_user` | 아이디·비밀번호 계정 | 아이디는 대소문자 무관 유일, 비밀번호는 BCrypt hash만 저장 |
 | `user_onboarding` | 최초 설정의 완료와 선택한 시작 방식 | 행이 있어야 온보딩 완료로 보며, 제품 개수와 무관하게 재접속 후에도 유지 |
-| `product` | 검색 가능한 카탈로그 제품 식별 정보 | 기존 `description`, `facts_json`은 호환용 legacy로 API·AI 근거에서 제외. `texture`는 비사실 가이드의 등록 제형 표시에만 사용 |
-| `product_catalog_content` | 모든 제품에 제공하는 제품 안내 | 제품명·category·등록 제형을 바탕으로 제품 종류·일반 사용법·특징을 설명하며, 적합성·효능·성분을 만들지 않고 생성 출처와 시각을 저장 |
+| `product` | 검색 가능한 카탈로그 제품 식별 정보 | `description`, `facts_json`은 출처 미확인 카탈로그 입력으로 제품별 AI 가이드에만 사용. 확인 사실·추천·Rescue 근거로 승격하지 않음 |
+| `product_catalog_content` | 모든 제품에 제공하는 제품 안내 | 제품별 설명·특징·category·등록 제형을 바탕으로 정체와 일반 사용법을 설명하며, 입력에 없는 적합성·효능·성분을 만들지 않고 생성 출처와 시각을 저장 |
 | `product_source_fact` | 출처를 다시 열 수 있는 제품 사실 | 출처명·URL·확인 시각이 모두 있는 행만 API와 AI의 `출처 확인 사실`로 노출 |
 | `user_product` | 사용자가 가진 화장품 | 카탈로그 제품 또는 사용자 직접 입력 이름 중 하나는 필수 |
 | `routine` | 특정 기간 실제로 사용한 조합 | 사용자별 `CURRENT` 하나, 수정은 기존 행 보존 후 새 행 생성 |
@@ -92,12 +92,12 @@ AI가 적용했다고 말하는 것으로는 상태가 바뀌지 않는다. `/re
 - `conversation_message.suggested_replies_json`: AI 답변의 다음 추천 입력 1~3개
 - `conversation_message.evidence_refs_json`: 서버 맥락에 실제로 있던 근거 ID만 저장
 
-`product.facts_json`은 과거 fixture를 기존 SQLite와 함께 읽기 위해 남겨둔 값이다. 근거 정보가 없으므로 `product_source_fact`로 자동 복사하지 않고 Product API와 AI 컨텍스트에서 제외한다.
+`product.description`, `product.facts_json`은 출처 미확인 카탈로그 입력이다. 제품별 AI 가이드가 같은 카테고리의 고정 문장으로 수렴하지 않도록 요약 입력에는 사용하지만, `product_source_fact`로 자동 복사하거나 출처 확인 badge·추천·Rescue 판단 근거로 사용하지 않는다.
 
 ## 제품 상세의 권위 순서
 
 1. `product`는 이름·브랜드·category 같은 식별 정보를 제공한다.
-2. `product_catalog_content`는 제품명·category·등록 제형을 바탕으로 제품이 무엇인지, 루틴의 일반 위치와 사용법, 구분 가능한 특징을 설명하는 정적 가이드다. `summary`에는 제품명과 제형이 포함되고, `highlights`는 제형을 첫 항목으로 제공한다. SQL fallback은 `EDITORIAL`, 생성 파이프라인 성공 결과만 `AI_GENERATED`이며 둘 다 출처 확인 사실이나 개인 적합 판정이 아니다.
+2. `product_catalog_content`는 제품별 `description`, `facts_json`, category와 등록 제형을 바탕으로 제품이 무엇인지와 일반 사용법을 설명하는 가이드다. `summary`는 상세 상단의 제품명을 반복하지 않고 제품별 특징을 먼저 설명한다. SQL fallback은 `EDITORIAL`, 생성 파이프라인 성공 결과만 `AI_GENERATED`이며 둘 다 출처 확인 사실이나 개인 적합 판정이 아니다.
 3. `product_source_fact`만 출처 확인 사실이다. 근거 행이 없으면 API의 `facts`는 빈 배열이다.
 4. `owned`, 연결 경험 수와 원문은 사용자별 조회에서 계산하며 정적 카탈로그에 저장하지 않는다.
 

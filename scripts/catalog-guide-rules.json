@@ -1,6 +1,6 @@
 {
-  "schemaVersion": "2.0.0",
-  "promptVersion": "catalog-guide-ko-v2",
+  "schemaVersion": "2.1.0",
+  "promptVersion": "catalog-guide-ko-v3",
   "aiOrigin": "AI_GENERATED",
   "editorialOrigin": "EDITORIAL",
   "usageInstructions": {
@@ -106,7 +106,7 @@
       "usageTiming": ["아침", "저녁"],
       "usageInstructionKeys": ["rinse_cleanser", "follow_label_cleanse"],
       "highlightKeys": ["rinse_cleanser_kind", "rinse_cleanser_form", "cleanser_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category} 제품으로, 물로 씻어내는 세안 단계에서 사용해요."
+      "summaryTemplate": "{texture} 제형의 {category} 제품으로, 물로 씻어내는 세안 단계에서 사용해요."
     },
     {
       "name": "CLEANSING_WATER",
@@ -116,7 +116,7 @@
       "usageTiming": ["아침", "저녁", "필요할 때"],
       "usageInstructionKeys": ["cleansing_water", "follow_label_cleanse"],
       "highlightKeys": ["cleansing_water_kind", "cleansing_water_form", "cleanser_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category} 제품으로, 화장솜으로 닦는 세안 단계에서 사용해요."
+      "summaryTemplate": "{texture} 제형의 {category} 제품으로, 화장솜으로 닦는 세안 단계에서 사용해요."
     },
     {
       "name": "OIL_BALM_CLEANSER",
@@ -126,7 +126,7 @@
       "usageTiming": ["저녁", "필요할 때"],
       "usageInstructionKeys": ["oil_balm", "follow_label_cleanse"],
       "highlightKeys": ["makeup_cleanser_kind", "oil_balm_form", "first_cleanse_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category} 제품으로, 저녁 첫 세안 단계에서 사용해요."
+      "summaryTemplate": "{texture} 제형의 {category} 제품으로, 저녁 첫 세안 단계에서 사용해요."
     },
     {
       "name": "REMOVER",
@@ -136,7 +136,7 @@
       "usageTiming": ["저녁", "필요할 때"],
       "usageInstructionKeys": ["remover", "follow_label_cleanse"],
       "highlightKeys": ["makeup_cleanser_kind", "remover_form", "first_cleanse_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 필요한 부위를 닦는 첫 세안 단계에서 사용해요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 필요한 부위를 닦는 첫 세안 단계에서 사용해요."
     },
     {
       "name": "TONER",
@@ -146,7 +146,7 @@
       "usageTiming": ["아침", "저녁"],
       "usageInstructionKeys": ["toner"],
       "highlightKeys": ["toner_kind", "toner_form", "after_cleanse_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 세안 다음 단계에서 바르고 흡수시키는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 세안 다음 단계에서 바르고 흡수시키는 제품이에요."
     },
     {
       "name": "TONER_PAD",
@@ -156,7 +156,7 @@
       "usageTiming": ["아침", "저녁", "필요할 때"],
       "usageInstructionKeys": ["toner_pad", "follow_label_time"],
       "highlightKeys": ["toner_pad_kind", "toner_pad_form", "after_cleanse_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 세안 다음 단계에서 닦거나 올려두는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 세안 다음 단계에서 닦거나 올려두는 제품이에요."
     },
     {
       "name": "MIST",
@@ -166,7 +166,7 @@
       "usageTiming": ["아침", "저녁", "필요할 때"],
       "usageInstructionKeys": ["mist"],
       "highlightKeys": ["mist_kind", "mist_form", "as_needed_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 얼굴에 분사해 사용하는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 얼굴에 분사해 사용하는 제품이에요."
     },
     {
       "name": "TREATMENT",
@@ -176,7 +176,7 @@
       "usageTiming": ["아침", "저녁"],
       "usageInstructionKeys": ["treatment"],
       "highlightKeys": ["treatment_kind", "treatment_form", "treatment_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 토너 다음 단계에서 바르고 흡수시키는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 토너 다음 단계에서 바르고 흡수시키는 제품이에요."
     },
     {
       "name": "EYE_CARE",
@@ -186,7 +186,7 @@
       "usageTiming": ["아침", "저녁"],
       "usageInstructionKeys": ["eye_care"],
       "highlightKeys": ["eye_care_kind", "eye_care_form", "eye_care_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 눈가 관리 단계에서 소량 바르는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 눈가 관리 단계에서 소량 바르는 제품이에요."
     },
     {
       "name": "LOCAL_CARE",
@@ -196,7 +196,7 @@
       "usageTiming": ["아침", "저녁", "필요할 때"],
       "usageInstructionKeys": ["spot_care"],
       "highlightKeys": ["spot_kind", "spot_form", "spot_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 필요한 피부 부위에 사용하는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 필요한 피부 부위에 사용하는 제품이에요."
     },
     {
       "name": "PATCH",
@@ -206,7 +206,7 @@
       "usageTiming": ["필요할 때"],
       "usageInstructionKeys": ["patch", "follow_label_time"],
       "highlightKeys": ["patch_kind", "patch_form", "patch_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 필요한 부위에 붙였다가 떼는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 필요한 부위에 붙였다가 떼는 제품이에요."
     },
     {
       "name": "LOTION",
@@ -216,7 +216,7 @@
       "usageTiming": ["아침", "저녁"],
       "usageInstructionKeys": ["lotion"],
       "highlightKeys": ["lotion_kind", "lotion_form", "lotion_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}으로, 세럼 다음 보습 단계에서 바르는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}으로, 세럼 다음 보습 단계에서 바르는 제품이에요."
     },
     {
       "name": "CREAM",
@@ -226,7 +226,7 @@
       "usageTiming": ["아침", "저녁"],
       "usageInstructionKeys": ["cream"],
       "highlightKeys": ["cream_kind", "cream_form", "cream_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}으로, 보습 마무리 단계에서 바르는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}으로, 보습 마무리 단계에서 바르는 제품이에요."
     },
     {
       "name": "FACE_OIL",
@@ -236,7 +236,7 @@
       "usageTiming": ["아침", "저녁"],
       "usageInstructionKeys": ["face_oil"],
       "highlightKeys": ["oil_kind", "oil_form", "oil_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 보습 마무리 단계에서 소량 바르는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 보습 마무리 단계에서 소량 바르는 제품이에요."
     },
     {
       "name": "SUNCARE_LIQUID",
@@ -246,7 +246,7 @@
       "usageTiming": ["아침", "필요할 때"],
       "usageInstructionKeys": ["suncare"],
       "highlightKeys": ["sun_kind", "sun_liquid_form", "sun_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category} 제품으로, 아침 기초 마지막에 펴 발라요."
+      "summaryTemplate": "{texture} 제형의 {category} 제품으로, 아침 기초 마지막에 펴 발라요."
     },
     {
       "name": "SUN_STICK",
@@ -256,7 +256,7 @@
       "usageTiming": ["아침", "필요할 때"],
       "usageInstructionKeys": ["sun_stick"],
       "highlightKeys": ["sun_kind", "sun_stick_form", "sun_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}으로, 아침 기초 마지막에 직접 밀어 발라요."
+      "summaryTemplate": "{texture} 제형의 {category}으로, 아침 기초 마지막에 직접 밀어 발라요."
     },
     {
       "name": "SUN_CUSHION",
@@ -266,7 +266,7 @@
       "usageTiming": ["아침", "필요할 때"],
       "usageInstructionKeys": ["sun_cushion"],
       "highlightKeys": ["sun_kind", "sun_cushion_form", "sun_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}으로, 아침 기초 마지막에 퍼프로 두드려 발라요."
+      "summaryTemplate": "{texture} 제형의 {category}으로, 아침 기초 마지막에 퍼프로 두드려 발라요."
     },
     {
       "name": "SHEET_MASK",
@@ -276,7 +276,7 @@
       "usageTiming": ["필요할 때"],
       "usageInstructionKeys": ["sheet_mask", "follow_label_time"],
       "highlightKeys": ["sheet_mask_kind", "sheet_mask_form", "mask_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 토너 다음에 얼굴에 붙였다가 떼는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 토너 다음에 얼굴에 붙였다가 떼는 제품이에요."
     },
     {
       "name": "EYE_PATCH",
@@ -286,7 +286,7 @@
       "usageTiming": ["필요할 때"],
       "usageInstructionKeys": ["eye_patch", "follow_label_time"],
       "highlightKeys": ["eye_patch_kind", "eye_patch_form", "mask_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}로, 눈가에 붙였다가 떼는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}로, 눈가에 붙였다가 떼는 제품이에요."
     },
     {
       "name": "WASH_OFF_MASK",
@@ -296,7 +296,7 @@
       "usageTiming": ["필요할 때"],
       "usageInstructionKeys": ["washoff_mask", "follow_label_time"],
       "highlightKeys": ["washoff_kind", "washoff_form", "washoff_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}으로, 얼굴에 올려뒀다가 씻어내는 팩 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}으로, 얼굴에 올려뒀다가 씻어내는 팩 제품이에요."
     },
     {
       "name": "EXFOLIATION",
@@ -306,7 +306,7 @@
       "usageTiming": ["필요할 때"],
       "usageInstructionKeys": ["exfoliation", "follow_label_time"],
       "highlightKeys": ["exfoliation_kind", "exfoliation_form", "exfoliation_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category} 제품으로, 세안 뒤 제품 표기 방법에 따라 사용해요."
+      "summaryTemplate": "{texture} 제형의 {category} 제품으로, 세안 뒤 제품 표기 방법에 따라 사용해요."
     },
     {
       "name": "SLEEPING_MASK",
@@ -316,7 +316,7 @@
       "usageTiming": ["저녁"],
       "usageInstructionKeys": ["sleeping_mask", "follow_label_time"],
       "highlightKeys": ["sleeping_kind", "sleeping_form", "sleeping_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}으로, 저녁 루틴 마지막에 바르고 두는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}으로, 저녁 루틴 마지막에 바르고 두는 제품이에요."
     },
     {
       "name": "LIP_CARE",
@@ -326,7 +326,7 @@
       "usageTiming": ["아침", "저녁", "필요할 때"],
       "usageInstructionKeys": ["lip_care"],
       "highlightKeys": ["lip_kind", "lip_form", "lip_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}으로, 입술에 직접 바르고 두는 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}으로, 입술에 직접 바르고 두는 제품이에요."
     },
     {
       "name": "MULTI_BALM",
@@ -336,7 +336,7 @@
       "usageTiming": ["아침", "저녁", "필요할 때"],
       "usageInstructionKeys": ["multi_balm"],
       "highlightKeys": ["multi_balm_kind", "multi_balm_form", "multi_balm_position"],
-      "summaryTemplate": "{name}: {texture} 제형의 {category}으로, 필요한 부위에 직접 바르는 밤 제품이에요."
+      "summaryTemplate": "{texture} 제형의 {category}으로, 필요한 부위에 직접 바르는 밤 제품이에요."
     }
   ]
 }

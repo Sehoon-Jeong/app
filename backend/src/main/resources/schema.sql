@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS product (
     UNIQUE (brand, name, version_label)
 );
 
--- 제품별 정적 사용 가이드다. 기존 description/facts_json은 이전 fixture와의
--- 호환을 위해 보존하지만 API와 AI 근거에는 이 테이블과 source fact만 사용한다.
+-- 제품별 사용 가이드다. description/facts_json은 출처 미확인 카탈로그 입력으로
+-- 가이드 생성에만 사용하며, 확인 사실·추천·Rescue 근거로 승격하지 않는다.
 CREATE TABLE IF NOT EXISTS product_catalog_content (
     product_id INTEGER PRIMARY KEY,
     summary TEXT NOT NULL CHECK (length(trim(summary)) > 0),
@@ -365,7 +365,7 @@ INSERT OR IGNORE INTO pattern_evidence(pattern_id, record_id, polarity) VALUES
   (2, 3, 'SUPPORTS'), (2, 4, 'SUPPORTS');
 
 -- 기존 SQLite 파일을 삭제하지 않아도 모든 카탈로그 제품에 제품 안내가 생긴다.
--- 출처 없는 효능·적합성·성분은 추정하지 않고 제품명·category·등록 제형으로 제품의
+-- 출처 없는 효능·적합성·성분은 추정하지 않고 category·등록 제형으로 제품의
 -- 종류, 일반적인 사용 위치·방법, 구분 가능한 특징을 설명한다. 과거의 기록 유도형
 -- 가이드는 origin과 관계없이 새 계약의 EDITORIAL fallback으로 한 번 갱신한다.
 INSERT INTO product_catalog_content(
@@ -376,27 +376,9 @@ INSERT INTO product_catalog_content(
 SELECT
     p.id,
     CASE
-        WHEN p.category LIKE '클렌징%' OR p.category = '리무버'
-            THEN p.name || ': ' || p.texture || ' 제형의 클렌징 제품으로, 세안 단계에서 사용해요.'
-        WHEN p.category IN ('토너', '스킨', '토너패드', '미스트')
-            THEN p.name || ': ' || p.texture || ' 제형의 토너 계열 제품으로, 세안 후 첫 단계에서 사용해요.'
-        WHEN p.category LIKE '선%' OR p.category = '선케어'
-            THEN p.name || ': ' || p.texture || ' 제형의 선케어 제품으로, 아침 스킨케어 마지막 단계에서 사용해요.'
-        WHEN p.category IN ('시트마스크', '슬리핑팩', '클레이팩', '워시오프팩', '모델링팩')
-            THEN p.name || ': ' || p.texture || ' 제형의 집중 관리 제품으로, 제품 형태에 맞춰 붙이거나 발라 사용해요.'
-        WHEN p.category IN ('아이크림', '아이세럼', '아이패치')
-            THEN p.name || ': ' || p.texture || ' 제형의 아이 케어 제품으로, 눈가에 사용해요.'
-        WHEN p.category IN ('립밤', '립마스크')
-            THEN p.name || ': ' || p.texture || ' 제형의 립 케어 제품으로, 입술에 사용해요.'
-        WHEN p.category IN ('트러블패치', '스팟케어', '멀티밤')
-            THEN p.name || ': ' || p.texture || ' 형태의 부분 케어 제품으로, 필요한 부위에 사용해요.'
-        WHEN p.category IN ('필링', '스크럽')
-            THEN p.name || ': ' || p.texture || ' 제형의 각질 정돈 제품으로, 일반 루틴과 구분해 사용해요.'
-        WHEN p.category IN ('세럼', '앰플', '에센스', '부스터', '페이스오일')
-            THEN p.name || ': ' || p.texture || ' 제형의 ' || p.category || ' 제품으로, 토너 다음과 크림 전에 사용해요.'
-        WHEN p.category IN ('크림', '수분크림', '영양크림', '재생크림', '젤크림', '로션', '에멀전', '수딩젤', '젤', '올인원')
-            THEN p.name || ': ' || p.texture || ' 제형의 ' || p.category || ' 제품으로, 세럼·에센스 다음 보습 단계에서 사용해요.'
-        ELSE p.name || ': ' || p.texture || ' 제형의 ' || COALESCE(NULLIF(p.category, ''), '스킨케어') || ' 제품이에요.'
+        WHEN length(trim(COALESCE(p.description, ''))) > 0 THEN
+            p.description || ' 제품이에요.'
+        ELSE p.texture || ' 제형의 ' || COALESCE(NULLIF(p.category, ''), '스킨케어') || ' 제품이에요.'
     END,
     CASE
         WHEN p.category LIKE '클렌징%' OR p.category = '리무버' THEN '세안 단계'
@@ -443,28 +425,28 @@ SELECT
     END,
     CASE
         WHEN p.category LIKE '클렌징%' OR p.category = '리무버'
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '제품 유형', 'detail', '사용 후 헹구거나 닦아내는 클렌징 계열이에요.'), json_object('title', '루틴 위치', 'detail', '토너와 보습 제품보다 먼저 사용해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '제품 유형', 'detail', '사용 후 헹구거나 닦아내는 클렌징 계열이에요.'), json_object('title', '루틴 위치', 'detail', '토너와 보습 제품보다 먼저 사용해요.'))
         WHEN p.category IN ('토너', '스킨', '토너패드', '미스트')
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '제품 유형', 'detail', '세안 직후 사용하는 토너 계열이에요.'), json_object('title', '루틴 위치', 'detail', '세안 다음, 세럼이나 크림 전에 사용해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '제품 유형', 'detail', '세안 직후 사용하는 토너 계열이에요.'), json_object('title', '루틴 위치', 'detail', '세안 다음, 세럼이나 크림 전에 사용해요.'))
         WHEN p.category LIKE '선%' OR p.category = '선케어'
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '제품 유형', 'detail', '아침에 사용하는 선케어 계열이에요.'), json_object('title', '루틴 위치', 'detail', '기초 스킨케어의 마지막, 메이크업 전에 사용해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '제품 유형', 'detail', '아침에 사용하는 선케어 계열이에요.'), json_object('title', '루틴 위치', 'detail', '기초 스킨케어의 마지막, 메이크업 전에 사용해요.'))
         WHEN p.category IN ('시트마스크', '아이패치', '트러블패치')
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '사용 형태', 'detail', '정해진 부위에 붙여 사용하는 제품이에요.'), json_object('title', '사용 기준', 'detail', '부착 위치와 시간은 제품 라벨을 우선해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '사용 형태', 'detail', '정해진 부위에 붙여 사용하는 제품이에요.'), json_object('title', '사용 기준', 'detail', '부착 위치와 시간은 제품 라벨을 우선해요.'))
         WHEN p.category IN ('슬리핑팩', '클레이팩', '워시오프팩', '모델링팩')
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '제품 유형', 'detail', '일상 루틴과 구분해 사용하는 팩 제품이에요.'), json_object('title', '사용 기준', 'detail', '도포량, 사용 시간, 제거 방법은 제품 라벨을 우선해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '제품 유형', 'detail', '일상 루틴과 구분해 사용하는 팩 제품이에요.'), json_object('title', '사용 기준', 'detail', '도포량, 사용 시간, 제거 방법은 제품 라벨을 우선해요.'))
         WHEN p.category IN ('아이크림', '아이세럼')
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '사용 부위', 'detail', '눈가에 사용하는 아이 케어 제품이에요.'), json_object('title', '사용 기준', 'detail', '사용량과 바르는 범위는 제품 라벨을 우선해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '사용 부위', 'detail', '눈가에 사용하는 아이 케어 제품이에요.'), json_object('title', '사용 기준', 'detail', '사용량과 바르는 범위는 제품 라벨을 우선해요.'))
         WHEN p.category IN ('립밤', '립마스크')
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '사용 부위', 'detail', '입술에 바르는 립 케어 제품이에요.'), json_object('title', '사용 형태', 'detail', '바른 뒤 입술에 남겨두는 유형이에요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '사용 부위', 'detail', '입술에 바르는 립 케어 제품이에요.'), json_object('title', '사용 형태', 'detail', '바른 뒤 입술에 남겨두는 유형이에요.'))
         WHEN p.category IN ('트러블패치', '스팟케어', '멀티밤')
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '사용 부위', 'detail', '원하는 부위에 부분적으로 사용하는 제품이에요.'), json_object('title', '사용 기준', 'detail', '사용 범위와 횟수는 제품 라벨을 우선해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '사용 부위', 'detail', '원하는 부위에 부분적으로 사용하는 제품이에요.'), json_object('title', '사용 기준', 'detail', '사용 범위와 횟수는 제품 라벨을 우선해요.'))
         WHEN p.category IN ('필링', '스크럽')
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '제품 유형', 'detail', '일반 루틴과 구분해 사용하는 각질 정돈 제품이에요.'), json_object('title', '사용 기준', 'detail', '사용 횟수와 시간은 제품 라벨을 우선해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '제품 유형', 'detail', '일반 루틴과 구분해 사용하는 각질 정돈 제품이에요.'), json_object('title', '사용 기준', 'detail', '사용 횟수와 시간은 제품 라벨을 우선해요.'))
         WHEN p.category IN ('세럼', '앰플', '에센스', '부스터', '페이스오일')
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '제품 유형', 'detail', p.category || ' 카테고리의 집중 케어 제품이에요.'), json_object('title', '루틴 위치', 'detail', '토너 다음, 크림이나 로션 전에 사용해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '제품 유형', 'detail', p.category || ' 카테고리의 집중 케어 제품이에요.'), json_object('title', '루틴 위치', 'detail', '토너 다음, 크림이나 로션 전에 사용해요.'))
         WHEN p.category IN ('크림', '수분크림', '영양크림', '재생크림', '젤크림', '로션', '에멀전', '수딩젤', '젤', '올인원')
-            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '제품 유형', 'detail', p.category || ' 카테고리의 보습 단계 제품이에요.'), json_object('title', '루틴 위치', 'detail', '세럼이나 에센스 다음 단계에 사용해요.'))
-        ELSE json_array(json_object('title', '제형', 'detail', p.texture || ' 타입으로 등록된 제품이에요.'), json_object('title', '제품 분류', 'detail', COALESCE(NULLIF(p.category, ''), '스킨케어') || ' 카테고리 제품이에요.'), json_object('title', '사용 기준', 'detail', '구체적인 사용 순서와 횟수는 제품 라벨을 우선해요.'))
+            THEN json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '제품 유형', 'detail', p.category || ' 카테고리의 보습 단계 제품이에요.'), json_object('title', '루틴 위치', 'detail', '세럼이나 에센스 다음 단계에 사용해요.'))
+        ELSE json_array(json_object('title', '제형', 'detail', p.texture || ' 타입이에요.'), json_object('title', '제품 종류', 'detail', COALESCE(NULLIF(p.category, ''), '스킨케어') || ' 카테고리 제품이에요.'), json_object('title', '사용 기준', 'detail', '구체적인 사용 순서와 횟수는 제품 라벨을 우선해요.'))
     END,
     'EDITORIAL',
     strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
@@ -489,6 +471,12 @@ WHERE (
       OR product_catalog_content.observation_points_json LIKE '%기록%'
       OR product_catalog_content.observation_points_json LIKE '%비교%'
       OR product_catalog_content.observation_points_json LIKE '%느낌%'
+      OR EXISTS (
+          SELECT 1
+            FROM product identity_product
+           WHERE identity_product.id = product_catalog_content.product_id
+             AND product_catalog_content.summary LIKE identity_product.name || ':%'
+      )
       OR NOT EXISTS (
           SELECT 1
             FROM json_each(product_catalog_content.observation_points_json) AS highlight

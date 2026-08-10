@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, BadgeCheck, Check, ChevronRight, CirclePlus, Clock3, Droplets, ExternalLink, Layers3, Plus, Search, Sparkles, X } from 'lucide-react'
+import { ArrowRight, BadgeCheck, ChevronRight, CirclePlus, ExternalLink, Plus, Search, Sparkles, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { startChatPath } from '../lib/chat'
@@ -68,11 +68,15 @@ export function ProductPage() {
   const data = product.data
   const guide = data.guide
   const owned = data.owned || added
+  const texture = guide?.highlights.find(highlight => highlight.title === '제형')?.detail
+    ?.replace(/\s*제형으로 등록된 제품이에요\.?$/, '')
+    .trim()
   const overviewItems = guide ? [
-    { label: '루틴 단계', value: guide.routineStep?.trim(), icon: Layers3 },
-    { label: '사용 방식', value: guide.usageType?.trim(), icon: Droplets },
-  ].filter(item => item.value) : []
-  const hasHighlights = Boolean(guide?.highlights?.length)
+    { label: '제품 유형', value: data.category },
+    { label: '제형', value: texture },
+    { label: '루틴 단계', value: guide.routineStep?.trim() },
+    { label: '사용 방식', value: guide.usageType?.trim() },
+  ].filter((item): item is { label: string; value: string } => Boolean(item.value)) : []
   const hasUsage = Boolean(guide?.usageTiming?.length || guide?.usageInstructions?.length)
   const openProductChat = () => navigate(startChatPath(
     'PRODUCT',
@@ -82,37 +86,23 @@ export function ProductPage() {
     { productId },
   ))
 
-  return <Screen nav={false} className="pb-44">
+  return <Screen nav={false} className="bg-white pb-44">
     <TopBar title="제품 정보" back/>
-    <div className="pb-10">
+    <div className="pb-8">
       <ProductHero product={data}/>
-      <div className="space-y-9 px-5 pt-7">
-        {guide?.summary?.trim() && <GuideSummary guide={guide}/>} 
-
-        {overviewItems.length > 0 && <section aria-labelledby="product-overview-title">
-          <GuideSectionHeading id="product-overview-title" title="한눈에 보기" aiGenerated={guide?.origin === 'AI_GENERATED'}/>
-          <div className={`mt-3 grid gap-3 ${overviewItems.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {overviewItems.map(({ label, value, icon: Icon }) => <div key={label} className="min-w-0 rounded-[20px] border border-[#e3e4f3] bg-white p-4 shadow-[0_8px_24px_rgba(52,58,91,.04)]">
-              <div className="grid size-9 place-items-center rounded-xl bg-accent-soft text-accent"><Icon size={17}/></div>
-              <p className="mt-4 text-[11px] font-bold text-muted">{label}</p>
-              <p className="mt-1.5 text-[15px] font-bold leading-5 tracking-[-.02em]">{value}</p>
-            </div>)}
-          </div>
-        </section>}
-
-        {guide && hasHighlights && <ProductHighlights guide={guide}/>} 
-
+      <div className="px-5">
+        {guide?.summary?.trim() && <GuideSummary guide={guide} productName={data.name}/>}
+        {overviewItems.length > 0 && <ProductOverview items={overviewItems}/>}
+        {guide && guide.highlights && guide.highlights.length > 0 && <ProductFeatures highlights={guide.highlights}/>}
         {guide && hasUsage && <UsageGuide guide={guide}/>} 
-
-        {data.facts.length > 0 && <VerifiedFacts facts={data.facts}/>} 
-
-        <ProductAiAction product={data} onClick={openProductChat}/>
+        {data.facts.length > 0 && <VerifiedFacts facts={data.facts}/>}
+        <div className="py-8"><ProductAiAction product={data} onClick={openProductChat}/></div>
       </div>
     </div>
     <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[430px] border-t border-line bg-white/96 px-4 pb-4 pt-3 shadow-[0_-12px_36px_rgba(23,24,22,.06)] backdrop-blur-xl">
       {added && <p className="mb-2 text-center text-[11px] font-semibold text-[#52722d]">내 화장품에 담았어요. 현재 루틴은 바뀌지 않아요.</p>}
       {add.error && <p className="mb-2 text-center text-[11px] font-semibold leading-5 text-danger">{add.error.message}</p>}
-      {owned ? <Button onClick={openProductChat} className="w-full"><Sparkles size={17}/>{data.personalRecordCount > 0 ? 'AI에게 내 기록과 비교하기' : 'AI에게 이 제품 물어보기'}</Button> : <div className="grid grid-cols-[116px_1fr] gap-2.5">
+      {owned ? <div className="grid grid-cols-[118px_1fr] gap-2.5"><Button variant="secondary" onClick={() => navigate('/my-products')}>내 화장품</Button><Button onClick={openProductChat}><Sparkles size={17}/>{data.personalRecordCount > 0 ? '내 기록과 비교' : 'AI에게 묻기'}</Button></div> : <div className="grid grid-cols-[116px_1fr] gap-2.5">
         <Button variant="secondary" onClick={openProductChat} aria-label="AI에게 이 제품 물어보기"><Sparkles size={17}/>AI에게 묻기</Button>
         <Button disabled={add.isPending} onClick={() => add.mutate()}>{add.isPending ? '추가하는 중…' : '내 화장품에 추가'}</Button>
       </div>}
@@ -121,83 +111,90 @@ export function ProductPage() {
 }
 
 function ProductHero({ product }: { product: Product }) {
-  const meta = [product.category, product.volume, product.versionLabel ? `${product.versionLabel} 버전` : undefined].filter(Boolean)
+  const meta = [product.volume, product.versionLabel ? `${product.versionLabel} 버전` : undefined].filter(Boolean)
   return <section>
-    <div className="relative isolate flex min-h-[238px] items-center justify-center overflow-hidden border-b border-line/70 bg-[#f4f5f1]">
-      <div className="absolute -left-16 top-4 size-44 rounded-full bg-[#e9ebff] blur-3xl"/>
-      <div className="absolute -right-12 bottom-0 size-40 rounded-full bg-[#e8f3d0] blur-3xl"/>
-      <div className="absolute inset-x-12 bottom-6 h-10 rounded-[50%] bg-black/[.07] blur-xl"/>
-      <div className="relative translate-y-1"><ProductGlyph category={product.category} size="lg" src={product.imageUrl}/></div>
+    <div className="relative isolate flex min-h-[286px] items-center justify-center overflow-hidden bg-[#f3f4ef]">
+      <div className="absolute -left-16 top-0 size-52 rounded-full bg-white/80 blur-3xl"/>
+      <div className="absolute -right-20 bottom-0 size-52 rounded-full bg-[#e9ebff]/75 blur-3xl"/>
+      <div className="absolute inset-x-20 bottom-8 h-8 rounded-[50%] bg-black/[.06] blur-xl"/>
+      <div className="relative -translate-y-1 drop-shadow-[0_18px_22px_rgba(32,38,31,.12)]"><ProductGlyph category={product.category} size="lg" src={product.imageUrl}/></div>
     </div>
-    <div className="px-5 pt-6">
-      <p className="text-[12px] font-bold tracking-[.03em] text-muted">{product.brand}</p>
-      <h1 className="mt-2 text-[30px] font-bold leading-[1.22] tracking-[-.05em]">{product.name}</h1>
-      {meta.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2">{meta.map(item => <span key={item} className="rounded-full border border-line bg-white px-3 py-1.5 text-[11px] font-semibold text-muted">{item}</span>)}</div>}
-      {product.verified && <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#dce9c5] bg-[#f6faee] px-3 py-1.5 text-[11px] font-bold text-[#52722d]"><BadgeCheck size={14}/>이 제품 버전 확인됨</div>}
+    <div className="px-5 pb-7 pt-6">
+      <div className="flex items-center gap-2 text-[12px] font-bold tracking-[.01em] text-muted"><span>{product.brand}</span><span className="size-0.5 rounded-full bg-[#b7bab3]"/><span>{product.category}</span></div>
+      <h1 className="mt-2.5 text-[29px] font-bold leading-[1.2] tracking-[-.05em]">{product.name}</h1>
+      {(meta.length > 0 || product.verified) && <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] font-medium text-muted">{meta.map(item => <span key={item}>{item}</span>)}{product.verified && <span className="inline-flex items-center gap-1 font-bold text-[#52722d]"><BadgeCheck size={14}/>제품 버전 확인됨</span>}</div>}
     </div>
   </section>
 }
 
-function GuideSummary({ guide }: { guide: ProductGuide }) {
+function GuideSummary({ guide, productName }: { guide: ProductGuide; productName: string }) {
   const aiGenerated = guide.origin === 'AI_GENERATED'
-  const generatedLabel = formatProductDate(guide.generatedAt)
-  return <section aria-labelledby="guide-summary-title" className={`overflow-hidden rounded-[24px] border p-5 ${aiGenerated ? 'border-[#d9dcff] bg-[linear-gradient(145deg,#f0f1ff_0%,#fafaff_55%,#fff_100%)]' : 'border-line bg-white'}`}>
-    <div className="flex items-center justify-between gap-3">
-      <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${aiGenerated ? 'bg-accent text-white' : 'bg-soft text-muted'}`}><Sparkles size={12}/>{aiGenerated ? 'AI가 정리한 제품 가이드' : 'SKN 제품 가이드'}</div>
-      {generatedLabel && <span className="shrink-0 text-[10px] font-medium text-muted">{generatedLabel} {aiGenerated ? '생성' : '작성'}</span>}
-    </div>
-    <h2 id="guide-summary-title" className="mt-4 text-[13px] font-bold text-accent">이 제품이 무엇인지</h2>
-    <p className="mt-2 text-[17px] font-semibold leading-7 tracking-[-.025em]">{guide.summary}</p>
-    {aiGenerated && <p className="mt-4 border-t border-[#dfe1f7] pt-3 text-[10px] leading-4 text-muted">제품 종류와 일반적인 사용 방법을 정리했어요.</p>}
+  const summary = withoutRepeatedProductName(guide.summary, productName)
+  return <section aria-labelledby="guide-summary-title" className="border-t border-line py-7">
+    <div className="flex items-center gap-1.5 text-[11px] font-bold text-accent"><Sparkles size={13}/><span>{aiGenerated ? 'SKN AI 제품 요약' : 'SKN 제품 요약'}</span></div>
+    <h2 id="guide-summary-title" className="sr-only">이 제품이 무엇인지</h2>
+    <p className="mt-3 text-[19px] font-semibold leading-8 tracking-[-.03em]">{summary}</p>
   </section>
 }
 
-function GuideSectionHeading({ id, title, aiGenerated }: { id: string; title: string; aiGenerated: boolean }) {
-  return <div className="flex items-center justify-between gap-3"><h2 id={id} className="text-[20px] font-bold tracking-[-.035em]">{title}</h2>{aiGenerated && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-accent"><Sparkles size={12}/>AI 가이드</span>}</div>
+function withoutRepeatedProductName(summary: string, productName: string) {
+  const trimmed = summary.trim()
+  if (!trimmed.startsWith(productName)) return trimmed
+  const remainder = trimmed.slice(productName.length)
+  if (!/^\s*[:：\-–—]/.test(remainder)) return trimmed
+  return remainder.replace(/^\s*[:：\-–—]\s*/, '').trim()
+}
+
+function ProductOverview({ items }: { items: { label: string; value: string }[] }) {
+  return <section aria-labelledby="product-overview-title" className="border-t border-line py-7">
+    <h2 id="product-overview-title" className="text-[18px] font-bold tracking-[-.03em]">기본 정보</h2>
+    <dl className="mt-4 grid grid-cols-2 overflow-hidden rounded-[20px] border border-line bg-[#fafbf8]">
+      {items.map(({ label, value }, index) => <div key={label} className={`min-w-0 p-4 ${index % 2 === 0 ? 'border-r border-line' : ''} ${index < 2 && items.length > 2 ? 'border-b border-line' : ''}`}>
+        <dt className="text-[10px] font-bold text-muted">{label}</dt>
+        <dd className="mt-1.5 text-[14px] font-semibold leading-5 tracking-[-.02em]">{value}</dd>
+      </div>)}
+    </dl>
+  </section>
+}
+
+function ProductFeatures({ highlights }: { highlights: ProductGuide['highlights'] }) {
+  return <section aria-labelledby="product-features-title" className="border-t border-line py-7">
+    <h2 id="product-features-title" className="text-[18px] font-bold tracking-[-.03em]">제품 특징</h2>
+    <div className="mt-4 divide-y divide-line rounded-[20px] border border-line bg-white px-4">
+      {highlights.map((highlight, index) => <div key={`${highlight.title}-${index}`} className="grid grid-cols-[88px_1fr] gap-3 py-4">
+        <p className="text-[11px] font-bold leading-5 text-muted">{highlight.title}</p>
+        <p className="text-[13px] font-semibold leading-5 tracking-[-.01em]">{highlight.detail}</p>
+      </div>)}
+    </div>
+  </section>
 }
 
 function UsageGuide({ guide }: { guide: ProductGuide }) {
   const timings = guide.usageTiming.filter(Boolean)
   const instructions = guide.usageInstructions.filter(Boolean)
-  return <section aria-labelledby="usage-guide-title">
-    <GuideSectionHeading id="usage-guide-title" title="사용 방법" aiGenerated={guide.origin === 'AI_GENERATED'}/>
-    <div className="mt-3 overflow-hidden rounded-[22px] border border-[#e3e4f3] bg-white">
-      {timings.length > 0 && <div className="flex gap-3 p-4"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><Clock3 size={18}/></div><div className="min-w-0 flex-1"><p className="text-[11px] font-bold text-muted">사용 시점</p><div className="mt-2 flex flex-wrap gap-1.5">{timings.map(timing => <span key={timing} className="rounded-full bg-soft px-2.5 py-1.5 text-[11px] font-semibold">{timing}</span>)}</div></div></div>}
-      {instructions.length > 0 && <div className={`${timings.length > 0 ? 'border-t border-line' : ''} px-4 py-1`}>{instructions.map((instruction, index) => <div key={`${instruction}-${index}`} className="flex gap-3 border-b border-line py-3.5 last:border-b-0"><span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-accent-soft text-accent"><Check size={12} strokeWidth={2.5}/></span><p className="text-[13px] leading-5">{instruction}</p></div>)}</div>}
-    </div>
-  </section>
-}
-
-function ProductHighlights({ guide }: { guide: ProductGuide }) {
-  const highlights = guide.highlights.filter(highlight => highlight.title?.trim() || highlight.detail?.trim())
-  if (!highlights.length) return null
-  return <section aria-labelledby="product-highlights-title">
-    <GuideSectionHeading id="product-highlights-title" title="제품 특징" aiGenerated={guide.origin === 'AI_GENERATED'}/>
-    <div className="mt-3 rounded-[24px] border border-[#d9dcff] bg-[#f7f7ff] p-3">
-      {highlights.map((highlight, index) => <article key={`${highlight.title}-${index}`} className="flex gap-3 rounded-[18px] bg-white p-4 shadow-[0_6px_20px_rgba(58,64,108,.05)] [&+&]:mt-2.5">
-        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><Sparkles size={16}/></div>
-        <div className="min-w-0 flex-1">{highlight.title?.trim() && <h3 className="text-[14px] font-bold leading-5">{highlight.title}</h3>}{highlight.detail?.trim() && <p className={`${highlight.title?.trim() ? 'mt-1.5' : ''} text-[12px] leading-5 text-muted`}>{highlight.detail}</p>}</div>
-      </article>)}
-    </div>
+  return <section aria-labelledby="usage-guide-title" className="border-t border-line py-7">
+    <div className="flex items-center justify-between gap-3"><h2 id="usage-guide-title" className="text-[18px] font-bold tracking-[-.03em]">사용 방법</h2>{timings.length > 0 && <div className="flex gap-1.5">{timings.map(timing => <span key={timing} className="rounded-full bg-accent-soft px-2.5 py-1.5 text-[10px] font-bold text-accent">{timing}</span>)}</div>}</div>
+    {instructions.length > 0 && <ol className="mt-5 space-y-4">{instructions.map((instruction, index) => <li key={`${instruction}-${index}`} className="flex gap-3.5"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-ink text-[11px] font-bold text-white">{index + 1}</span><p className="pt-0.5 text-[14px] leading-6">{instruction}</p></li>)}</ol>}
   </section>
 }
 
 function VerifiedFacts({ facts }: { facts: ProductFact[] }) {
-  return <section aria-labelledby="verified-facts-title">
-    <div className="flex items-end justify-between gap-4"><div><p className="text-[10px] font-bold tracking-[.08em] text-[#52722d]">SOURCE CHECKED</p><h2 id="verified-facts-title" className="mt-1 text-[20px] font-bold tracking-[-.035em]">출처에서 확인한 사실</h2></div><span className="shrink-0 text-[11px] font-semibold text-muted">{facts.length}건</span></div>
-    <div className="mt-3 space-y-2.5">{facts.map((fact, index) => <article key={`${fact.type}-${fact.text}-${index}`} className="rounded-[20px] border border-[#dfe8d0] bg-white p-4">
-      <div className="flex gap-3"><div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f1f7e7] text-[#52722d]"><BadgeCheck size={17}/></div><div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-[#66833e]">{factTypeLabel(fact.type)}</p><p className="mt-1.5 text-[13px] font-semibold leading-5">{fact.text}</p></div></div>
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3 text-[10px] text-muted"><a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1 font-semibold underline decoration-line underline-offset-2"><span className="truncate">{fact.sourceLabel}</span><ExternalLink size={11} className="shrink-0"/></a><span className="shrink-0">{formatProductDate(fact.checkedAt)} 확인</span></div>
+  return <section aria-labelledby="verified-facts-title" className="border-t border-line py-7">
+    <div className="flex items-center justify-between gap-4"><h2 id="verified-facts-title" className="text-[18px] font-bold tracking-[-.03em]">출처에서 확인한 정보</h2><span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#52722d]"><BadgeCheck size={13}/>{facts.length}건</span></div>
+    <div className="mt-4 divide-y divide-line border-y border-line">{facts.map((fact, index) => <article key={`${fact.type}-${fact.text}-${index}`} className="py-4">
+      <p className="text-[10px] font-bold text-[#66833e]">{factTypeLabel(fact.type)}</p><p className="mt-1.5 text-[13px] font-semibold leading-5">{fact.text}</p>
+      <div className="mt-2.5 flex items-center justify-between gap-3 text-[10px] text-muted"><a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1 font-semibold underline decoration-line underline-offset-2"><span className="truncate">{fact.sourceLabel}</span><ExternalLink size={11} className="shrink-0"/></a><span className="shrink-0">{formatProductDate(fact.checkedAt)} 확인</span></div>
     </article>)}</div>
   </section>
 }
 
 function ProductAiAction({ product, onClick }: { product: Product; onClick: () => void }) {
   const hasRecords = product.personalRecordCount > 0
-  return <section aria-labelledby="product-ai-title" className="overflow-hidden rounded-[24px] bg-ink text-white shadow-[0_16px_36px_rgba(23,24,22,.14)]">
-    <div className="p-5"><div className="flex items-center gap-2 text-lime"><Sparkles size={16}/><p className="text-[11px] font-bold">SKN AI</p></div><h2 id="product-ai-title" className="mt-3 text-[20px] font-bold leading-7 tracking-[-.035em]">{hasRecords ? `내 경험 ${product.personalRecordCount}건과 비교해볼까요?` : '내 루틴과 함께 살펴볼까요?'}</h2><p className="mt-2 text-[12px] leading-5 text-white/65">{hasRecords ? '제품 정보와 내가 남긴 기록을 구분해 연결해요.' : '제품 정보와 현재 루틴에서 함께 볼 점을 정리해요.'}</p></div>
-    <button type="button" onClick={onClick} className="flex w-full items-center justify-between border-t border-white/10 bg-white/[.06] px-5 py-4 text-left text-[13px] font-bold transition active:bg-white/10"><span>{hasRecords ? 'AI에게 내 기록과 비교 요청' : 'AI에게 이 제품 물어보기'}</span><ArrowRight size={17} className="text-lime"/></button>
-  </section>
+  return <button type="button" onClick={onClick} aria-labelledby="product-ai-title" className="flex w-full items-center gap-4 rounded-[22px] border border-[#dfe1ff] bg-[linear-gradient(135deg,#f1f2ff_0%,#fafaff_100%)] p-4 text-left transition active:scale-[.99]">
+    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent text-white shadow-[0_8px_18px_rgba(83,101,245,.22)]"><Sparkles size={19}/></span>
+    <span className="min-w-0 flex-1"><span className="text-[10px] font-bold text-accent">SKN AI</span><span id="product-ai-title" className="mt-1 block text-[15px] font-bold leading-5 tracking-[-.02em]">{hasRecords ? `내 경험 ${product.personalRecordCount}건과 비교하기` : '내 루틴에서 이 제품 물어보기'}</span><span className="mt-1 block text-[11px] leading-4 text-muted">제품 정보와 내 기록을 구분해서 답해요.</span></span>
+    <ArrowRight size={18} className="shrink-0 text-accent"/>
+  </button>
 }
 
 function factTypeLabel(type: string) {

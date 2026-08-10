@@ -58,10 +58,10 @@ export function ProductGlyph({ category = '제품', size = 'md', src }: { catego
   const [failed, setFailed] = useState(false)
   const isDropper = /세럼|앰플/.test(category)
   const isTube = /선|클렌/.test(category)
-  const dims = size === 'lg' ? 'h-40 w-28' : size === 'sm' ? 'h-14 w-12' : 'h-24 w-18'
+  const dims = size === 'lg' ? 'h-48 w-36' : size === 'sm' ? 'h-14 w-12' : 'h-24 w-18'
   if (src && !failed) {
     return <div className={twMerge('shrink-0 overflow-hidden rounded-2xl border border-line bg-white', dims)}>
-      <img src={src} alt={category} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-full w-full object-cover"/>
+      <img src={src} alt={category} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-full w-full object-contain p-1.5"/>
     </div>
   }
   return <div className={twMerge('relative grid shrink-0 place-items-end', dims)} aria-hidden="true">

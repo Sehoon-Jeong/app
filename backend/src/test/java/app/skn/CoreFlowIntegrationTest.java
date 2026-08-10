@@ -85,13 +85,13 @@ class CoreFlowIntegrationTest {
 
         mvc.perform(get("/api/v1/products/2").session(demoSession()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.guide.summary").value("판테놀 리페어 세럼: 젤 세럼 제형의 세럼 제품으로, 토너 다음과 크림 전에 사용해요."))
+                .andExpect(jsonPath("$.guide.summary").value("판테놀을 중심으로 편안한 사용감을 내세운 세럼 제품이에요."))
                 .andExpect(jsonPath("$.guide.routineStep").value("토너 다음 단계"))
                 .andExpect(jsonPath("$.guide.usageTiming").isArray())
                 .andExpect(jsonPath("$.guide.usageInstructions.length()").value(2))
                 .andExpect(jsonPath("$.guide.highlights.length()").value(3))
                 .andExpect(jsonPath("$.guide.highlights[0].title").value("제형"))
-                .andExpect(jsonPath("$.guide.highlights[0].detail").value("젤 세럼 타입으로 등록된 제품이에요."))
+                .andExpect(jsonPath("$.guide.highlights[0].detail").value("젤 세럼 타입이에요."))
                 .andExpect(jsonPath("$.guide.usageTips").doesNotExist())
                 .andExpect(jsonPath("$.guide.observationPoints").doesNotExist())
                 .andExpect(jsonPath("$.guide.origin").value("EDITORIAL"))
@@ -124,7 +124,7 @@ class CoreFlowIntegrationTest {
                   FROM product_catalog_content
                  WHERE product_id = 6
                 """);
-        assertThat(guide.get("summary")).isEqualTo("마일드 젤클렌저: 젤 제형의 클렌징 제품으로, 세안 단계에서 사용해요.");
+        assertThat(guide.get("summary")).isEqualTo("아침과 저녁에 사용하는 젤 클렌저 제품이에요.");
         assertThat(guide.get("usage_tips_json").toString()).doesNotContain("기록", "비교", "느낌");
         assertThat(guide.get("observation_points_json").toString()).doesNotContain("기록", "비교", "느낌");
         assertThat(guide.get("origin")).isEqualTo("EDITORIAL");

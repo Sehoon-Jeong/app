@@ -51,31 +51,37 @@ FORBIDDEN_SUMMARY_PATTERNS = (
     r"적합",
     r"안전",
     r"무해",
+    r"치료",
+    r"예방",
+    r"보장",
+    r"알레르기",
+    r"임산부",
+    r"유해",
+    r"독성",
+    r"강한\s*세정력",
+)
+CATALOG_BOUND_PATTERNS = (
     r"저자극",
     r"순한",
     r"효과",
     r"효능",
     r"개선",
-    r"치료",
-    r"예방",
-    r"보장",
     r"진정",
     r"미백",
     r"주름",
     r"장벽",
     r"트러블",
     r"여드름",
-    r"알레르기",
-    r"임산부",
-    r"유해",
-    r"독성",
-    r"강한\s*세정력",
     r"약산성",
     r"\bpH\b",
     r"\bSPF\s*\d+",
     r"\bPA\s*\+",
     r"\d+(?:\.\d+)?\s*%",
 )
+DISTINCTIVE_STOPWORDS = {
+    "제품", "제형", "사용", "사용하는", "안내", "표시", "등록", "피부", "얼굴",
+    "아침", "저녁", "단계", "카테고리", "스킨케어", "데일리", "타입", "함유",
+}
 
 
 class CatalogGuideError(RuntimeError):
@@ -93,6 +99,8 @@ class Product:
     name: str
     category: str
     texture: str
+    description: str = ""
+    catalog_facts: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -194,21 +202,32 @@ def load_products(db_path: Path) -> List[Product]:
     with connect_readonly(db_path) as connection:
         try:
             rows = connection.execute(
-                "SELECT id, brand, name, category, COALESCE(texture, '') AS texture "
+                "SELECT id, brand, name, category, COALESCE(texture, '') AS texture, "
+                "COALESCE(description, '') AS description, COALESCE(facts_json, '[]') AS facts_json "
                 "FROM product ORDER BY id"
             ).fetchall()
         except sqlite3.DatabaseError as exc:
             raise CatalogGuideError("product 테이블에서 카탈로그를 읽을 수 없습니다.") from exc
-    products = [
-        Product(
+    products = []
+    for row in rows:
+        try:
+            raw_facts = json.loads(str(row["facts_json"] or "[]"))
+        except json.JSONDecodeError:
+            raw_facts = []
+        facts = tuple(
+            str(value).strip()
+            for value in raw_facts
+            if isinstance(value, str) and str(value).strip()
+        )
+        products.append(Product(
             id=int(row["id"]),
             brand=str(row["brand"] or "").strip(),
             name=str(row["name"] or "").strip(),
             category=str(row["category"] or "").strip(),
             texture=str(row["texture"] or "").strip(),
-        )
-        for row in rows
-    ]
+            description=str(row["description"] or "").strip(),
+            catalog_facts=facts,
+        ))
     if not products:
         raise CatalogGuideError("product 테이블이 비어 있습니다.")
     duplicate_ids = [item for item, count in Counter(p.id for p in products).items() if count != 1]
@@ -291,6 +310,8 @@ def guide_input_hash(product: Product, family: Mapping[str, Any], rules: Mapping
             "name": product.name,
             "category": product.category,
             "texture": product.texture,
+            "description": product.description,
+            "catalogFacts": product.catalog_facts,
         },
         "family": family,
         "rulesSchemaVersion": rules["schemaVersion"],
@@ -301,13 +322,31 @@ def guide_input_hash(product: Product, family: Mapping[str, Any], rules: Mapping
     return hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest()
 
 
+def editorial_summary(product: Product, family: Mapping[str, Any]) -> str:
+    description = product.description.strip().rstrip(".。!? ")
+    if description.endswith(("표시", "안내")):
+        lead = f"{description}된 제품이에요."
+    elif description:
+        lead = f"{description} 제품이에요."
+    else:
+        lead = family["summaryTemplate"].format(
+            name=product.name, category=product.category, texture=product.texture
+        )
+    classification = f"{product.texture} 제형의 {product.category}로 분류돼요."
+    summary = f"{lead} {classification}"
+    if product.catalog_facts:
+        facts = " · ".join(product.catalog_facts[:2])
+        candidate = f"{summary} 등록된 특징은 {facts}예요."
+        if len(candidate) <= 220:
+            summary = candidate
+    return summary
+
+
 def editorial_guide(
     product: Product, family: Mapping[str, Any], rules: Mapping[str, Any], generated_at: str
 ) -> Dict[str, Any]:
     guide = {
-        "summary": family["summaryTemplate"].format(
-            name=product.name, category=product.category, texture=product.texture
-        ),
+        "summary": editorial_summary(product, family),
         "routineStep": family["routineStep"],
         "usageType": family["usageType"],
         "usageTiming": list(family["usageTiming"]),
@@ -332,6 +371,15 @@ def _without_identity(summary: str, product: Product) -> str:
     return scrubbed
 
 
+def distinctive_terms(product: Product) -> set[str]:
+    text = " ".join((product.description, *product.catalog_facts))
+    return {
+        token
+        for token in re.findall(r"[가-힣A-Za-z0-9+]+", text)
+        if len(token) >= 2 and token not in DISTINCTIVE_STOPWORDS
+    }
+
+
 def validate_guide(
     guide: Any, product: Product, family: Mapping[str, Any], rules: Mapping[str, Any]
 ) -> None:
@@ -339,20 +387,18 @@ def validate_guide(
         actual = set(guide) if isinstance(guide, dict) else set()
         raise GuideValidationError(f"가이드 키 불일치: {sorted(actual ^ GUIDE_KEYS)}")
     summary = guide["summary"]
-    if not isinstance(summary, str) or not summary.strip() or len(summary.strip()) > 180:
-        raise GuideValidationError("summary는 1~180자의 문자열이어야 합니다.")
-    if product.name not in summary:
-        raise GuideValidationError("summary에 정확한 제품명이 포함되어야 합니다.")
-    summary_without_name = summary.replace(product.name, "", 1)
-    if product.category not in summary_without_name:
+    if not isinstance(summary, str) or not summary.strip() or len(summary.strip()) > 220:
+        raise GuideValidationError("summary는 1~220자의 문자열이어야 합니다.")
+    if re.match(rf"^{re.escape(product.name)}\s*[:：\-–—]", summary):
+        raise GuideValidationError("summary는 상세 상단의 제품명을 반복하지 않아야 합니다.")
+    if product.category not in summary:
         raise GuideValidationError("summary는 제품 종류를 설명하도록 정확한 카테고리를 포함해야 합니다.")
-    if not product.texture or product.texture not in summary_without_name:
+    if not product.texture or product.texture not in summary:
         raise GuideValidationError("summary는 확인된 제형을 포함해야 합니다.")
     scrubbed_sentence = _without_identity(summary, product).strip()
-    if not scrubbed_sentence.endswith((".", "!", "?")) or len(
-        re.findall(r"[.!?](?=\s|$)", scrubbed_sentence)
-    ) != 1:
-        raise GuideValidationError("summary는 한 문장이어야 합니다.")
+    sentence_count = len(re.findall(r"[.!?](?=\s|$)", scrubbed_sentence))
+    if not scrubbed_sentence.endswith((".", "!", "?")) or not 1 <= sentence_count <= 3:
+        raise GuideValidationError("summary는 1~3문장이어야 합니다.")
     if guide["routineStep"] != family["routineStep"]:
         raise GuideValidationError("routineStep이 카테고리 규칙과 다릅니다.")
     if guide["usageType"] != family["usageType"]:
@@ -393,7 +439,7 @@ def validate_guide(
     if len(set(highlight_pairs)) != len(highlight_pairs):
         raise GuideValidationError("highlight가 중복됐습니다.")
 
-    visible_texts = [summary_without_name, *instructions]
+    visible_texts = [summary, *instructions]
     visible_texts.extend(value for highlight in highlights for value in highlight.values())
     forbidden_language = [
         pattern
@@ -418,6 +464,18 @@ def validate_guide(
         hits = [pattern for pattern in FORBIDDEN_SUMMARY_PATTERNS if re.search(pattern, scrubbed, re.IGNORECASE)]
         if hits:
             raise GuideValidationError(f"summary 금지 표현 감지: {hits}")
+        catalog_text = " ".join((product.description, *product.catalog_facts))
+        unsupported = [
+            pattern
+            for pattern in CATALOG_BOUND_PATTERNS
+            if re.search(pattern, summary, re.IGNORECASE)
+            and not re.search(pattern, catalog_text, re.IGNORECASE)
+        ]
+        if unsupported:
+            raise GuideValidationError(f"카탈로그 입력에 없는 주장 감지: {unsupported}")
+        terms = distinctive_terms(product)
+        if terms and not any(term in summary for term in terms):
+            raise GuideValidationError("summary가 제품별 카탈로그 특징을 사용하지 않았습니다.")
 
 
 def artifact_path(artifacts_dir: Path, product_id: int) -> Path:
@@ -581,6 +639,10 @@ def batch_prompt(products: Sequence[Product], rules: Mapping[str, Any], generate
                     "category": product.category,
                     "texture": product.texture,
                 },
+                "catalogInput": {
+                    "description": product.description,
+                    "facts": list(product.catalog_facts),
+                },
                 "required": {
                     "routineStep": family["routineStep"],
                     "usageType": family["usageType"],
@@ -596,9 +658,11 @@ def batch_prompt(products: Sequence[Product], rules: Mapping[str, Any], generate
         )
     return (
         "아래 제품마다 정확히 한 개의 한국어 제품 사용 가이드를 만드세요. "
-        "입력에 있는 브랜드·제품명·카테고리·제형 외 제품 사실을 추정하지 마세요. "
+        "identity와 catalogInput에 있는 정보만 사용하고 제품 사실을 새로 추정하지 마세요. "
         "성분, 효능, 안전성, 피부 적합성, 의학적 판단, 수치, 공식 주장을 새로 만들지 마세요. "
-        "summary는 정확한 제품명과 카테고리를 반드시 포함하고 이 제품이 무엇인지 설명하는 짧은 한 문장입니다. "
+        "summary는 상세 상단에 이미 보이는 제품명을 반복하지 말고 1~3문장으로 작성하세요. "
+        "정확한 카테고리와 제형을 포함하고, catalogInput의 제품별 설명이나 특징을 최소 하나 사용해 "
+        "같은 카테고리의 다른 제품과 구분되는 내용을 먼저 설명하세요. catalogInput 문장을 그대로 나열하지 말고 자연스럽게 정리하세요. "
         "기록, 비교, 관찰, 느낌, 남기기와 관련된 표현은 어느 필드에도 쓰지 마세요. "
         "routineStep, usageType, usageTiming은 required 값을 그대로 복사하세요. "
         "usageInstructions는 allowedUsageInstructions에서 중복 없이 1~3개 선택하세요. "
@@ -668,8 +732,9 @@ def call_openai_batch(
         "reasoning": {"effort": reasoning_effort},
         "store": False,
         "instructions": (
-            "당신은 화장품의 효능을 추정하는 상담사가 아니라, 제품이 무엇이고 루틴에서 "
-            "어떻게 사용하는지 허용된 카테고리 규칙 안에서 설명하는 카탈로그 에디터입니다."
+            "당신은 화장품의 효능을 추정하는 상담사가 아니라, 제공된 제품별 카탈로그 설명과 "
+            "특징을 자연스럽고 구체적인 한국어로 정리하는 카탈로그 에디터입니다. "
+            "입력에 없는 사실은 추가하지 않습니다."
         ),
         "input": batch_prompt(products, rules, generated_at),
         "text": {

@@ -60,9 +60,9 @@ class CatalogGuideTests(unittest.TestCase):
             self.assertEqual(generated_at, guide["generatedAt"])
             self.assertEqual("EDITORIAL", guide["origin"])
             self.assertEqual(guides.GUIDE_KEYS, set(guide))
-            self.assertIn(product.name, guide["summary"])
-            self.assertIn(product.category, guide["summary"].replace(product.name, "", 1))
-            self.assertIn(product.texture, guide["summary"].replace(product.name, "", 1))
+            self.assertFalse(guide["summary"].startswith(f"{product.name}:"))
+            self.assertIn(product.category, guide["summary"])
+            self.assertIn(product.texture, guide["summary"])
             self.assertTrue(any(item["title"] == "제형" for item in guide["highlights"]))
             visible = json.dumps(guide, ensure_ascii=False)
             for pattern in guides.FORBIDDEN_GUIDE_LANGUAGE_PATTERNS:
@@ -73,20 +73,36 @@ class CatalogGuideTests(unittest.TestCase):
         family = guides.rule_for(product, self.rules)
         guide = guides.editorial_guide(product, family, self.rules, "2026-08-11T00:00:00Z")
         guide["origin"] = "AI_GENERATED"
-        guide["summary"] = "테스트 제품 1: 젤 제형의 세럼으로, 피부 장벽 개선 효과가 있는 안전한 제품이에요."
+        guide["summary"] = "젤 제형의 세럼으로, 피부 장벽 개선 효과가 있는 안전한 제품이에요."
         with self.assertRaises(guides.GuideValidationError):
             guides.validate_guide(guide, product, family, self.rules)
+
+    def test_catalog_description_and_facts_make_the_fallback_product_specific(self):
+        product = guides.Product(
+            19,
+            "토리든",
+            "다이브인 저분자 히알루론산 토너",
+            "토너",
+            "워터리",
+            "저분자 히알루론산 함유로 흡수감을 안내하는 보습 토너",
+            ("히알루론산 함유 표시", "약산성 표시"),
+        )
+        family = guides.rule_for(product, self.rules)
+        guide = guides.editorial_guide(product, family, self.rules, "2026-08-11T00:00:00Z")
+        self.assertIn("저분자 히알루론산", guide["summary"])
+        self.assertIn("워터리", guide["summary"])
+        self.assertNotRegex(guide["summary"], rf"^{product.name}\s*:")
 
     def test_summary_requires_texture_and_rejects_old_recording_language(self):
         product = self.product(1, "세럼")
         family = guides.rule_for(product, self.rules)
         guide = guides.editorial_guide(product, family, self.rules, "2026-08-11T00:00:00Z")
         guide["origin"] = "AI_GENERATED"
-        guide["summary"] = "테스트 제품 1: 세럼으로, 토너 다음 단계에서 바르는 제품이에요."
+        guide["summary"] = "세럼으로, 토너 다음 단계에서 바르는 제품이에요."
         with self.assertRaises(guides.GuideValidationError):
             guides.validate_guide(guide, product, family, self.rules)
 
-        guide["summary"] = "테스트 제품 1: 젤 제형의 세럼으로, 사용 느낌을 기록하는 제품이에요."
+        guide["summary"] = "젤 제형의 세럼으로, 사용 느낌을 기록하는 제품이에요."
         with self.assertRaises(guides.GuideValidationError):
             guides.validate_guide(guide, product, family, self.rules)
 
@@ -111,7 +127,7 @@ class CatalogGuideTests(unittest.TestCase):
         )
         ai_guide = dict(editorial.guide)
         ai_guide["origin"] = "AI_GENERATED"
-        ai_guide["summary"] = "테스트 제품 1: 젤 제형의 세럼으로, 토너 다음 단계에서 바르고 흡수시키는 제품이에요."
+        ai_guide["summary"] = "젤 제형의 세럼으로, 토너 다음 단계에서 바르고 흡수시키는 제품이에요."
         ai = guides.ResolvedGuide(product, input_hash, ai_guide, "AI", 1)
         diagnostics = {"missing": [], "duplicates": [], "extras": [], "invalid": []}
 
@@ -166,7 +182,7 @@ class CatalogGuideTests(unittest.TestCase):
         first_family = guides.rule_for(products[0], self.rules)
         first = guides.editorial_guide(products[0], first_family, self.rules, generated_at)
         first["origin"] = "AI_GENERATED"
-        first["summary"] = "테스트 제품 1: 젤 제형의 세럼으로, 토너 다음 단계에서 바르고 흡수시키는 제품이에요."
+        first["summary"] = "젤 제형의 세럼으로, 토너 다음 단계에서 바르고 흡수시키는 제품이에요."
 
         second_family = guides.rule_for(products[1], self.rules)
         second = guides.editorial_guide(products[1], second_family, self.rules, generated_at)

@@ -1,6 +1,14 @@
 # 제품별 사용 가이드 생성
 
-`catalog_guides.py`는 SQLite의 모든 제품을 읽고, 제품이 무엇이며 루틴에서 어떻게 사용하는지 설명하는 가이드를 생성·검증·저장한다. 제품에 없는 효능이나 성분을 추정하지 않는다. 입력은 제품 ID, 브랜드, 제품명, 카테고리, 제형뿐이다.
+`catalog_guides.py`는 SQLite의 모든 제품을 읽고, 제품이 무엇이며 루틴에서 어떻게 사용하는지 설명하는 가이드를 생성·검증·저장한다. 제품에 없는 효능이나 성분을 추정하지 않는다. 제품 ID, 브랜드, 제품명, 카테고리, 제형과 DB에 이미 있는 설명·표기 정보를 입력으로 사용한다.
+
+현재 앱의 정적 카탈로그 문구는 `backend/data/subagent-catalog/catalog-*.jsonl` 세 파일이 원본이다. 다음 명령은 외부 API를 호출하지 않으며, 2,654개가 모두 있고 계약을 통과할 때에만 SQLite를 한 번에 갱신한다.
+
+```bash
+python3 scripts/import_subagent_catalog.py
+```
+
+갱신 직전 DB는 `backend/data/skn.before-subagent-catalog.db`로 백업된다.
 
 결과는 항상 아래 여덟 필드를 가진다.
 
@@ -18,7 +26,7 @@ generatedAt
 ## 안전장치
 
 - DB의 46개 카테고리와 규칙의 46개 카테고리가 정확히 일치하지 않으면 생성 전에 중단한다. `OTHER` 기본값은 없다.
-- 요약에는 정확한 제품명·카테고리·제형이 모두 들어가며 이 제품이 무엇인지 한 문장으로 설명한다.
+- 요약은 상세 상단의 제품명을 반복하지 않고, 정확한 카테고리·제형으로 이 제품이 무엇인지 한 문장으로 설명한다.
 - 사용법은 카테고리별 일반 사용법에서만 고른다. 효능·성분·안전·적합성·의학적 판단과 공식 주장은 만들 수 없다.
 - 강조 정보는 제형·제품 종류·사용 형태·루틴 위치만 설명한다. 기록·비교·관찰을 유도하는 문구는 허용하지 않는다.
 - Responses API의 Strict Structured Outputs와 애플리케이션 검증을 모두 통과해야 AI 결과로 인정한다.
@@ -34,7 +42,7 @@ generatedAt
 
 ```dotenv
 OPENAI_API_KEY=...
-OPENAI_MODEL=...
+OPENAI_MODEL=gpt-5.6-terra
 OPENAI_REASONING_EFFORT=low
 ```
 
