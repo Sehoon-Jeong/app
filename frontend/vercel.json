@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://api.leafeep.com/api/:path*"
+      "destination": "http://api.leafeep.com/api/:path*"
     },
     {
       "source": "/:path*",
