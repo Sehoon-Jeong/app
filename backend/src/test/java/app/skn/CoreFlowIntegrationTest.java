@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.mock.web.MockHttpSession;
@@ -21,6 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -104,6 +106,20 @@ class CoreFlowIntegrationTest {
                    AND (summary LIKE '%기록%' OR summary LIKE '%비교%' OR summary LIKE '%느낌%')
                 """, Integer.class);
         assertThat(oldEditorialCopy).isZero();
+    }
+
+    @Test
+    void productionFrontendOriginCanUseQuickLogin() throws Exception {
+        mvc.perform(post("/api/v1/auth/quick-login/test01")
+                        .header(HttpHeaders.ORIGIN, "https://skn-labs.vercel.app")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(
+                        HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        "https://skn-labs.vercel.app"
+                ))
+                .andExpect(jsonPath("$.username").value("test01"));
     }
 
     @Test
