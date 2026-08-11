@@ -20,6 +20,7 @@ from typing import Any, Dict, Iterable, List
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DB = ROOT / "backend/data/skn.db"
 DEFAULT_INPUT = ROOT / "backend/data/subagent-catalog"
+EXPECTED_PRODUCT_COUNT = 2654
 STATIC_GENERATED_AT = "2026-08-11T00:00:00Z"
 GUIDE_KEYS = {
     "summary",
@@ -131,7 +132,48 @@ def read_rows(paths: Iterable[Path]) -> List[Dict[str, Any]]:
     return rows
 
 
-def import_catalog(db_path: Path, input_dir: Path) -> None:
+def read_products(path: Path) -> List[Dict[str, Any]]:
+    products = []
+    required = {
+        "id", "brand", "name", "category", "volume", "versionLabel",
+        "description", "texture", "verified", "facts", "imageUrl",
+    }
+    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not raw_line.strip():
+            continue
+        try:
+            product = json.loads(raw_line)
+        except json.JSONDecodeError as exc:
+            raise StaticCatalogError(f"{path}:{line_number}: JSON 오류") from exc
+        if not isinstance(product, dict) or set(product) != required:
+            actual = set(product) if isinstance(product, dict) else set()
+            raise StaticCatalogError(
+                f"{path}:{line_number}: product 계약 오류 {sorted(actual ^ required)}"
+            )
+        product_id = int(product["id"])
+        for field in ("brand", "name", "category", "description", "texture", "imageUrl"):
+            text(product[field], f"product {product_id}.{field}", maximum=1000)
+        if product["volume"] is not None:
+            text(product["volume"], f"product {product_id}.volume")
+        if product["versionLabel"] is not None:
+            text(product["versionLabel"], f"product {product_id}.versionLabel")
+        if not isinstance(product["verified"], bool):
+            raise StaticCatalogError(f"product {product_id}.verified: boolean이어야 합니다.")
+        if not isinstance(product["facts"], list) or any(
+            not isinstance(item, str) for item in product["facts"]
+        ):
+            raise StaticCatalogError(f"product {product_id}.facts: 문자열 배열이어야 합니다.")
+        products.append(product)
+    ids = [int(product["id"]) for product in products]
+    if len(products) != EXPECTED_PRODUCT_COUNT or ids != list(range(1, EXPECTED_PRODUCT_COUNT + 1)):
+        raise StaticCatalogError(
+            f"제품 원본은 1~{EXPECTED_PRODUCT_COUNT} 연속 ID여야 합니다. count={len(products)}"
+        )
+    return products
+
+
+def import_catalog(db_path: Path, input_dir: Path, *, create_backup: bool = True) -> None:
+    product_rows = read_products(input_dir / "products.jsonl")
     paths = sorted(input_dir.glob("catalog-*.jsonl"))
     if len(paths) != 3:
         raise StaticCatalogError(f"분할 JSONL 3개가 필요합니다. 현재 {len(paths)}개")
@@ -140,10 +182,7 @@ def import_catalog(db_path: Path, input_dir: Path) -> None:
     connection = sqlite3.connect(db_path)
     try:
         connection.execute("PRAGMA foreign_keys = ON")
-        products = {
-            int(product_id): str(name)
-            for product_id, name in connection.execute("SELECT id, name FROM product ORDER BY id")
-        }
+        products = {int(product["id"]): str(product["name"]) for product in product_rows}
         row_ids = [int(row["productId"]) for row in rows]
         if len(row_ids) != len(set(row_ids)):
             raise StaticCatalogError("JSONL에 중복 productId가 있습니다.")
@@ -157,9 +196,45 @@ def import_catalog(db_path: Path, input_dir: Path) -> None:
             for row in rows
             for product_id in [int(row["productId"])]
         ]
-        backup = db_path.with_suffix(".before-subagent-catalog.db")
-        shutil.copy2(db_path, backup)
+        backup = db_path.with_suffix(".before-subagent-catalog.db") if create_backup else None
+        if backup is not None:
+            shutil.copy2(db_path, backup)
         with connection:
+            connection.executemany(
+                """
+                INSERT INTO product(
+                    id, brand, name, category, volume, version_label,
+                    description, texture, verified, facts_json, image_url
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    brand = excluded.brand,
+                    name = excluded.name,
+                    category = excluded.category,
+                    volume = excluded.volume,
+                    version_label = excluded.version_label,
+                    description = excluded.description,
+                    texture = excluded.texture,
+                    verified = excluded.verified,
+                    facts_json = excluded.facts_json,
+                    image_url = excluded.image_url
+                """,
+                [
+                    (
+                        int(product["id"]),
+                        product["brand"],
+                        product["name"],
+                        product["category"],
+                        product["volume"],
+                        product["versionLabel"],
+                        product["description"],
+                        product["texture"],
+                        1 if product["verified"] else 0,
+                        json.dumps(product["facts"], ensure_ascii=False),
+                        product["imageUrl"],
+                    )
+                    for product in product_rows
+                ],
+            )
             connection.executemany(
                 """
                 INSERT INTO product_catalog_content(
@@ -192,7 +267,18 @@ def import_catalog(db_path: Path, input_dir: Path) -> None:
                     for product_id, guide in guides
                 ],
             )
-        print(f"imported={len(guides)} backup={backup}")
+        product_count = connection.execute(
+            "SELECT COUNT(*) FROM product WHERE id BETWEEN 1 AND ?", (EXPECTED_PRODUCT_COUNT,)
+        ).fetchone()[0]
+        guide_count = connection.execute(
+            "SELECT COUNT(*) FROM product_catalog_content WHERE product_id BETWEEN 1 AND ?",
+            (EXPECTED_PRODUCT_COUNT,),
+        ).fetchone()[0]
+        if product_count != EXPECTED_PRODUCT_COUNT or guide_count != EXPECTED_PRODUCT_COUNT:
+            raise StaticCatalogError(
+                f"import 검증 실패: products={product_count}, guides={guide_count}"
+            )
+        print(f"products={product_count} guides={guide_count} backup={backup or 'managed-externally'}")
     finally:
         connection.close()
 
@@ -201,8 +287,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     parser.add_argument("--input-dir", type=Path, default=DEFAULT_INPUT)
+    parser.add_argument(
+        "--skip-backup",
+        action="store_true",
+        help="배포 스크립트가 SQLite backup API로 백업을 끝낸 경우에만 사용합니다.",
+    )
     args = parser.parse_args()
-    import_catalog(args.db, args.input_dir)
+    import_catalog(args.db, args.input_dir, create_backup=not args.skip_backup)
     return 0
 
 

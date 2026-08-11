@@ -34,11 +34,20 @@
 2. 실행 JAR와 배포 파일로 release artifact를 만든다.
 3. SSH로 OCI 인스턴스에 artifact를 전송한다.
 4. 기존 SQLite가 있으면 SQLite backup API로 일관된 백업을 만들고 무결성을 검사한다.
-5. commit SHA를 태그로 새 컨테이너 이미지를 만들고 API 컨테이너만 교체한다.
-6. 컨테이너 내부 `/actuator/health`와 공개 HTTP 헬스체크가 모두 성공해야 배포 성공으로 처리한다.
-7. 내부 헬스체크가 실패하면 직전 컨테이너 이미지로 되돌린다.
+5. 저장소의 정적 제품 2,654개와 제품별 안내 2,654개를 기존 사용자 데이터를 건드리지 않고 upsert한다.
+6. commit SHA를 태그로 새 컨테이너 이미지를 만들고 API 컨테이너만 교체한다.
+7. 컨테이너 내부 `/actuator/health`와 공개 HTTP 헬스체크가 모두 성공해야 배포 성공으로 처리한다.
+8. 내부 헬스체크가 실패하면 직전 컨테이너 이미지로 되돌린다.
 
 workflow는 [deploy-backend.yml](../.github/workflows/deploy-backend.yml), 서버 배포 자산은 [`deploy/oci/`](../deploy/oci/)에 있다.
+
+## 해커톤 빠른 로그인
+
+- 운영 데모는 `TEST_HARNESS_ENABLED=true`로 실행해 데스크톱 빠른 로그인 패널을 제공한다.
+- 계정은 `test01`부터 `test20`까지이며 `schema.sql`이 멱등적으로 보장한다.
+- 빠른 로그인 API는 테스트 하네스가 켜진 경우에만 응답한다.
+- 일반 로그인과 사용자별 데이터 소유권 검사는 빠른 로그인 이후에도 동일하게 적용된다.
+- 공개 데모를 종료할 때는 Compose의 값을 `false`로 바꾸고 API 컨테이너만 재생성한다.
 
 ## 데이터 변경 경계
 

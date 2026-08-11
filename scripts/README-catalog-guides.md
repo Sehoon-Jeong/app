@@ -2,7 +2,7 @@
 
 `catalog_guides.py`는 SQLite의 모든 제품을 읽고, 제품이 무엇이며 루틴에서 어떻게 사용하는지 설명하는 가이드를 생성·검증·저장한다. 제품에 없는 효능이나 성분을 추정하지 않는다. 제품 ID, 브랜드, 제품명, 카테고리, 제형과 DB에 이미 있는 설명·표기 정보를 입력으로 사용한다.
 
-현재 앱의 정적 카탈로그 문구는 `backend/data/subagent-catalog/catalog-*.jsonl` 세 파일이 원본이다. 다음 명령은 외부 API를 호출하지 않으며, 2,654개가 모두 있고 계약을 통과할 때에만 SQLite를 한 번에 갱신한다.
+현재 앱의 정적 제품 원본은 `backend/data/subagent-catalog/products.jsonl`, 제품별 문구는 `backend/data/subagent-catalog/catalog-*.jsonl` 세 파일이다. 다음 명령은 외부 API를 호출하지 않으며, 제품과 문구가 각각 2,654개 있고 계약을 통과할 때에만 SQLite를 한 번에 갱신한다.
 
 ```bash
 python3 scripts/import_subagent_catalog.py

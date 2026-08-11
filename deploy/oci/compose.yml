@@ -9,7 +9,8 @@ services:
     environment:
       PORT: '8080'
       SKN_DB_PATH: /app/data/skn.db
-      TEST_HARNESS_ENABLED: 'false'
+      # 해커톤 심사 환경에서 데스크톱 빠른 로그인 계정 20개를 노출한다.
+      TEST_HARNESS_ENABLED: 'true'
     volumes:
       - ${SKN_DATA_DIR:?SKN_DATA_DIR is required}:/app/data
     networks:

@@ -41,12 +41,33 @@ rm -rf "$release_dir"
 mkdir -p "$release_dir"
 tar -xzf "$archive_file" -C "$release_dir"
 
-for required_file in skn-api.jar schema.sql Dockerfile compose.yml backup_sqlite.py; do
+for required_file in skn-api.jar schema.sql Dockerfile compose.yml backup_sqlite.py import_subagent_catalog.py catalog/products.jsonl; do
   [[ -f "$release_dir/$required_file" ]] || {
     printf 'release is missing %s\n' "$required_file" >&2
     exit 65
   }
 done
+
+catalog_shard_count=$(find "$release_dir/catalog" -maxdepth 1 -type f -name 'catalog-*.jsonl' | wc -l)
+if [[ "$catalog_shard_count" -ne 3 ]]; then
+  printf 'release must contain exactly three catalog guide shards\n' >&2
+  exit 65
+fi
+
+if [[ ! -s "$data_dir/skn.db" ]]; then
+  python3 - "$data_dir/skn.db" "$release_dir/schema.sql" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+database, schema = sys.argv[1:]
+connection = sqlite3.connect(database)
+try:
+    connection.executescript(Path(schema).read_text(encoding="utf-8"))
+finally:
+    connection.close()
+PY
+fi
 
 new_schema_hash=$(sha256sum "$release_dir/schema.sql" | awk '{print $1}')
 schema_hash_file="$service_dir/schema.sha256"
@@ -63,6 +84,11 @@ if [[ -s "$data_dir/skn.db" ]]; then
   python3 "$release_dir/backup_sqlite.py" \
     "$data_dir/skn.db" "$backup_dir/skn-$backup_stamp.db"
 fi
+
+python3 "$release_dir/import_subagent_catalog.py" \
+  --db "$data_dir/skn.db" \
+  --input-dir "$release_dir/catalog" \
+  --skip-backup
 
 image_name="skn-api:$release_sha"
 previous_image=$(docker inspect --format '{{.Config.Image}}' skn-api 2>/dev/null || true)
