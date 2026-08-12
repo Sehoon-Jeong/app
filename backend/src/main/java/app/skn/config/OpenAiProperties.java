@@ -14,7 +14,8 @@ public record OpenAiProperties(
         int maxOutputTokens,
         boolean webSearchEnabled,
         String webSearchContextSize,
-        String rateLimitFallbackModel
+        String rateLimitFallbackModel,
+        int rateLimitFallbackMaxOutputTokens
 ) {
     public boolean configured() {
         return apiKey != null && !apiKey.isBlank();

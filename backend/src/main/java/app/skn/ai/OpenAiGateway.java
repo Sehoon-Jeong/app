@@ -120,6 +120,10 @@ public class OpenAiGateway {
                 if (!retryable || attempt == 2) break;
                 if (error.getStatusCode().value() == 429 && requireWebSearch && canUseRateLimitFallback()) {
                     request.put("model", properties.rateLimitFallbackModel().trim());
+                    request.put("max_output_tokens", Math.max(
+                            properties.maxOutputTokens(),
+                            properties.rateLimitFallbackMaxOutputTokens()
+                    ));
                     log.warn("OpenAI web search is using the configured rate-limit fallback model");
                     continue;
                 }

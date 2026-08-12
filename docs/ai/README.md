@@ -91,7 +91,7 @@ P4는 식별·사용 맥락 보조로만 쓰고 안전·효능·원인 판단에
 ## 모델·비용·실패 정책
 
 - 기본 모델: `gpt-5.6-terra`
-- 검색 429 fallback: `gpt-5.6-luna` 한 번. 현재 계정의 Terra TPM이 검색 요청보다 작게 남았을 때만 사용하며, 일반 성공 경로는 Terra다.
+- 검색 429 fallback: `gpt-5.6-luna` 한 번. 현재 계정의 Terra TPM이 검색 요청보다 작게 남았을 때만 사용하며, 일반 성공 경로는 Terra다. fallback은 검색·추론·구조화 JSON 마감을 위해 1,800 tokens를 사용한다.
 - reasoning effort: `low`
 - 최대 출력: 650 tokens
 - web search: Responses API `web_search`, 제품·추천·Rescue 판단 단계는 `tool_choice: required`
