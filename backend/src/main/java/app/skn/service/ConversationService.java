@@ -45,6 +45,7 @@ public class ConversationService {
     public ConversationView create(CreateConversationRequest request) {
         String mode = normalizeMode(request.mode());
         if (!mode.equals("RESCUE") && isRescueIntent(request.initialPrompt())) mode = "RESCUE";
+        else if (!mode.equals("PRODUCT") && isRecommendationIntent(request.initialPrompt())) mode = "RECOMMEND";
         if (request.productId() != null) skincareService.product(request.productId());
         if (request.experienceId() != null) skincareService.experience(request.experienceId());
 
@@ -77,6 +78,9 @@ public class ConversationService {
             startRescue(conversationId, request.text().trim(), userMessageId);
         } else if (mode.equals("RESCUE")) {
             handleRescue(conversationId, request.text().trim(), userMessageId, rescueStage);
+        } else if (!mode.equals("PRODUCT") && isRecommendationIntent(request.text())) {
+            if (!mode.equals("RECOMMEND")) repository.updateConversationMode(conversationId, "RECOMMEND");
+            answerWithAi(conversationId, "RECOMMEND", request.text().trim(), userMessageId);
         } else {
             answerWithAi(conversationId, mode, request.text().trim(), userMessageId);
         }
@@ -257,7 +261,24 @@ public class ConversationService {
                 mode.equals("PRODUCT") || mode.equals("RECOMMEND")
                         || (mode.equals("RESCUE") && repository.findRescuePlan(conversationId).isPresent())
         );
+        if (mode.equals("RECOMMEND") && result.status().equals("FALLBACK")) {
+            result = recommendationFallback(conversationId, result);
+        }
         saveAi(conversationId, userMessageId, result);
+    }
+
+    private AiResult recommendationFallback(long conversationId, AiResult original) {
+        List<ProductView> candidates = recommendationCandidates(conversationId);
+        if (candidates.isEmpty()) return original;
+        ProductView candidate = candidates.get(0);
+        return new AiResult(
+                "지금 하나만 고르면 **%s %s**을 먼저 보세요.\n\n외부 제품 정보 확인이 잠시 지연돼 세부 특징이나 적합성은 덧붙이지 않았어요. 그래도 답을 비워두지 않고 서버가 고른 첫 번째 카탈로그 후보를 연결했습니다."
+                        .formatted(candidate.brand(), candidate.name()),
+                "FALLBACK",
+                List.of("이 제품 상세를 볼래", "연결되면 근거까지 다시 확인해줘"),
+                List.of("P-" + candidate.id()),
+                List.of()
+        );
     }
 
     private void saveAi(long conversationId, long userMessageId, AiResult result) {
@@ -286,10 +307,7 @@ public class ConversationService {
                     .append(fact.text()).append("\n"));
         }
         if (mode.equals("RECOMMEND")) {
-            List<ProductView> candidates = skincareService.products("").stream()
-                    .filter(candidate -> !candidate.owned())
-                    .limit(3)
-                    .toList();
+            List<ProductView> candidates = recommendationCandidates(conversationId);
             for (int index = 0; index < candidates.size(); index++) {
                 ProductView candidate = candidates.get(index);
                 context.append("P-").append(candidate.id()).append(" 서버 후보 순위 ")
@@ -333,6 +351,41 @@ public class ConversationService {
         }
         appendHistory(context, conversationId);
         return context.toString();
+    }
+
+    private List<ProductView> recommendationCandidates(long conversationId) {
+        List<ProductView> available = skincareService.products("").stream()
+                .filter(candidate -> !candidate.owned())
+                .toList();
+        String conversationText = repository.findMessages(conversationId).stream()
+                .map(MessageView::content)
+                .reduce("", (left, right) -> left + " " + right)
+                .toLowerCase(Locale.ROOT).replace(" ", "");
+        List<String> preferredCategories = preferredCategories(conversationText);
+        if (preferredCategories.isEmpty()) return available.stream().limit(3).toList();
+
+        List<ProductView> matched = available.stream()
+                .filter(product -> preferredCategories.stream().anyMatch(keyword ->
+                        product.category().toLowerCase(Locale.ROOT).contains(keyword)))
+                .limit(3)
+                .toList();
+        return matched.isEmpty() ? available.stream().limit(3).toList() : matched;
+    }
+
+    private List<String> preferredCategories(String conversationText) {
+        if (containsAny(conversationText, "선크림", "선케어", "자외선", "spf", "야외", "밖에오래", "햇빛")) {
+            return List.of("선", "자외선");
+        }
+        if (containsAny(conversationText, "클렌징", "클렌저", "세안", "씻")) return List.of("클렌", "워시");
+        if (conversationText.contains("토너")) return List.of("토너", "스킨");
+        if (containsAny(conversationText, "세럼", "앰플", "에센스")) return List.of("세럼", "앰플", "에센스");
+        if (containsAny(conversationText, "크림", "로션", "보습")) return List.of("크림", "로션", "모이스처");
+        if (containsAny(conversationText, "립", "입술")) return List.of("립");
+        return List.of();
+    }
+
+    private boolean containsAny(String value, String... candidates) {
+        return List.of(candidates).stream().anyMatch(value::contains);
     }
 
     private void appendProductGuide(StringBuilder context, ProductView product) {
@@ -408,6 +461,12 @@ public class ConversationService {
         String value = message.replace(" ", "");
         if (value.contains("않") || value.contains("아니")) return false;
         return List.of("빠르게심해", "점점심해", "숨쉬기", "입술이부", "눈이부", "물집", "진물", "통증이심")
+                .stream().anyMatch(value::contains);
+    }
+
+    private boolean isRecommendationIntent(String message) {
+        String value = message.toLowerCase(Locale.ROOT).replace(" ", "");
+        return List.of("추천", "골라줘", "골라봐", "뭐사", "뭘사", "살만한제품", "제품찾아줘")
                 .stream().anyMatch(value::contains);
     }
 

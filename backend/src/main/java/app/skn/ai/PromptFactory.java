@@ -9,7 +9,7 @@ import java.util.Map;
 
 @Component
 public class PromptFactory {
-    public static final String VERSION = "chat-v3-web-grounded";
+    public static final String VERSION = "chat-v4-luna-direct-answer";
 
     private final String shared;
     private final Map<String, String> modes;

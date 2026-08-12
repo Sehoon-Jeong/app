@@ -15,12 +15,10 @@ app:
     enabled: true
   openai:
     api-key: ""
-    model: gpt-5.6-terra
+    model: gpt-5.6-luna
     reasoning-effort: low
     connect-timeout: 1s
     read-timeout: 1s
-    max-output-tokens: 300
+    max-output-tokens: 1800
     web-search-enabled: false
     web-search-context-size: low
-    rate-limit-fallback-model: gpt-5.6-luna
-    rate-limit-fallback-max-output-tokens: 1800

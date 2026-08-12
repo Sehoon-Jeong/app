@@ -424,6 +424,71 @@ class CoreFlowIntegrationTest {
     }
 
     @Test
+    void explicitRecommendationIntentStartsInRecommendationModeAndStillNamesAProductOnAiFailure() throws Exception {
+        MockHttpSession session = demoSession();
+        mvc.perform(post("/api/v1/ai/conversations").session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"mode":"GENERAL","initialPrompt":"그냥 하나 추천해줘. 지금 즉시","clientRequestId":"test-auto-recommend-create"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.mode").value("RECOMMEND"))
+                .andExpect(jsonPath("$.messages[1].content").value(org.hamcrest.Matchers.containsString("지금 하나만 고르면")))
+                .andExpect(jsonPath("$.messages[1].evidenceRefs[0]").value(org.hamcrest.Matchers.startsWith("P-")));
+    }
+
+    @Test
+    void explicitRecommendationIntentTurnsAnExistingGeneralThreadIntoRecommendationMode() throws Exception {
+        MockHttpSession session = demoSession();
+        String created = mvc.perform(post("/api/v1/ai/conversations").session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"mode":"GENERAL","initialPrompt":"내 최근 기록을 요약해줘","clientRequestId":"test-recommend-thread"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long conversationId = json.readTree(created).path("id").asLong();
+
+        mvc.perform(post("/api/v1/ai/conversations/{id}/messages", conversationId).session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"text":"기준 말고 제품 하나 골라줘","clientRequestId":"test-auto-recommend-message"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mode").value("RECOMMEND"))
+                .andExpect(jsonPath("$.messages[3].content").value(org.hamcrest.Matchers.containsString("지금 하나만 고르면")));
+    }
+
+    @Test
+    void recommendationUsesTheExistingConversationToNarrowTheCatalogCandidates() throws Exception {
+        MockHttpSession session = demoSession();
+        String created = mvc.perform(post("/api/v1/ai/conversations").session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"mode":"GENERAL","initialPrompt":"밖에 오래 있는 날 바르는 게 귀찮아","clientRequestId":"test-suncare-thread"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long conversationId = json.readTree(created).path("id").asLong();
+
+        String recommended = mvc.perform(post("/api/v1/ai/conversations/{id}/messages", conversationId).session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"text":"그냥 하나 추천해줘","clientRequestId":"test-suncare-recommend"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mode").value("RECOMMEND"))
+                .andReturn().getResponse().getContentAsString();
+        JsonNode messages = json.readTree(recommended).path("messages");
+        String productRef = messages.get(messages.size() - 1).path("evidenceRefs").get(0).asText();
+        long productId = Long.parseLong(productRef.substring(2));
+
+        mvc.perform(get("/api/v1/products/{id}", productId).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.category").value(org.hamcrest.Matchers.containsString("선")));
+    }
+
+    @Test
     void rescueDoesNotCreateAPlanUntilRecordedChangesAreConfirmed() throws Exception {
         MockHttpSession session = demoSession();
         String created = mvc.perform(post("/api/v1/ai/conversations").session(session)

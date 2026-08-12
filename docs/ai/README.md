@@ -90,17 +90,16 @@ P4는 식별·사용 맥락 보조로만 쓰고 안전·효능·원인 판단에
 
 ## 모델·비용·실패 정책
 
-- 기본 모델: `gpt-5.6-terra`
-- 검색 429 fallback: `gpt-5.6-luna` 한 번. 현재 계정의 Terra TPM이 검색 요청보다 작게 남았을 때만 사용하며, 일반 성공 경로는 Terra다. fallback은 검색·추론·구조화 JSON 마감을 위해 1,800 tokens를 사용한다.
+- 기본 모델: `gpt-5.6-luna`
 - reasoning effort: `low`
-- 최대 출력: 650 tokens
+- 최대 출력: 1,800 tokens. 검색·추론 뒤 구조화 JSON이 잘리지 않게 확보한 예산이며, 사용자에게 보이는 답변 길이는 schema와 프롬프트로 별도 제한한다.
 - web search: Responses API `web_search`, 제품·추천·Rescue 판단 단계는 `tool_choice: required`
 - source include: `web_search_call.action.sources`
 - 재시도: 429·5xx·timeout에만 1회
 - 저장: OpenAI `store: false`
-- 실패: 사용자 메시지를 먼저 DB에 저장한 뒤 fallback 답변을 남긴다.
+- 실패: 사용자 메시지를 먼저 DB에 저장한다. 추천 질문은 서버 카탈로그 후보 하나를 직접 연결하고, 그 외 질문은 재시도 가능한 fallback을 남긴다.
 
-Terra는 최저가 모델보다 한국어 맥락·상충 근거·보수적 표현이 중요한 SKN 대화에서 균형을 취한 선택이다. Luna는 공식 모델 안내에서 효율적인 고처리량 용도로 구분되므로, Terra가 계정 TPM 때문에 검색 시작 전 거절된 경우에만 같은 프롬프트·검색·검증 계약으로 대체한다. 최신 가격과 모델은 [OpenAI API 가격](https://developers.openai.com/api/docs/pricing)에서 확인한다.
+Luna 하나로 일반 대화와 검색 대화를 운영한다. 모델 전환 분기는 두지 않고, 서버의 근거 검증과 실패 시 직접 응답으로 신뢰성과 가용성을 보완한다. 최신 가격과 모델은 [OpenAI API 가격](https://developers.openai.com/api/docs/pricing)에서 확인한다.
 
 ## 비밀값
 
