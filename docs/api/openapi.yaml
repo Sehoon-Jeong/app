@@ -607,15 +607,24 @@ components:
         evidence: { type: array, items: { $ref: '#/components/schemas/PatternEvidence' } }
     Message:
       type: object
-      required: [id, role, content, suggestedReplies, evidenceRefs, status, createdAt]
+      required: [id, role, content, suggestedReplies, evidenceRefs, webSources, status, createdAt]
       properties:
         id: { type: integer, format: int64 }
         role: { type: string, enum: [USER, ASSISTANT] }
-        content: { type: string }
+        content: { type: string, description: AI 답변은 Markdown이며 외부 사실을 사용한 문장에는 webSources와 연결된 클릭 가능한 인라인 인용이 포함된다. }
         suggestedReplies: { type: array, maxItems: 3, items: { type: string, maxLength: 80 } }
         evidenceRefs: { type: array, maxItems: 8, items: { type: string, maxLength: 64 } }
+        webSources: { type: array, maxItems: 8, items: { $ref: '#/components/schemas/WebSource' } }
         status: { type: string, enum: [READY, FALLBACK, FAILED] }
         createdAt: { type: string }
+    WebSource:
+      type: object
+      required: [ref, title, url, tier]
+      properties:
+        ref: { type: string, pattern: '^S-[1-9][0-9]*$', description: 한 AI 메시지 안에서만 유효한 인라인 출처 번호 }
+        title: { type: string, maxLength: 180 }
+        url: { type: string, format: uri, pattern: '^https://' }
+        tier: { type: string, enum: [P1, P2, P3, P4], description: 'P1 제품 공식정보, P2 공공기관, P3 연구 자료, P4 보조 자료' }
     RescuePlan:
       type: object
       required: [id, title, rationale, status]

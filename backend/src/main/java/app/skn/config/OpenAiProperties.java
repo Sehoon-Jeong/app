@@ -11,7 +11,9 @@ public record OpenAiProperties(
         String reasoningEffort,
         Duration connectTimeout,
         Duration readTimeout,
-        int maxOutputTokens
+        int maxOutputTokens,
+        boolean webSearchEnabled,
+        String webSearchContextSize
 ) {
     public boolean configured() {
         return apiKey != null && !apiKey.isBlank();

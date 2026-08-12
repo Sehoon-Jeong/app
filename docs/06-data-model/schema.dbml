@@ -151,7 +151,7 @@ Table pattern_evidence {
 Table conversation {
   id integer [pk, increment]
   user_id integer [not null, ref: > app_user.id]
-  mode text [not null, note: 'GENERAL | PRODUCT | PATTERN | RESCUE']
+  mode text [not null, note: 'GENERAL | PRODUCT | RECOMMEND | PATTERN | RESCUE']
   product_id integer [ref: > product.id]
   experience_id integer [ref: > experience_session.id]
   status text [not null, note: 'OPEN | CLOSED']
@@ -169,6 +169,18 @@ Table conversation_message {
   status text [not null, note: 'READY | FALLBACK | FAILED']
   client_request_id text
   created_at text [not null]
+}
+
+Table conversation_message_source {
+  message_id integer [not null, ref: > conversation_message.id]
+  source_order integer [not null]
+  title text [not null]
+  url text [not null]
+  source_tier text [not null, note: 'P1 | P2 | P3 | P4']
+  indexes {
+    (message_id, source_order) [pk]
+    (message_id, url) [unique]
+  }
 }
 
 Table rescue_plan {

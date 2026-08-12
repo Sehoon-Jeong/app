@@ -78,7 +78,15 @@ export type Home = {
 export type Message = {
   id: number; role: 'USER' | 'ASSISTANT'; content: string; suggestedReplies: string[];
   evidenceRefs: string[];
+  webSources?: WebSource[];
   status: 'READY' | 'FALLBACK' | 'FAILED'; createdAt: string;
+}
+
+export type WebSource = {
+  ref: string;
+  title: string;
+  url: string;
+  tier: 'P1' | 'P2' | 'P3' | 'P4';
 }
 
 export type RescuePlan = {

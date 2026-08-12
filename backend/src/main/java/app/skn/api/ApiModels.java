@@ -207,8 +207,16 @@ public final class ApiModels {
             String content,
             List<String> suggestedReplies,
             List<String> evidenceRefs,
+            List<WebSourceView> webSources,
             String status,
             String createdAt
+    ) {}
+
+    public record WebSourceView(
+            String ref,
+            String title,
+            String url,
+            String tier
     ) {}
 
     public record RescuePlanView(

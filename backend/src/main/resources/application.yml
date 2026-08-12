@@ -51,6 +51,8 @@ app:
     connect-timeout: 3s
     read-timeout: 25s
     max-output-tokens: 650
+    web-search-enabled: ${OPENAI_WEB_SEARCH_ENABLED:true}
+    web-search-context-size: ${OPENAI_WEB_SEARCH_CONTEXT_SIZE:low}
 
 logging:
   level:

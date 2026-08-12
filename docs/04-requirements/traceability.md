@@ -4,12 +4,12 @@
 | --- | --- | --- | --- | --- |
 | P0 | [#157 계정·데이터 경계](https://github.com/skn-labs/app/issues/157) | ACC, SEC | `/api/v1/auth/*` | `app_user` |
 | P0 | [#158 카탈로그·내 화장품](https://github.com/skn-labs/app/issues/158) | PRD-01~02, CAT-01, CAT-05 | `/api/v1/products`, `/api/v1/me/products` | `product`, `product_catalog_content`, `product_source_fact`, `user_product` |
-| P0 | [#159 AI 제품 탐색](https://github.com/skn-labs/app/issues/159) | EXP-01~06 | `/api/v1/products/{id}`, `/api/v1/ai/conversations` | `product`, `conversation`, `conversation_message` |
+| P0 | [#159 AI 제품 탐색](https://github.com/skn-labs/app/issues/159) | EXP-01~06 | `/api/v1/products/{id}`, `/api/v1/ai/conversations` | `product`, `conversation`, `conversation_message`, `conversation_message_source` |
 | P0 | [#160 루틴·사용 맥락](https://github.com/skn-labs/app/issues/160) | RTN-01~05 | `/api/v1/me/routines` | `routine`, `routine_item` |
 | P0 | [#161 경험 기록·회고](https://github.com/skn-labs/app/issues/161) | REC-01~08 | `/api/v1/me/experiences` | `experience_session`, `experience_record`, `comparison_baseline` |
 | P0 | [#162 AI Rescue](https://github.com/skn-labs/app/issues/162) | RSC-01~08 | `/api/v1/ai/conversations/{id}/messages`, `/api/v1/ai/conversations/{id}/rescue/apply` | `conversation`, `conversation_message`, `rescue_plan` |
 | P0 | [#163 홈·기록·패턴](https://github.com/skn-labs/app/issues/163) | HOME, HIS, PAT | `/api/v1/home`, `/api/v1/me/experience-records`, `/api/v1/me/patterns` | `experience_record`, `personal_pattern`, `pattern_evidence` |
-| P0 | [#164 AI·보안·운영](https://github.com/skn-labs/app/issues/164) | AI, OPS, SEC | 모든 P0 API | 세션 소유권 조건, `client_request_id`, `evidence_refs_json` |
+| P0 | [#164 AI·보안·운영](https://github.com/skn-labs/app/issues/164) | AI, OPS, SEC | 모든 P0 API | 세션 소유권 조건, `client_request_id`, `evidence_refs_json`, `conversation_message_source` |
 | P1 | 경험 순환 강화 | CAT-02~03, PRD-03~04, EXP-07, RTN-06~07, REC-09, RSC-09~10, HIS-02, PAT-05, AI-05~06 | Feature 참조 | evidence_snapshot, ai_job, notification |
 | P2 | 입력·구매 편의 | ONB, MEM, PRD-05, CAT-04, EXP-08 | `/receipts`, `/wishlist` | ai_memory, receipt, wishlist_item |
 

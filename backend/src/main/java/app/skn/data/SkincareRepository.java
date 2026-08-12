@@ -6,6 +6,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -189,6 +190,17 @@ public class SkincareRepository {
                  WHERE cb.user_id = ? AND cb.ended_at IS NULL
                  ORDER BY cb.id DESC LIMIT 1
                 """, (rs, rowNum) -> mapRoutine(rs), userId()).stream().findFirst();
+    }
+
+    public List<RoutineView> findBaselineRoutines(int limit) {
+        return jdbc.query("""
+                SELECT r.id, r.name, r.day_part, r.status, r.started_at
+                  FROM comparison_baseline cb
+                  JOIN routine r ON r.id = cb.routine_id
+                 WHERE cb.user_id = ?
+                 ORDER BY cb.id DESC
+                 LIMIT ?
+                """, (rs, rowNum) -> mapRoutine(rs), userId(), limit);
     }
 
     private Optional<RoutineView> findRoutineByStatus(String status) {
@@ -496,6 +508,14 @@ public class SkincareRepository {
 
     public long insertMessage(long conversationId, String role, String content, String status,
                               String clientRequestId, List<String> suggestedReplies, List<String> evidenceRefs) {
+        return insertMessage(conversationId, role, content, status, clientRequestId,
+                suggestedReplies, evidenceRefs, List.of());
+    }
+
+    @Transactional
+    public long insertMessage(long conversationId, String role, String content, String status,
+                              String clientRequestId, List<String> suggestedReplies, List<String> evidenceRefs,
+                              List<WebSourceView> webSources) {
         Long id = jdbc.queryForObject("""
                 INSERT INTO conversation_message(
                     conversation_id, role, content, status, client_request_id,
@@ -504,12 +524,23 @@ public class SkincareRepository {
                 """, Long.class, conversationId, role, content, status, clientRequestId,
                 writeJson(suggestedReplies == null ? List.of() : suggestedReplies),
                 writeJson(evidenceRefs == null ? List.of() : evidenceRefs));
+        long messageId = id == null ? 0 : id;
+        if (webSources != null) {
+            for (int index = 0; index < webSources.size(); index++) {
+                WebSourceView source = webSources.get(index);
+                jdbc.update("""
+                        INSERT INTO conversation_message_source(
+                            message_id, source_order, title, url, source_tier
+                        ) VALUES (?, ?, ?, ?, ?)
+                        """, messageId, index + 1, source.title(), source.url(), source.tier());
+            }
+        }
         jdbc.update("UPDATE conversation SET updated_at = datetime('now') WHERE id = ?", conversationId);
-        return id == null ? 0 : id;
+        return messageId;
     }
 
     public List<MessageView> findMessages(long conversationId) {
-        return jdbc.query("""
+        List<MessageView> messages = jdbc.query("""
                 SELECT cm.* FROM conversation_message cm
                 JOIN conversation c ON c.id = cm.conversation_id
                 WHERE cm.conversation_id = ? AND c.user_id = ? ORDER BY cm.id
@@ -517,8 +548,25 @@ public class SkincareRepository {
                 rs.getLong("id"), rs.getString("role"), rs.getString("content"),
                 parseStringList(rs.getString("suggested_replies_json")),
                 parseStringList(rs.getString("evidence_refs_json")),
+                List.of(),
                 rs.getString("status"), rs.getString("created_at")
         ), conversationId, userId());
+        return messages.stream().map(message -> new MessageView(
+                message.id(), message.role(), message.content(), message.suggestedReplies(),
+                message.evidenceRefs(), findMessageWebSources(message.id()), message.status(), message.createdAt()
+        )).toList();
+    }
+
+    private List<WebSourceView> findMessageWebSources(long messageId) {
+        return jdbc.query("""
+                SELECT source_order, title, url, source_tier
+                  FROM conversation_message_source
+                 WHERE message_id = ?
+                 ORDER BY source_order
+                """, (rs, rowNum) -> new WebSourceView(
+                "S-" + rs.getInt("source_order"),
+                rs.getString("title"), rs.getString("url"), rs.getString("source_tier")
+        ), messageId);
     }
 
     public List<ConversationView> findConversations() {

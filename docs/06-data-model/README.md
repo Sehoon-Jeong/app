@@ -27,6 +27,7 @@ erDiagram
   EXPERIENCE_RECORD ||--o{ PATTERN_EVIDENCE : supports
   APP_USER ||--o{ CONVERSATION : chats
   CONVERSATION ||--o{ CONVERSATION_MESSAGE : contains
+  CONVERSATION_MESSAGE ||--o{ CONVERSATION_MESSAGE_SOURCE : cites
   CONVERSATION ||--o| RESCUE_PLAN : proposes
 ```
 
@@ -48,7 +49,8 @@ erDiagram
 | `personal_pattern` | 여러 경험에서 반복된 선호·차이의 표현 | 피부 타입이나 원인 판정이 아님 |
 | `pattern_evidence` | 패턴을 지지하거나 반대하는 원본 기록 | `SUPPORTS` 또는 `CONTRADICTS` |
 | `conversation` | 제품·패턴·Rescue·자율 질문을 담는 공통 채팅 | 모드만 다르고 UI와 메시지 계약은 공통 |
-| `conversation_message` | 사용자/AI 메시지 | AI 답변마다 동적 후속 입력 1~3개와 검증된 근거 참조를 JSON으로 저장 |
+| `conversation_message` | 사용자/AI 메시지 | AI 답변마다 동적 후속 입력 1~3개와 검증된 개인 근거 참조를 JSON으로 저장 |
+| `conversation_message_source` | AI 답변이 실제로 인용한 웹 출처 | OpenAI `url_citation`의 HTTPS URL만 메시지별 순서와 P1~P4 등급으로 저장 |
 | `rescue_plan` | 사용자 승인 전 루틴 제안 | 제안 기준 루틴가 현재 루틴과 같을 때만 적용 |
 
 ## 상태 전이
@@ -91,6 +93,8 @@ AI가 적용했다고 말하는 것으로는 상태가 바뀌지 않는다. `/re
 - `product_catalog_content.observation_points_json`: API의 `highlights`에 대응하는 `title`, `detail` 제품 특징 배열. 기존 DB 호환을 위해 물리 컬럼명은 유지
 - `conversation_message.suggested_replies_json`: AI 답변의 다음 추천 입력 1~3개
 - `conversation_message.evidence_refs_json`: 서버 맥락에 실제로 있던 근거 ID만 저장
+
+외부 출처는 JSON에 섞지 않고 `conversation_message_source`에 둔다. `S-1` 같은 번호는 한 AI 메시지 안에서만 유효하며, 답변 Markdown의 클릭 가능한 인라인 인용과 `source_order`가 일치한다. P1은 제품 공식정보, P2는 공공기관, P3는 연구 자료, P4는 보조 자료다. P4는 안전·효능·원인 판단 근거로 사용하지 않는다.
 
 `product.description`, `product.facts_json`은 출처 미확인 카탈로그 입력이다. 제품별 AI 가이드가 같은 카테고리의 고정 문장으로 수렴하지 않도록 요약 입력에는 사용하지만, `product_source_fact`로 자동 복사하거나 출처 확인 badge·추천·Rescue 판단 근거로 사용하지 않는다.
 

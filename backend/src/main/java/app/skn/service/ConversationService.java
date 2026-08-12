@@ -109,7 +109,8 @@ public class ConversationService {
                 AiResult result = openAi.answer(
                         "RESCUE", prompts.instructions("RESCUE"),
                         rescueContext(conversationId, "SAFETY_UNKNOWN"),
-                        "사용자가 증상이 심하거나 빠르게 악화되는지 잘 모르겠다고 답했다. 진단하지 말고, 제품 분석을 계속하기 전에 사용자가 스스로 답할 수 있는 짧은 확인 질문 하나만 하라."
+                        "사용자가 증상이 심하거나 빠르게 악화되는지 잘 모르겠다고 답했다. 진단하지 말고, 제품 분석을 계속하기 전에 사용자가 스스로 답할 수 있는 짧은 확인 질문 하나만 하라.",
+                        false
                 );
                 saveAi(conversationId, userMessageId, result, "rescue-safety-");
                 return;
@@ -117,7 +118,8 @@ public class ConversationService {
             AiResult result = openAi.answer(
                     "RESCUE", prompts.instructions("RESCUE"),
                     rescueContext(conversationId, "SAFETY_CONTINUE"),
-                    "안전 확인 뒤, 서버가 계산한 비교 기준과 현재 루틴의 변경을 사용자에게 보여주고 기록과 다른 변화가 있었는지 한 가지만 물어라."
+                    "안전 확인 뒤, 서버가 계산한 비교 기준과 현재 루틴의 변경을 사용자에게 보여주고 기록과 다른 변화가 있었는지 한 가지만 물어라.",
+                    false
             );
             saveAi(conversationId, userMessageId, result, "rescue-changes-");
             return;
@@ -128,7 +130,8 @@ public class ConversationService {
                 AiResult result = openAi.answer(
                         "RESCUE", prompts.instructions("RESCUE"),
                         rescueContext(conversationId, "CHANGE_CORRECTION_NEEDED"),
-                        userMessage + "\n사용자가 저장된 변경 목록과 다른 점을 말했거나 확인하지 않았다. 이 대화만으로 저장된 루틴 사실을 바꾸지 말고, 현재 저장된 변경만으로 계속할지 루틴을 먼저 고칠지 한 가지만 확인하라. 아직 확인 순서나 새 루틴을 제안하지 마라."
+                        userMessage + "\n사용자가 저장된 변경 목록과 다른 점을 말했거나 확인하지 않았다. 이 대화만으로 저장된 루틴 사실을 바꾸지 말고, 현재 저장된 변경만으로 계속할지 루틴을 먼저 고칠지 한 가지만 확인하라. 아직 확인 순서나 새 루틴을 제안하지 마라.",
+                        false
                 );
                 saveAi(conversationId, userMessageId, result, "rescue-changes-");
                 return;
@@ -139,7 +142,8 @@ public class ConversationService {
             AiResult result = openAi.answer(
                     "RESCUE", prompts.instructions("RESCUE"),
                     rescueContext(conversationId, "PLAN_READY"),
-                    userMessage + "\n서버가 계산한 확인 순서와 제안 루틴을 설명하되 특정 제품을 범인이라고 말하지 마라."
+                    userMessage + "\n서버가 계산한 확인 순서와 제안 루틴을 설명하되 특정 제품을 범인이라고 말하지 마라.",
+                    true
             );
             saveAi(conversationId, userMessageId, result, "rescue-plan-");
             return;
@@ -249,7 +253,9 @@ public class ConversationService {
                 mode,
                 prompts.instructions(mode),
                 contextFor(conversationId, mode),
-                userMessage
+                userMessage,
+                mode.equals("PRODUCT") || mode.equals("RECOMMEND")
+                        || (mode.equals("RESCUE") && repository.findRescuePlan(conversationId).isPresent())
         );
         saveAi(conversationId, userMessageId, result);
     }
@@ -261,7 +267,7 @@ public class ConversationService {
     private void saveAi(long conversationId, long userMessageId, AiResult result, String clientRequestPrefix) {
         repository.insertMessage(
                 conversationId, "ASSISTANT", result.text(), result.status(),
-                clientRequestPrefix + userMessageId, result.suggestedReplies(), result.evidenceRefs());
+                clientRequestPrefix + userMessageId, result.suggestedReplies(), result.evidenceRefs(), result.webSources());
     }
 
     private String contextFor(long conversationId, String mode) {
@@ -272,7 +278,8 @@ public class ConversationService {
             ProductView product = skincareService.product(productId);
             context.append("P-").append(product.id()).append(" 제품: ")
                     .append(product.brand()).append(" / ").append(product.name()).append(" / ")
-                    .append(product.category()).append("\n");
+                    .append(product.category()).append(" / 용량 ").append(product.volume())
+                    .append(" / 버전 ").append(product.versionLabel()).append("\n");
             appendProductGuide(context, product);
             product.facts().forEach(fact -> context.append("P-").append(product.id())
                     .append(" 출처 확인 사실[").append(fact.sourceLabel()).append("]: ")
@@ -287,7 +294,9 @@ public class ConversationService {
                 ProductView candidate = candidates.get(index);
                 context.append("P-").append(candidate.id()).append(" 서버 후보 순위 ")
                         .append(index + 1).append(": ").append(candidate.brand()).append(" / ")
-                        .append(candidate.name()).append(" / ").append(candidate.category()).append("\n");
+                        .append(candidate.name()).append(" / ").append(candidate.category())
+                        .append(" / 용량 ").append(candidate.volume()).append(" / 버전 ")
+                        .append(candidate.versionLabel()).append("\n");
                 appendProductGuide(context, candidate);
                 candidate.facts().forEach(fact -> context.append("P-").append(candidate.id())
                         .append(" 출처 확인 사실[").append(fact.sourceLabel()).append("]: ")
@@ -295,7 +304,26 @@ public class ConversationService {
             }
             if (candidates.isEmpty()) context.append("추천 가능한 미보유 카탈로그 후보 없음\n");
         }
+        List<UserProductView> ownedProducts = skincareService.userProducts();
+        if (ownedProducts.isEmpty()) context.append("내 화장품: 없음\n");
+        else {
+            context.append("내 화장품:\n");
+            ownedProducts.stream().limit(30).forEach(item -> {
+                if (item.product() != null) {
+                    context.append("P-").append(item.product().id()).append(" 보유 제품: ")
+                            .append(item.product().brand()).append(" / ").append(item.product().name())
+                            .append(" / ").append(item.product().category()).append("\n");
+                } else {
+                    context.append("사용자 직접 등록 보유 제품: ").append(item.customBrand()).append(" / ")
+                            .append(item.customName()).append(" / ").append(item.customCategory()).append("\n");
+                }
+            });
+        }
         repository.findCurrentRoutine().ifPresent(routine -> appendRoutine(context, routine, "CURRENT"));
+        List<RoutineView> baselines = repository.findBaselineRoutines(3);
+        for (int index = 0; index < baselines.size(); index++) {
+            appendRoutine(context, baselines.get(index), index == 0 ? "LATEST_BASELINE" : "PAST_BASELINE_" + (index + 1));
+        }
         for (ExperienceRecordView record : repository.findRelevantRecords(productId, 6)) appendRecord(context, record);
         if (mode.equals("PATTERN") || mode.equals("RECOMMEND")) {
             repository.findPatterns().stream().limit(3).forEach(pattern -> context.append("PT-")
@@ -354,9 +382,12 @@ public class ConversationService {
 
     private void appendRecord(StringBuilder context, ExperienceRecordView record) {
         context.append("E-").append(record.id()).append(" 개인 경험: ")
-                .append(record.productName()).append(" / ").append(record.sentiment()).append(" / “")
-                .append("사용자가 고른 태그 ").append(record.tags())
-                .append(" / 불편 ").append(record.discomfort()).append("\n");
+                .append(record.productName()).append(" / 평가 ").append(record.sentiment())
+                .append(" / 사용 결과 원문 “").append(record.note()).append("”")
+                .append(" / 사용자가 고른 태그 ").append(record.tags())
+                .append(" / 불편 ").append(record.discomfort())
+                .append(" / 실제 사용 일치 ").append(record.adherence())
+                .append(" / 기록 시각 ").append(record.createdAt()).append("\n");
     }
 
     private void appendHistory(StringBuilder context, long conversationId) {

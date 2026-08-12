@@ -25,12 +25,13 @@
 ## AI 데이터 경계
 
 - 사용자 메시지를 먼저 저장한 뒤 AI를 호출한다.
-- AI에는 서버가 선별한 source-backed 제품 사실, 루틴, 평가·태그처럼 구조화된 경험만 전달한다.
+- AI에는 정확한 제품 식별정보, 현재·비교 기준 루틴, 질문과 관련된 사용 결과 원문·평가·태그만 전달한다. 제품·성분 외부 사실은 OpenAI Responses API의 `web_search`로 그때 확인한다.
 - 모든 제품에는 `product_catalog_content` 가이드가 있지만, 가이드는 출처 확인 사실이 아니다. 제품별 카탈로그 설명·특징·category·등록 제형을 바탕으로 제품 정체와 일반 사용법을 설명한다.
 - `product.facts_json`, `description`은 출처가 없으므로 제품별 AI 가이드 입력으로만 사용한다. Product API의 확인된 `facts`, 추천·Rescue 근거와 source-backed fact로는 승격하지 않는다.
 - SQL fallback 가이드는 `EDITORIAL`, 별도 생성 파이프라인 성공 결과만 `AI_GENERATED`로 저장한다.
 - 기존 DB의 구 계약 가이드가 기록·비교·느낌을 유도하는 문구를 포함하면 과거 origin과 관계없이 `EDITORIAL` fallback으로 교체한다. 새 계약의 AI 재생성을 기다리는 동안 구 화면을 노출하지 않기 위한 호환 규칙이다.
 - AI 답변의 `evidenceRefs`는 서버 맥락에 실제로 포함된 ID만 저장한다.
+- AI 답변의 외부 근거는 OpenAI가 반환한 `url_citation`의 HTTPS URL만 `conversation_message_source`에 P1~P4 등급과 함께 저장한다.
 - AI 답변은 다음 추천 입력 1~3개를 함께 저장한다.
 - AI가 실패하면 사용자 메시지와 기존 기록은 남고 fallback 답변을 추가한다.
 

@@ -349,6 +349,31 @@ class CoreFlowIntegrationTest {
     }
 
     @Test
+    void assistantWebSourcesAreReturnedWithTheirValidatedPriorityTier() throws Exception {
+        MockHttpSession session = signUpSession("citation_user");
+        String body = mvc.perform(post("/api/v1/ai/conversations").session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"mode":"GENERAL","initialPrompt":"제품 정보를 확인해줘","clientRequestId":"test-citation-create"}
+                                """))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        JsonNode created = json.readTree(body);
+        long conversationId = created.path("id").asLong();
+        long assistantMessageId = created.path("messages").get(1).path("id").asLong();
+        jdbc.update("""
+                INSERT INTO conversation_message_source(message_id, source_order, title, url, source_tier)
+                VALUES (?, 1, '브랜드 공식 제품 안내', 'https://example.com/official-product', 'P1')
+                """, assistantMessageId);
+
+        mvc.perform(get("/api/v1/ai/conversations/{id}", conversationId).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.messages[1].webSources[0].ref").value("S-1"))
+                .andExpect(jsonPath("$.messages[1].webSources[0].title").value("브랜드 공식 제품 안내"))
+                .andExpect(jsonPath("$.messages[1].webSources[0].url").value("https://example.com/official-product"))
+                .andExpect(jsonPath("$.messages[1].webSources[0].tier").value("P1"));
+    }
+
+    @Test
     void generalDiscomfortPromptStartsInRescueMode() throws Exception {
         MockHttpSession session = demoSession();
         mvc.perform(post("/api/v1/ai/conversations").session(session)

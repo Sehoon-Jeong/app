@@ -48,6 +48,11 @@ for required_file in skn-api.jar schema.sql Dockerfile compose.yml backup_sqlite
   }
 done
 
+[[ -d "$release_dir/migrations" ]] || {
+  printf 'release is missing migrations directory\n' >&2
+  exit 65
+}
+
 catalog_shard_count=$(find "$release_dir/catalog" -maxdepth 1 -type f -name 'catalog-*.jsonl' | wc -l)
 if [[ "$catalog_shard_count" -ne 3 ]]; then
   printf 'release must contain exactly three catalog guide shards\n' >&2
@@ -69,20 +74,81 @@ finally:
 PY
 fi
 
-new_schema_hash=$(sha256sum "$release_dir/schema.sql" | awk '{print $1}')
-schema_hash_file="$service_dir/schema.sha256"
-if [[ -s "$data_dir/skn.db" && -f "$schema_hash_file" ]]; then
-  previous_schema_hash=$(<"$schema_hash_file")
-  if [[ "$new_schema_hash" != "$previous_schema_hash" ]]; then
-    printf 'schema.sql changed; add and verify an operational migration before deployment\n' >&2
-    exit 78
-  fi
-fi
-
 if [[ -s "$data_dir/skn.db" ]]; then
   backup_stamp=$(date -u +%Y%m%dT%H%M%SZ)
   python3 "$release_dir/backup_sqlite.py" \
     "$data_dir/skn.db" "$backup_dir/skn-$backup_stamp.db"
+fi
+
+new_schema_hash=$(sha256sum "$release_dir/schema.sql" | awk '{print $1}')
+applied_migration_count=$(python3 - "$data_dir/skn.db" "$release_dir/migrations" "$new_schema_hash" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+database, migration_dir, target_hash = sys.argv[1:]
+connection = sqlite3.connect(database)
+connection.execute("PRAGMA foreign_keys = ON")
+connection.execute("""
+    CREATE TABLE IF NOT EXISTS schema_migration (
+        name TEXT PRIMARY KEY,
+        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+""")
+connection.execute("""
+    CREATE TABLE IF NOT EXISTS schema_release (
+        schema_hash TEXT PRIMARY KEY,
+        prepared_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+""")
+applied = 0
+try:
+    for path in sorted(Path(migration_dir).glob("*.sql")):
+        exists = connection.execute(
+            "SELECT 1 FROM schema_migration WHERE name = ?", (path.name,)
+        ).fetchone()
+        if exists:
+            continue
+        escaped_name = path.name.replace("'", "''")
+        script = "BEGIN IMMEDIATE;\n" + path.read_text(encoding="utf-8")
+        script += f"\nINSERT INTO schema_migration(name) VALUES ('{escaped_name}');\nCOMMIT;"
+        connection.executescript(script)
+        applied += 1
+    if applied > 0:
+        connection.execute(
+            "INSERT OR IGNORE INTO schema_release(schema_hash) VALUES (?)", (target_hash,)
+        )
+        connection.commit()
+finally:
+    connection.close()
+print(applied)
+PY
+)
+
+schema_hash_file="$service_dir/schema.sha256"
+if [[ -s "$data_dir/skn.db" && -f "$schema_hash_file" ]]; then
+  previous_schema_hash=$(<"$schema_hash_file")
+  if [[ "$new_schema_hash" != "$previous_schema_hash" && "$applied_migration_count" -eq 0 ]]; then
+    prepared_schema=$(python3 - "$data_dir/skn.db" "$new_schema_hash" <<'PY'
+import sqlite3
+import sys
+
+database, target_hash = sys.argv[1:]
+connection = sqlite3.connect(database)
+try:
+    found = connection.execute(
+        "SELECT 1 FROM schema_release WHERE schema_hash = ?", (target_hash,)
+    ).fetchone()
+    print(1 if found else 0)
+finally:
+    connection.close()
+PY
+)
+    if [[ "$prepared_schema" -ne 1 ]]; then
+      printf 'schema.sql changed; add and verify an operational migration before deployment\n' >&2
+      exit 78
+    fi
+  fi
 fi
 
 python3 "$release_dir/import_subagent_catalog.py" \

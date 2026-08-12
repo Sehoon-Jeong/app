@@ -34,10 +34,11 @@
 2. 실행 JAR와 배포 파일로 release artifact를 만든다.
 3. SSH로 OCI 인스턴스에 artifact를 전송한다.
 4. 기존 SQLite가 있으면 SQLite backup API로 일관된 백업을 만들고 무결성을 검사한다.
-5. 저장소의 정적 제품 2,654개와 제품별 안내 2,654개를 기존 사용자 데이터를 건드리지 않고 upsert한다.
-6. commit SHA를 태그로 새 컨테이너 이미지를 만들고 API 컨테이너만 교체한다.
-7. 컨테이너 내부 `/actuator/health`와 공개 HTTP 헬스체크가 모두 성공해야 배포 성공으로 처리한다.
-8. 내부 헬스체크가 실패하면 직전 컨테이너 이미지로 되돌린다.
+5. 아직 적용하지 않은 `deploy/oci/migrations/*.sql`을 이름순으로 한 번씩 실행하고 적용 이력을 남긴다.
+6. 저장소의 정적 제품 2,654개와 제품별 안내 2,654개를 기존 사용자 데이터를 건드리지 않고 upsert한다.
+7. commit SHA를 태그로 새 컨테이너 이미지를 만들고 API 컨테이너만 교체한다.
+8. 컨테이너 내부 `/actuator/health`와 공개 HTTP 헬스체크가 모두 성공해야 배포 성공으로 처리한다.
+9. 내부 헬스체크가 실패하면 직전 컨테이너 이미지로 되돌린다.
 
 workflow는 [deploy-backend.yml](../.github/workflows/deploy-backend.yml), 서버 배포 자산은 [`deploy/oci/`](../deploy/oci/)에 있다.
 
@@ -53,7 +54,7 @@ workflow는 [deploy-backend.yml](../.github/workflows/deploy-backend.yml), 서�
 
 - 현재 SQLite schema 원본은 `backend/src/main/resources/schema.sql`이다.
 - 운영 DB가 만들어진 뒤 `schema.sql` hash가 바뀌면 자동 배포를 중단한다.
-- schema 변경은 운영 migration과 복구 검증을 먼저 추가한 뒤 배포한다.
+- schema 변경은 같은 배포에 멱등적인 운영 migration을 추가해야 한다. 배포기는 새 migration이 준비한 schema hash를 기록해 실패 후 동일 release 재시도도 허용한다.
 - release 교체나 롤백 과정에서 SQLite 데이터 디렉터리를 삭제하지 않는다.
 
 ## 비밀정보

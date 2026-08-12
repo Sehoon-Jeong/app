@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, ArrowRight, BadgeCheck, BookOpen, Check, ChevronRight, Clock3, Layers3, MessageCircle, Send, Sparkles, X } from 'lucide-react'
+import { AlertCircle, ArrowRight, BadgeCheck, BookOpen, Check, ChevronRight, Clock3, ExternalLink, Globe2, Layers3, MessageCircle, Send, Sparkles, X } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
 import { api } from '../lib/api'
-import type { Conversation, ExperienceRecord, Pattern, Product, Routine } from '../lib/types'
+import type { Conversation, ExperienceRecord, Pattern, Product, Routine, WebSource } from '../lib/types'
 import { AiBadge, Button, Card, ErrorState, Loading, ProductGlyph, Screen, TopBar } from '../components/ui'
 import { startChatPath } from '../lib/chat'
 
@@ -75,7 +75,7 @@ export function ChatPage() {
   const { id } = useParams(); const conversationId = Number(id)
   const navigate = useNavigate(); const queryClient = useQueryClient(); const bottomRef = useRef<HTMLDivElement>(null)
   const [text, setText] = useState('')
-  const [openEvidenceRefs, setOpenEvidenceRefs] = useState<string[] | null>(null)
+  const [openEvidence, setOpenEvidence] = useState<{ refs: string[]; webSources: WebSource[] } | null>(null)
   const conversation = useQuery({ queryKey: ['conversation', conversationId], queryFn: () => api.conversation(conversationId) })
   const productId = conversation.data?.productId
   const product = useQuery({ queryKey: ['product', productId], queryFn: () => api.product(productId!), enabled: Boolean(productId) })
@@ -90,15 +90,15 @@ export function ChatPage() {
     <TopBar title={modeTitle(data.mode)} back/>
     <div className="flex-1 px-5 py-6">
       {product.data && <ProductContextCard product={product.data}/>} 
-      <div className="mb-7 flex gap-3 rounded-2xl bg-soft p-3 text-[11px] leading-5 text-muted"><Sparkles size={15} className="mt-0.5 shrink-0 text-accent"/><p>업로드한 사진·메모 원문은 요청하지 않으면 AI에 보내지 않아요. 서버가 선별한 제품 사실과 기록만 사용합니다.</p></div>
-      <div className="space-y-6">{data.messages.map(message => <div key={message.id} className={message.role === 'USER' ? 'flex justify-end' : 'flex items-start gap-3'}>{message.role === 'ASSISTANT' && <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-ink text-lime"><Sparkles size={15}/></div>}<div className={message.role === 'USER' ? 'max-w-[82%] rounded-[20px] rounded-br-md bg-soft px-4 py-3 text-sm leading-6' : 'min-w-0 flex-1 pt-1 text-[14px] leading-6'}><MessageContent text={message.content} markdown={message.role === 'ASSISTANT'}/>{message.role === 'ASSISTANT' && data.mode === 'RECOMMEND' && <RecommendedProductLinks refs={message.evidenceRefs}/>} {message.role === 'ASSISTANT' && message.evidenceRefs.length > 0 && <EvidenceSummary refs={message.evidenceRefs} onOpen={() => setOpenEvidenceRefs(message.evidenceRefs)}/>} {message.status === 'FALLBACK' && <p className="mt-2 text-[10px] font-semibold text-muted">AI 연결이 느려 저장된 정보로 답했어요.</p>}</div></div>)}{send.isPending && <div className="flex items-start gap-3"><div className="grid size-8 place-items-center rounded-xl bg-ink text-lime"><Sparkles size={15}/></div><div className="flex gap-1 pt-3"><span className="size-1.5 animate-bounce rounded-full bg-muted"/><span className="size-1.5 animate-bounce rounded-full bg-muted [animation-delay:120ms]"/><span className="size-1.5 animate-bounce rounded-full bg-muted [animation-delay:240ms]"/></div></div>}</div>
+      <div className="mb-7 flex gap-3 rounded-2xl bg-soft p-3 text-[11px] leading-5 text-muted"><Sparkles size={15} className="mt-0.5 shrink-0 text-accent"/><p>이 대화에 필요한 제품·루틴·사용 결과만 AI에 보내요. 외부 정보는 검색한 출처를 함께 보여줘요.</p></div>
+      <div className="space-y-6">{data.messages.map(message => <div key={message.id} className={message.role === 'USER' ? 'flex justify-end' : 'flex items-start gap-3'}>{message.role === 'ASSISTANT' && <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-ink text-lime"><Sparkles size={15}/></div>}<div className={message.role === 'USER' ? 'max-w-[82%] rounded-[20px] rounded-br-md bg-soft px-4 py-3 text-sm leading-6' : 'min-w-0 flex-1 pt-1 text-[14px] leading-6'}><MessageContent text={message.content} markdown={message.role === 'ASSISTANT'}/>{message.role === 'ASSISTANT' && data.mode === 'RECOMMEND' && <RecommendedProductLinks refs={message.evidenceRefs}/>} {message.role === 'ASSISTANT' && (message.evidenceRefs.length > 0 || (message.webSources?.length ?? 0) > 0) && <EvidenceSummary refs={message.evidenceRefs} webSources={message.webSources || []} onOpen={() => setOpenEvidence({ refs: message.evidenceRefs, webSources: message.webSources || [] })}/>} {message.status === 'FALLBACK' && <p className="mt-2 text-[10px] font-semibold text-muted">AI 연결이 느려 입력과 기록을 보존했어요.</p>}</div></div>)}{send.isPending && <div className="flex items-start gap-3"><div className="grid size-8 place-items-center rounded-xl bg-ink text-lime"><Sparkles size={15}/></div><div className="min-w-0 pt-1"><div className="flex gap-1 pt-2"><span className="size-1.5 animate-bounce rounded-full bg-muted"/><span className="size-1.5 animate-bounce rounded-full bg-muted [animation-delay:120ms]"/><span className="size-1.5 animate-bounce rounded-full bg-muted [animation-delay:240ms]"/></div><p className="mt-3 text-[11px] text-muted">내 기록과 외부 근거를 함께 확인하고 있어요.</p></div></div>}</div>
 
       {data.rescuePlan && <RescuePlanCard conversation={data} onApply={() => apply.mutate()} pending={apply.isPending}/>} 
       {send.error && <div className="mt-5 rounded-2xl bg-[#fff3f3] p-4 text-xs leading-5 text-danger"><p>{send.error.message}</p><button onClick={() => text && send.mutate(text)} className="mt-2 font-bold underline">다시 보내기</button></div>}
       <div ref={bottomRef}/>
     </div>
     <Composer value={text} onChange={setText} onSubmit={submit} pending={send.isPending} suggestions={data.quickReplies} placeholder={data.mode === 'RESCUE' ? '지금 상태를 평소 말하듯 적어주세요' : '궁금한 것을 이어서 물어보세요'}/>
-    {openEvidenceRefs && <EvidenceSheet refs={openEvidenceRefs} onClose={() => setOpenEvidenceRefs(null)}/>} 
+    {openEvidence && <EvidenceSheet refs={openEvidence.refs} webSources={openEvidence.webSources} onClose={() => setOpenEvidence(null)}/>}
   </Screen>
 }
 
@@ -171,7 +171,7 @@ function MessageContent({ text, markdown = false }: { text: string; markdown?: b
         ol: ({ children }) => <ol className="mb-3 ml-1 list-decimal space-y-1.5 pl-5 marker:font-bold marker:text-accent last:mb-0">{children}</ol>,
         li: ({ children }) => <li className="pl-0.5 leading-6">{children}</li>,
         blockquote: ({ children }) => <blockquote className="my-3 rounded-r-xl border-l-3 border-accent bg-accent-soft px-3 py-2 text-muted">{children}</blockquote>,
-        a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" className="font-semibold text-accent underline underline-offset-2">{children}</a>,
+        a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" aria-label={`출처 ${String(children)} 새 창에서 열기`} className="mx-0.5 inline-flex min-w-5 -translate-y-px items-center justify-center rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold leading-4 text-accent no-underline ring-1 ring-inset ring-[#d9ddff]">{children}</a>,
         hr: () => <hr className="my-4 border-line"/>,
         table: ({ children }) => <div className="my-3 overflow-x-auto rounded-xl border border-line"><table className="w-full min-w-72 border-collapse text-xs">{children}</table></div>,
         th: ({ children }) => <th className="border-b border-line bg-soft px-3 py-2 text-left font-bold">{children}</th>,
@@ -182,13 +182,14 @@ function MessageContent({ text, markdown = false }: { text: string; markdown?: b
   </div>
 }
 
-function EvidenceSummary({ refs, onOpen }: { refs: string[]; onOpen: () => void }) {
+function EvidenceSummary({ refs, webSources, onOpen }: { refs: string[]; webSources: WebSource[]; onOpen: () => void }) {
   const counts = refs.reduce<Record<string, number>>((all, ref) => {
     const label = ref.startsWith('PT-') ? '패턴' : ref.startsWith('P-') ? '제품 정보' : ref.startsWith('R-') ? '루틴' : '내 경험'
     all[label] = (all[label] || 0) + 1
     return all
   }, {})
-  return <button type="button" onClick={onOpen} aria-haspopup="dialog" className="mt-3 flex w-full items-center gap-1.5 rounded-xl bg-soft px-3 py-2.5 text-left text-[10px] font-semibold text-muted transition active:bg-[#e9ebe5]"><BookOpen size={13} className="shrink-0 text-accent"/><span className="min-w-0 flex-1">근거 연결 · {Object.entries(counts).map(([label, count]) => `${label} ${count}`).join(' · ')}</span><ChevronRight size={14} className="shrink-0"/></button>
+  const labels = [...(webSources.length ? [`외부 출처 ${webSources.length}`] : []), ...Object.entries(counts).map(([label, count]) => `${label} ${count}`)]
+  return <button type="button" onClick={onOpen} aria-haspopup="dialog" className="mt-3 flex w-full items-center gap-1.5 rounded-xl bg-soft px-3 py-2.5 text-left text-[10px] font-semibold text-muted transition active:bg-[#e9ebe5]"><BookOpen size={13} className="shrink-0 text-accent"/><span className="min-w-0 flex-1">근거 보기 · {labels.join(' · ')}</span><ChevronRight size={14} className="shrink-0"/></button>
 }
 
 function RecommendedProductLinks({ refs }: { refs: string[] }) {
@@ -212,7 +213,7 @@ function RecommendedProductLinks({ refs }: { refs: string[] }) {
   </section>
 }
 
-function EvidenceSheet({ refs, onClose }: { refs: string[]; onClose: () => void }) {
+function EvidenceSheet({ refs, webSources, onClose }: { refs: string[]; webSources: WebSource[]; onClose: () => void }) {
   const uniqueRefs = [...new Set(refs)]
   const needsProducts = uniqueRefs.some(ref => ref.startsWith('P-') && !ref.startsWith('PT-'))
   const needsRoutines = uniqueRefs.some(ref => ref.startsWith('R-'))
@@ -236,13 +237,30 @@ function EvidenceSheet({ refs, onClose }: { refs: string[]; onClose: () => void 
 
   return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 px-0 backdrop-blur-[2px]" onMouseDown={onClose}>
     <section role="dialog" aria-modal="true" aria-labelledby="evidence-title" className="safe-bottom flex max-h-[82dvh] w-full max-w-[430px] animate-rise flex-col overflow-hidden rounded-t-[30px] bg-paper shadow-[0_-18px_60px_rgba(23,24,22,.18)]" onMouseDown={event => event.stopPropagation()}>
-      <div className="shrink-0 px-5 pb-4 pt-3"><div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#d9dcd6]"/><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold text-accent">CONNECTED SOURCES</p><h2 id="evidence-title" className="mt-1 text-[22px] font-bold tracking-[-.035em]">이 답변의 근거</h2><p className="mt-2 text-xs leading-5 text-muted">SKN AI에게 실제로 연결된 제품 정보와 내 기록이에요.</p></div><button type="button" onClick={onClose} aria-label="근거 닫기" className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-muted shadow-sm"><X size={19}/></button></div></div>
+      <div className="shrink-0 px-5 pb-4 pt-3"><div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#d9dcd6]"/><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold text-accent">ANSWER SOURCES</p><h2 id="evidence-title" className="mt-1 text-[22px] font-bold tracking-[-.035em]">이 답변에 쓴 근거</h2><p className="mt-2 text-xs leading-5 text-muted">웹에서 확인한 자료와 내 기록을 분리해서 보여줘요.</p></div><button type="button" onClick={onClose} aria-label="근거 닫기" className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-muted shadow-sm"><X size={19}/></button></div></div>
       <div className="overflow-y-auto border-t border-line px-5 py-5">
-        {loading ? <div className="grid min-h-44 place-items-center"><span className="size-6 animate-spin rounded-full border-2 border-line border-t-accent"/></div> : <div className="space-y-3">{evidence.map(item => <EvidenceCard key={item.ref} item={item}/>)}</div>}
-        <div className="mt-5 rounded-2xl bg-soft p-4 text-[11px] leading-5 text-muted"><b className="text-ink">이 근거가 뜻하는 것</b><br/>AI가 답변을 만들 때 아래 정보를 참고했다는 뜻이에요. 피부 적합성이나 원인을 증명하는 표시는 아니에요.</div>
+        {webSources.length > 0 && <section><p className="mb-3 text-[11px] font-bold text-muted">웹에서 확인한 자료</p><div className="space-y-3">{webSources.map(source => <WebSourceCard key={source.ref} source={source}/>)}</div></section>}
+        {loading ? <div className="grid min-h-44 place-items-center"><span className="size-6 animate-spin rounded-full border-2 border-line border-t-accent"/></div> : evidence.length > 0 && <section className={webSources.length ? 'mt-6' : ''}><p className="mb-3 text-[11px] font-bold text-muted">내 데이터</p><div className="space-y-3">{evidence.map(item => <EvidenceCard key={item.ref} item={item}/>)}</div></section>}
+        <div className="mt-5 rounded-2xl bg-soft p-4 text-[11px] leading-5 text-muted"><b className="text-ink">근거를 읽는 법</b><br/>P1은 제품 공식정보, P2는 공공기관, P3는 연구 자료, P4는 보조 자료예요. 연결된 자료는 적합성이나 원인을 증명하지 않아요.</div>
       </div>
     </section>
   </div>
+}
+
+function WebSourceCard({ source }: { source: WebSource }) {
+  const tier = sourceTier(source.tier)
+  let host = source.url
+  try { host = new URL(source.url).hostname.replace(/^www\./, '') } catch { /* 서버가 이미 검증한 URL */ }
+  return <a href={source.url} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-[20px] border border-[#dfe1f4] bg-[linear-gradient(135deg,#fafaff_0%,#fff_76%)] transition active:scale-[.99]">
+    <div className="flex gap-3 p-4"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><Globe2 size={18}/></div><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="rounded-full bg-white px-2 py-1 text-[9px] font-bold text-accent ring-1 ring-inset ring-[#d9ddff]">{source.ref.replace('S-', '')}</span><span className="text-[10px] font-bold text-muted">{tier}</span></div><h3 className="mt-2 line-clamp-2 text-sm font-bold leading-5">{source.title}</h3><p className="mt-1 truncate text-[10px] text-muted">{host}</p></div><ExternalLink size={16} className="mt-1 shrink-0 text-muted transition group-hover:text-accent"/></div>
+  </a>
+}
+
+function sourceTier(tier: WebSource['tier']) {
+  if (tier === 'P1') return 'P1 · 제품 공식정보'
+  if (tier === 'P2') return 'P2 · 공공기관'
+  if (tier === 'P3') return 'P3 · 연구 자료'
+  return 'P4 · 보조 자료'
 }
 
 type ResolvedEvidence = { ref: string; kind: 'PRODUCT' | 'ROUTINE' | 'RECORD' | 'PATTERN' | 'UNKNOWN'; eyebrow: string; title: string; subtitle?: string; details: string[] }
