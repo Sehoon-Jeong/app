@@ -91,6 +91,7 @@ P4는 식별·사용 맥락 보조로만 쓰고 안전·효능·원인 판단에
 ## 모델·비용·실패 정책
 
 - 기본 모델: `gpt-5.6-terra`
+- 검색 429 fallback: `gpt-5.6-luna` 한 번. 현재 계정의 Terra TPM이 검색 요청보다 작게 남았을 때만 사용하며, 일반 성공 경로는 Terra다.
 - reasoning effort: `low`
 - 최대 출력: 650 tokens
 - web search: Responses API `web_search`, 제품·추천·Rescue 판단 단계는 `tool_choice: required`
@@ -99,7 +100,7 @@ P4는 식별·사용 맥락 보조로만 쓰고 안전·효능·원인 판단에
 - 저장: OpenAI `store: false`
 - 실패: 사용자 메시지를 먼저 DB에 저장한 뒤 fallback 답변을 남긴다.
 
-Terra는 최저가 모델보다 한국어 맥락·상충 근거·보수적 표현이 중요한 SKN 대화에서 균형을 취한 선택이다. 최신 가격과 모델은 [OpenAI API 가격](https://developers.openai.com/api/docs/pricing)에서 확인한다.
+Terra는 최저가 모델보다 한국어 맥락·상충 근거·보수적 표현이 중요한 SKN 대화에서 균형을 취한 선택이다. Luna는 공식 모델 안내에서 효율적인 고처리량 용도로 구분되므로, Terra가 계정 TPM 때문에 검색 시작 전 거절된 경우에만 같은 프롬프트·검색·검증 계약으로 대체한다. 최신 가격과 모델은 [OpenAI API 가격](https://developers.openai.com/api/docs/pricing)에서 확인한다.
 
 ## 비밀값
 

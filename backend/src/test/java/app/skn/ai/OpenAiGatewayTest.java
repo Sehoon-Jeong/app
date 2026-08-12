@@ -14,7 +14,7 @@ class OpenAiGatewayTest {
     private final ObjectMapper json = new ObjectMapper();
     private final OpenAiGateway gateway = new OpenAiGateway(new OpenAiProperties(
             "test-key", "gpt-5.6-terra", "low", Duration.ofSeconds(1), Duration.ofSeconds(1),
-            300, true, "low"
+            300, true, "low", "gpt-5.6-luna"
     ), json);
 
     @Test

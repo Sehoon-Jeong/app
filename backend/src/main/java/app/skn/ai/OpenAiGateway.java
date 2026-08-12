@@ -118,6 +118,11 @@ public class OpenAiGateway {
                 boolean retryable = error.getStatusCode().value() == 429 || error.getStatusCode().is5xxServerError();
                 log.warn("OpenAI request failed: status={}, attempt={}", error.getStatusCode().value(), attempt);
                 if (!retryable || attempt == 2) break;
+                if (error.getStatusCode().value() == 429 && requireWebSearch && canUseRateLimitFallback()) {
+                    request.put("model", properties.rateLimitFallbackModel().trim());
+                    log.warn("OpenAI web search is using the configured rate-limit fallback model");
+                    continue;
+                }
                 if (!waitBeforeRetry(error)) break;
             } catch (ResourceAccessException error) {
                 log.warn("OpenAI request timed out: attempt={}", attempt);
@@ -128,6 +133,11 @@ public class OpenAiGateway {
             }
         }
         return fallback(mode);
+    }
+
+    private boolean canUseRateLimitFallback() {
+        String fallback = properties.rateLimitFallbackModel();
+        return fallback != null && !fallback.isBlank() && !fallback.trim().equals(properties.model());
     }
 
     private Map<String, Object> responseSchema() {

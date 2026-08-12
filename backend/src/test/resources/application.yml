@@ -22,3 +22,4 @@ app:
     max-output-tokens: 300
     web-search-enabled: false
     web-search-context-size: low
+    rate-limit-fallback-model: gpt-5.6-luna

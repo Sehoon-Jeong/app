@@ -53,6 +53,7 @@ app:
     max-output-tokens: 650
     web-search-enabled: ${OPENAI_WEB_SEARCH_ENABLED:true}
     web-search-context-size: ${OPENAI_WEB_SEARCH_CONTEXT_SIZE:low}
+    rate-limit-fallback-model: ${OPENAI_RATE_LIMIT_FALLBACK_MODEL:gpt-5.6-luna}
 
 logging:
   level:
