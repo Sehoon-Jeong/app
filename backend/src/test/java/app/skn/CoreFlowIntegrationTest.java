@@ -346,6 +346,38 @@ class CoreFlowIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         JsonNode response = json.readTree(body);
         assertThat(response.path("quickReplies").size()).isBetween(1, 3);
+        assertThat(response.path("messages").get(1).path("content").asText())
+                .doesNotContain("AI 연결이 잠시 원활하지 않아요")
+                .contains("지금 저장된 내 데이터");
+    }
+
+    @Test
+    void productAndPatternModesReturnDomainAnswersWhenAiProviderIsUnavailable() throws Exception {
+        MockHttpSession session = demoSession();
+        String productBody = mvc.perform(post("/api/v1/ai/conversations").session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"mode":"PRODUCT","productId":1,"initialPrompt":"이 제품 어때?","clientRequestId":"test-product-domain-fallback"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.messages[1].status").value("FALLBACK"))
+                .andExpect(jsonPath("$.messages[1].evidenceRefs[0]").value("P-1"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(json.readTree(productBody).path("messages").get(1).path("content").asText())
+                .contains("지금 확인한 제품은")
+                .doesNotContain("AI 연결이 잠시 원활하지 않아요");
+
+        String patternBody = mvc.perform(post("/api/v1/ai/conversations").session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"mode":"PATTERN","initialPrompt":"내 기록에서 반복되는 패턴을 보여줘","clientRequestId":"test-pattern-domain-fallback"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.messages[1].status").value("FALLBACK"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(json.readTree(patternBody).path("messages").get(1).path("content").asText())
+                .containsAnyOf("반복해서 연결된 패턴", "반복 패턴으로 보여줄 근거")
+                .doesNotContain("AI 연결이 잠시 원활하지 않아요");
     }
 
     @Test
@@ -501,17 +533,23 @@ class CoreFlowIntegrationTest {
         mvc.perform(post("/api/v1/ai/conversations/{id}/messages", conversationId).session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"심하거나 빠르게 악화되진 않아요\",\"clientRequestId\":\"test-rescue-confirm-safe\"}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.messages[3].status").value("FALLBACK"))
+                .andExpect(jsonPath("$.messages[3].content").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("AI 연결이 잠시 원활하지 않아요"))));
         mvc.perform(post("/api/v1/ai/conversations/{id}/messages", conversationId).session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"클렌저도 따로 바꿨어\",\"clientRequestId\":\"test-rescue-correction\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rescuePlan").doesNotExist());
+                .andExpect(jsonPath("$.rescuePlan").doesNotExist())
+                .andExpect(jsonPath("$.messages[5].content").value(org.hamcrest.Matchers.containsString("저장된 루틴과 달라서")));
         mvc.perform(post("/api/v1/ai/conversations/{id}/messages", conversationId).session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"저장된 변경만으로 계속할게요\",\"clientRequestId\":\"test-rescue-confirm-changes\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rescuePlan.status").value("PROPOSED"));
+                .andExpect(jsonPath("$.rescuePlan.status").value("PROPOSED"))
+                .andExpect(jsonPath("$.messages[7].content").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("AI 연결이 잠시 원활하지 않아요"))));
     }
 
     @Test

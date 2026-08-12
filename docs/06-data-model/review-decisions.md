@@ -33,7 +33,7 @@
 - AI 답변의 `evidenceRefs`는 서버 맥락에 실제로 포함된 ID만 저장한다.
 - AI 답변의 외부 근거는 OpenAI가 반환한 `url_citation`의 HTTPS URL만 `conversation_message_source`에 P1~P4 등급과 함께 저장한다.
 - AI 답변은 다음 추천 입력 1~3개를 함께 저장한다.
-- AI가 실패하면 사용자 메시지와 기존 기록은 남고 fallback 답변을 추가한다.
+- AI가 실패하면 사용자 메시지와 기존 기록은 남고, 대화 모드에 맞는 서버 직접 답변을 `FALLBACK` 상태로 추가한다. 일반 장애 문구만으로 끝나는 메시지는 저장하지 않는다.
 
 ## 현재 무결성
 

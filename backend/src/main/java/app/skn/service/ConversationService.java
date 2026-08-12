@@ -116,6 +116,7 @@ public class ConversationService {
                         "사용자가 증상이 심하거나 빠르게 악화되는지 잘 모르겠다고 답했다. 진단하지 말고, 제품 분석을 계속하기 전에 사용자가 스스로 답할 수 있는 짧은 확인 질문 하나만 하라.",
                         false
                 );
+                result = rescueFallbackIfNeeded(conversationId, result, "SAFETY_UNKNOWN");
                 saveAi(conversationId, userMessageId, result, "rescue-safety-");
                 return;
             }
@@ -125,6 +126,7 @@ public class ConversationService {
                     "안전 확인 뒤, 서버가 계산한 비교 기준과 현재 루틴의 변경을 사용자에게 보여주고 기록과 다른 변화가 있었는지 한 가지만 물어라.",
                     false
             );
+            result = rescueFallbackIfNeeded(conversationId, result, "CHANGES");
             saveAi(conversationId, userMessageId, result, "rescue-changes-");
             return;
         }
@@ -137,6 +139,7 @@ public class ConversationService {
                         userMessage + "\n사용자가 저장된 변경 목록과 다른 점을 말했거나 확인하지 않았다. 이 대화만으로 저장된 루틴 사실을 바꾸지 말고, 현재 저장된 변경만으로 계속할지 루틴을 먼저 고칠지 한 가지만 확인하라. 아직 확인 순서나 새 루틴을 제안하지 마라.",
                         false
                 );
+                result = rescueFallbackIfNeeded(conversationId, result, "CHANGE_CORRECTION");
                 saveAi(conversationId, userMessageId, result, "rescue-changes-");
                 return;
             }
@@ -149,6 +152,7 @@ public class ConversationService {
                     userMessage + "\n서버가 계산한 확인 순서와 제안 루틴을 설명하되 특정 제품을 범인이라고 말하지 마라.",
                     true
             );
+            result = rescueFallbackIfNeeded(conversationId, result, "PLAN");
             saveAi(conversationId, userMessageId, result, "rescue-plan-");
             return;
         }
@@ -261,24 +265,163 @@ public class ConversationService {
                 mode.equals("PRODUCT") || mode.equals("RECOMMEND")
                         || (mode.equals("RESCUE") && repository.findRescuePlan(conversationId).isPresent())
         );
-        if (mode.equals("RECOMMEND") && result.status().equals("FALLBACK")) {
-            result = recommendationFallback(conversationId, result);
-        }
+        result = domainFallbackIfNeeded(conversationId, mode, result);
         saveAi(conversationId, userMessageId, result);
     }
 
-    private AiResult recommendationFallback(long conversationId, AiResult original) {
+    private AiResult domainFallbackIfNeeded(long conversationId, String mode, AiResult result) {
+        if (!result.status().equals("FALLBACK")) return result;
+        return switch (mode) {
+            case "PRODUCT" -> productFallback(conversationId);
+            case "RECOMMEND" -> recommendationFallback(conversationId);
+            case "PATTERN" -> patternFallback();
+            case "RESCUE" -> rescueFallback(conversationId, "PLAN");
+            default -> generalFallback();
+        };
+    }
+
+    private AiResult generalFallback() {
+        RoutineView current = repository.findCurrentRoutine().orElse(null);
+        List<ExperienceRecordView> records = repository.findExperienceRecords();
+        List<String> evidence = new ArrayList<>();
+        StringBuilder answer = new StringBuilder("지금 저장된 내 데이터로 바로 확인하면, ");
+        if (current == null) {
+            answer.append("**현재 루틴은 아직 없어요.**");
+        } else {
+            answer.append("현재 루틴은 **").append(current.name()).append("**이고, ")
+                    .append(current.items().stream().map(RoutineItemView::productName).toList())
+                    .append("을 사용 중이에요.");
+            evidence.add("R-" + current.id());
+        }
+        if (records.isEmpty()) {
+            answer.append(" 아직 남긴 사용 결과는 없어서 반복되는 취향이나 불편은 말할 수 없어요.");
+        } else {
+            ExperienceRecordView latest = records.get(0);
+            answer.append("\n\n가장 최근 사용 결과는 **").append(latest.productName()).append("**에 남긴 “")
+                    .append(latest.note()).append("”이고, 선택한 태그는 ").append(latest.tags()).append("예요.");
+            evidence.add("E-" + latest.id());
+        }
+        return fallbackResult(answer.toString(),
+                List.of("현재 루틴을 자세히 볼래", "최근 사용 결과를 더 보여줘"), evidence);
+    }
+
+    private AiResult productFallback(long conversationId) {
+        Map<String, Object> row = repository.findConversationRow(conversationId).orElseThrow();
+        Long productId = nullableLong(row.get("product_id"));
+        if (productId == null) return generalFallback();
+        ProductView product = skincareService.product(productId);
+        String volume = product.volume() == null || product.volume().isBlank() ? "용량 정보 없음" : product.volume();
+        StringBuilder answer = new StringBuilder("지금 확인한 제품은 **")
+                .append(product.brand()).append(' ').append(product.name()).append("**이에요. ")
+                .append(product.category()).append(" · ").append(volume).append("로 식별돼요.");
+        if (!product.facts().isEmpty()) {
+            answer.append("\n\n저장된 확인 정보는 ")
+                    .append(product.facts().stream().limit(2).map(ProductFact::text).toList()).append("예요.");
+        } else {
+            answer.append("\n\n외부 자료를 확인하지 않은 상태에서는 성분·효과·적합성을 덧붙이지 않을게요.");
+        }
+        answer.append(" 내 화장품 등록은 **").append(product.owned() ? "되어 있고" : "아직 안 되어 있고")
+                .append("**, 연결된 사용 결과는 **").append(product.personalRecordCount()).append("건**이에요.");
+        return fallbackResult(answer.toString(),
+                List.of("내 루틴과 겹치는지만 볼래", "이 제품 상세를 볼래"), List.of("P-" + product.id()));
+    }
+
+    private AiResult recommendationFallback(long conversationId) {
         List<ProductView> candidates = recommendationCandidates(conversationId);
-        if (candidates.isEmpty()) return original;
+        if (candidates.isEmpty()) {
+            return fallbackResult(
+                    "지금은 **추천할 수 있는 미보유 카탈로그 제품이 없어요.** 내 화장품을 정리하거나 새 제품을 카탈로그에 추가한 뒤 다시 비교할 수 있어요.",
+                    List.of("내 화장품을 볼래", "제품을 검색할래"), List.of());
+        }
         ProductView candidate = candidates.get(0);
-        return new AiResult(
+        return fallbackResult(
                 "지금 하나만 고르면 **%s %s**을 먼저 보세요.\n\n외부 제품 정보 확인이 잠시 지연돼 세부 특징이나 적합성은 덧붙이지 않았어요. 그래도 답을 비워두지 않고 서버가 고른 첫 번째 카탈로그 후보를 연결했습니다."
                         .formatted(candidate.brand(), candidate.name()),
-                "FALLBACK",
                 List.of("이 제품 상세를 볼래", "연결되면 근거까지 다시 확인해줘"),
-                List.of("P-" + candidate.id()),
-                List.of()
+                List.of("P-" + candidate.id())
         );
+    }
+
+    private AiResult patternFallback() {
+        List<PatternView> patterns = repository.findPatterns();
+        if (patterns.isEmpty()) {
+            int recordCount = repository.recordCount();
+            return fallbackResult(
+                    "지금은 **반복 패턴으로 보여줄 근거가 없어요.** 사용 결과는 " + recordCount
+                            + "건 저장돼 있지만, 같은 느낌이 반복되고 반대 경험도 함께 쌓여야 패턴으로 연결할 수 있어요.",
+                    List.of("최근 사용 결과를 볼래", "새 느낌을 기록할래"), List.of());
+        }
+        List<PatternView> visible = patterns.stream().limit(2).toList();
+        String details = visible.stream().map(pattern -> "- **" + pattern.title() + "** · 지지 "
+                + pattern.supportingCount() + "건 · 반대 " + pattern.contradictingCount() + "건")
+                .reduce((left, right) -> left + "\n" + right).orElse("");
+        return fallbackResult("지금 내 기록에서 반복해서 연결된 패턴은 이거예요.\n\n" + details
+                        + "\n\n피부 타입 판정이 아니라, 실제로 남긴 경험의 반복만 보여줘요.",
+                List.of("첫 번째 패턴 근거를 볼래", "반대 기록도 볼래"),
+                visible.stream().map(pattern -> "PT-" + pattern.id()).toList());
+    }
+
+    private AiResult rescueFallbackIfNeeded(long conversationId, AiResult result, String stage) {
+        return result.status().equals("FALLBACK") ? rescueFallback(conversationId, stage) : result;
+    }
+
+    private AiResult rescueFallback(long conversationId, String stage) {
+        if (stage.equals("SAFETY_UNKNOWN")) {
+            return fallbackResult(
+                    "잘 모르겠다면 제품 확인 순서는 아직 정하지 않을게요. **빠르게 악화되는지, 통증이 심한지, 눈이나 입술이 붓거나 숨쉬기 불편한지**만 다시 확인해 주세요.",
+                    List.of("그런 증상은 없어요", "빠르게 심해지고 있어요"), List.of());
+        }
+        if (stage.equals("CHANGE_CORRECTION")) {
+            return fallbackResult(
+                    "말해준 내용은 저장된 루틴과 달라서 아직 변경 사실로 확정하지 않았어요. **현재 저장된 변경만으로 계속할지, 루틴을 먼저 고칠지** 선택해 주세요.",
+                    List.of("저장된 변경만으로 계속할게요", "루틴을 먼저 고칠게요"), rescueRoutineEvidence());
+        }
+        if (stage.equals("CHANGES")) return rescueChangesFallback();
+
+        RescuePlanView plan = repository.findRescuePlan(conversationId).orElse(null);
+        if (plan == null) return rescueChangesFallback();
+        List<String> evidence = new ArrayList<>(rescueRoutineEvidence());
+        if (plan.removeUserProductId() != null) {
+            UserProductView candidate = skincareService.userProduct(plan.removeUserProductId());
+            if (candidate.product() != null) evidence.add("P-" + candidate.product().id());
+        }
+        String action = plan.status().equals("PROPOSED")
+                ? "사용자가 적용하기 전에는 현재 루틴을 바꾸지 않아요."
+                : "현재 기록만으로는 자동 적용할 루틴을 만들지 않았어요.";
+        return fallbackResult("다음 확인 순서는 **" + plan.title() + "**이에요.\n\n" + plan.rationale()
+                        + " 특정 제품을 원인으로 단정한 결과는 아니에요. " + action,
+                plan.status().equals("PROPOSED")
+                        ? List.of("이 루틴으로 적용할래", "적용하지 않고 기록만 남길래")
+                        : List.of("현재 루틴을 다시 볼래", "기록만 남길래"), evidence);
+    }
+
+    private AiResult rescueChangesFallback() {
+        RoutineView current = repository.findCurrentRoutine().orElse(null);
+        RoutineView baseline = repository.findBaselineRoutine().orElse(null);
+        if (current == null) {
+            return fallbackResult(
+                    "**저장된 현재 루틴이 없어서 변경점을 비교할 수 없어요.** 지금 실제 사용하는 제품 조합을 먼저 루틴으로 등록해 주세요.",
+                    List.of("현재 루틴을 만들게요", "기록만 남길게요"), rescueRoutineEvidence());
+        }
+        List<Long> baselineIds = baseline == null ? List.of() : repository.findRoutineUserProductIds(baseline.id());
+        List<RoutineItemView> changed = current.items().stream()
+                .filter(item -> !baselineIds.contains(item.userProductId())).toList();
+        String changeText = changed.isEmpty() ? "추가된 제품을 찾지 못했어요"
+                : changed.stream().map(RoutineItemView::productName).reduce((left, right) -> left + " · " + right).orElse("");
+        return fallbackResult("기록된 비교 기준 이후 달라진 제품은 **" + changeText
+                        + "**예요. 실제로 함께 바꾼 제품이나 사용 빈도가 더 있었나요?",
+                List.of("저장된 변경이 맞아요", "다른 변경도 있었어요"), rescueRoutineEvidence());
+    }
+
+    private List<String> rescueRoutineEvidence() {
+        List<String> evidence = new ArrayList<>();
+        repository.findCurrentRoutine().ifPresent(routine -> evidence.add("R-" + routine.id()));
+        repository.findBaselineRoutine().ifPresent(routine -> evidence.add("R-" + routine.id()));
+        return evidence;
+    }
+
+    private AiResult fallbackResult(String text, List<String> suggestions, List<String> evidence) {
+        return new AiResult(text, "FALLBACK", suggestions, evidence.stream().distinct().limit(8).toList(), List.of());
     }
 
     private void saveAi(long conversationId, long userMessageId, AiResult result) {
