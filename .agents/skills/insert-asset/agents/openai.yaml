@@ -1,0 +1,4 @@
+interface:
+  display_name: "SKN 애셋 삽입"
+  short_description: "SKN 브랜드 애셋을 코드에 넣거나 새 애셋을 등록"
+  default_prompt: "$insert-asset을 사용하여 요청한 SKN 애셋을 카탈로그에서 찾아 코드에 넣어 주세요. 새 애셋을 준 경우에는 저장소에 등록하고 카탈로그에 설명을 추가해 주세요."
