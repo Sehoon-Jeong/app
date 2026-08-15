@@ -331,6 +331,10 @@ INSERT OR IGNORE INTO product(id, brand, name, category, volume, version_label, 
   (10, '솔라핏', '벨벳 UV 플루이드', '선케어', '50ml', '2026.06', '보송한 마무리를 내세운 플루이드 선케어', '플루이드', 1, '["SPF50+ PA++++ 표시", "메이크업 전 사용 안내", "보송한 마무리 표현"]'),
   (11, '더마리브', '워터 베리어 젤크림', '크림', '50ml', '2026.04', '수분감과 가벼운 마무리를 내세운 젤크림', '젤크림', 1, '["젤크림 제형으로 표시", "아침·저녁 사용 안내", "향 정보 확인 대기"]');
 
+UPDATE product
+   SET image_url = '/skn-assets/dermalive-cica-gel.png'
+ WHERE id = 8;
+
 INSERT OR IGNORE INTO user_product(id, user_id, product_id, memo, added_at) VALUES
   (1, 1, 1, NULL, datetime('now', '-4 day')),
   (2, 1, 2, NULL, datetime('now', '-90 day')),

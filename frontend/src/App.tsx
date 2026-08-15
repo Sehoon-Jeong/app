@@ -6,7 +6,7 @@ import { AuthPage } from './pages/AuthPage'
 import { HomePage } from './pages/HomePage'
 import { ExplorePage, ProductPage, ShelfPage } from './pages/ExplorePages'
 import { ExperiencePage, RecordPage, RoutineEditPage } from './pages/ExperiencePages'
-import { AiLandingPage, ChatPage, ChatStartPage } from './pages/ChatPages'
+import { AiLandingPage, ChatPage, ChatStartPage, ProductSearchPage } from './pages/ChatPages'
 import { PatternPage, RecordsPage } from './pages/RecordsPages'
 import { RoutineDetailPage, RoutineListPage } from './pages/RoutinesPages'
 import { ExperienceHubPage } from './pages/ExperienceHubPage'
@@ -30,6 +30,7 @@ export default function App() {
     <Route path="/experiences/:id" element={<ExperiencePage/>}/>
     <Route path="/experiences/:id/record" element={<RecordPage/>}/>
     <Route path="/ai" element={<AiLandingPage/>}/>
+    <Route path="/ai/search" element={<ProductSearchPage/>}/>
     <Route path="/ai/new" element={<ChatStartPage/>}/>
     <Route path="/ai/:id" element={<ChatPage/>}/>
     <Route path="/records" element={<RecordsPage/>}/>

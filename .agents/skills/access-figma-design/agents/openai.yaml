@@ -1,0 +1,4 @@
+interface:
+  display_name: "SKN Figma 디자인 접근"
+  short_description: "키체인 토큰으로 SKN Figma 디자인을 안전하게 조회"
+  default_prompt: "$access-figma-design을 사용하여 SKN Figma 디자인의 화면과 노드 구조를 확인해 주세요."

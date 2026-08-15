@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Clock3, History, Plus } from 'lucide-react'
+import { ArrowRight, Bell, Clock3, History, UserRound } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import type { Routine } from '../lib/types'
-import { Button, Card, EmptyState, ErrorState, Loading, Screen, TopBar } from '../components/ui'
+import { Button, Card, ErrorState, Loading, Screen, SknMark, TopBar } from '../components/ui'
 
 export function ExperienceHubPage() {
   const navigate = useNavigate()
@@ -16,25 +16,23 @@ export function ExperienceHubPage() {
   if (home.isError || records.isError) return <Screen><TopBar title="사용 경험"/><ErrorState message={(home.error || records.error)?.message || '사용 경험을 불러오지 못했어요.'}/></Screen>
 
   const experience = home.data.currentExperience
-  return <Screen>
-    <TopBar title="사용 경험"/>
-    <div className="px-5 py-6">
-      <p className="text-xs font-bold text-accent">MY LAB</p>
-      <h1 className="mt-2 text-[27px] font-bold leading-9 tracking-[-.045em]">제품을 써본 조건과<br/>느낌을 함께 봐요.</h1>
-      <p className="mt-3 text-sm leading-6 text-muted">확인 중인 조합과 실제 현재 루틴을 구분하고, 지난 기록까지 한 흐름으로 봅니다.</p>
+  return <Screen className="bg-white">
+    <header className="sticky top-0 z-30 grid h-[82px] grid-cols-3 items-center bg-white px-5"><span/><SknMark className="h-9 w-9 justify-self-center"/><div className="flex items-center justify-self-end"><Link to="/records" aria-label="내 기록" className="grid size-10 place-items-center"><UserRound size={23}/></Link><button aria-label="알림" className="grid size-10 place-items-center"><Bell size={23}/></button></div></header>
+    <div className="px-5 pb-8">
+      <div className="flex items-center gap-3"><img src="/skn-assets/ai-drop.png" alt="" className="size-[82px] shrink-0 object-contain"/><div><h1 className="text-[23px] font-semibold leading-[1.28] tracking-[-.04em]">제품을 써본 조건과<br/>느낌을 함께 봐요.</h1><p className="mt-2 text-[12px] leading-5 text-[#969696]">확인 중인 조합과 실제 현재 루틴을<br/>구분하고, 지난 기록까지 한 흐름으로 봅니다.</p></div></div>
 
-      <section className="mt-8">
-        <p className="text-xs font-bold text-muted">7일 동안 사용감을 남기는 조합</p>
-        <h2 className="mt-1 text-xl font-bold tracking-[-.035em]">확인 중인 루틴</h2>
-      {experience ? <Card className="mt-3 overflow-hidden border-0 bg-ink p-0 text-white">
+      <section className="mt-9">
+        <p className="text-[12px] font-medium text-[#a8c8ff]">7일 동안 사용감을 남기는 조합</p>
+        <h2 className="mt-2 text-[19px] font-semibold tracking-[-.035em]">확인 중인 루틴</h2>
+      {experience ? <Card className="mt-2 overflow-hidden border-[#cfe0ff] bg-white p-0 text-black">
         <Link to={`/experiences/${experience.id}`} className="block p-5">
-          <div className="flex items-center justify-between"><span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold text-lime">확인 중 · DAY {experience.day}</span><span className="text-[11px] text-white/50">{experience.reviewDue ? '오늘 돌아보기' : `${experience.daysUntilReview}일 뒤 돌아보기`}</span></div>
+          <div className="flex items-center justify-between"><span className="rounded-full bg-black px-3 py-1 text-[11px] font-medium text-white">확인 중 · DAY {experience.day}</span><span className="text-[11px] text-[#8c8c8c]">{experience.reviewDue ? '오늘 돌아보기' : `${experience.daysUntilReview}일 뒤 돌아보기`}</span></div>
           <h2 className="mt-5 text-xl font-bold tracking-[-.03em]">{experience.title}</h2>
-          <p className="mt-2 line-clamp-1 text-xs text-white/55">{experience.subtitle}</p>
-          <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-lime" style={{ width: `${Math.min(100, Math.max(8, experience.day / 7 * 100))}%` }}/></div>
+          <p className="mt-2 line-clamp-1 text-xs text-[#8c8c8c]">{experience.subtitle}</p>
+          <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-[#edf3ff]"><div className="h-full rounded-full bg-black" style={{ width: `${Math.min(100, Math.max(8, experience.day / 7 * 100))}%` }}/></div>
         </Link>
-        <div className="grid grid-cols-2 gap-2 border-t border-white/10 p-3"><Button onClick={() => navigate(`/experiences/${experience.id}/record`)} className="bg-white text-ink">지금 느낌 남기기</Button><Button onClick={() => navigate(`/experiences/${experience.id}/record?discomfort=1`)} className="bg-white/10 text-white shadow-none">불편함 기록</Button></div>
-      </Card> : <Card className="mt-3 border-dashed"><EmptyState icon={<Plus/>} title="지금 확인 중인 루틴이 없어요" body={current.data ? '현재 루틴은 그대로 사용 중이에요. 조합을 바꾸면 새 루틴의 사용 경험 기록이 시작됩니다.' : '실제로 사용할 제품과 순서를 정하면 그 조합의 사용 경험 기록이 시작됩니다.'} action={<Link to="/routine/edit"><Button>{current.data ? '루틴 바꾸기' : '루틴 만들기'}</Button></Link>}/></Card>}
+        <div className="grid grid-cols-2 gap-2 border-t border-[#dce8ff] p-3"><Button onClick={() => navigate(`/experiences/${experience.id}/record`)} className="rounded-full bg-black text-white">지금 느낌 남기기</Button><Button onClick={() => navigate(`/experiences/${experience.id}/record?discomfort=1`)} className="rounded-full border border-[#cfe0ff] bg-white text-black shadow-none">불편함 기록</Button></div>
+      </Card> : <Card className="mt-2 border-[#cfe0ff] bg-[#fcfdff] px-5 py-10 text-center"><h3 className="text-[18px] font-medium">지금 확인 중인 루틴이 없어요</h3><p className="mx-auto mt-4 max-w-[280px] text-[12px] leading-5 text-[#777]">{current.data ? '현재 루틴은 그대로 사용 중이에요. 조합을 바꾸면 새 루틴의 사용 경험 기록이 시작됩니다.' : '실제로 사용할 제품과 순서를 정하면 그 조합의 사용 경험 기록이 시작됩니다.'}</p><Link to="/routine/edit"><Button className="mt-8 w-full rounded-full border-[#b9d2ff] bg-white text-black" variant="secondary">새 연구 시작하기</Button></Link></Card>}
       </section>
 
       <section className="mt-9">

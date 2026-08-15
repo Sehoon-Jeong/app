@@ -49,7 +49,11 @@ function BottomNav() {
 }
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
-  return <div className="inline-flex items-center gap-2.5"><div className="grid size-8 place-items-center rounded-xl bg-ink text-lime"><FlaskConical size={18}/></div><span className={twMerge('font-black tracking-[-.08em]', compact ? 'text-xl' : 'text-3xl')}>SKN</span></div>
+  return <img src="/skn-assets/skn-wordmark.png" alt="SKN" className={compact ? 'h-7 w-auto' : 'h-12 w-auto'}/>
+}
+
+export function SknMark({ className = '' }: { className?: string }) {
+  return <img src="/skn-assets/skn-mark.png" alt="SKN" className={twMerge('h-8 w-[30px] object-contain', className)}/>
 }
 
 export function Button({ className, variant = 'primary', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'ghost' | 'danger' }) {

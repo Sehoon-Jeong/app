@@ -54,8 +54,8 @@ export const api = {
   pattern: (id: number) => request<Pattern>(`/api/v1/me/patterns/${id}`),
   conversations: () => request<Conversation[]>('/api/v1/ai/conversations'),
   conversation: (id: number) => request<Conversation>(`/api/v1/ai/conversations/${id}`),
-  createConversation: (mode: string, initialPrompt: string, extras: { productId?: number; experienceId?: number } = {}) => request<Conversation>('/api/v1/ai/conversations', { method: 'POST', body: JSON.stringify({ mode, initialPrompt, ...extras, clientRequestId: uid() }) }),
-  sendMessage: (id: number, text: string) => request<Conversation>(`/api/v1/ai/conversations/${id}/messages`, { method: 'POST', body: JSON.stringify({ text, clientRequestId: uid() }) }),
+  createConversation: (mode: string, initialPrompt: string, extras: { productId?: number; experienceId?: number } = {}, clientRequestId: string = uid()) => request<Conversation>('/api/v1/ai/conversations', { method: 'POST', body: JSON.stringify({ mode, initialPrompt, ...extras, clientRequestId }) }),
+  sendMessage: (id: number, text: string, clientRequestId: string = uid()) => request<Conversation>(`/api/v1/ai/conversations/${id}/messages`, { method: 'POST', body: JSON.stringify({ text, clientRequestId }) }),
   applyRescue: (id: number) => request<Experience>(`/api/v1/ai/conversations/${id}/rescue/apply`, { method: 'POST', body: JSON.stringify({ clientRequestId: uid() }) }),
   resetDemo: (scenario: 'default' | 'empty-experience' | 'cold-start') => request<{ message: string }>(`/api/v1/demo/reset?scenario=${scenario}`, { method: 'POST', body: '{}' }),
 }

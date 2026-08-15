@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, BadgeCheck, ChevronRight, CirclePlus, ExternalLink, Plus, Search, Sparkles, X } from 'lucide-react'
+import { ArrowRight, BadgeCheck, ChevronLeft, ChevronRight, ExternalLink, Plus, Search, Sparkles, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { startChatPath } from '../lib/chat'
 import type { Product, ProductFact, ProductGuide, UserProduct } from '../lib/types'
-import { Button, EmptyState, ErrorState, Loading, ProductGlyph, Screen, TopBar } from '../components/ui'
+import { Button, EmptyState, ErrorState, Loading, ProductGlyph, Screen, SknMark, TopBar } from '../components/ui'
 
 export function ExplorePage() {
   const navigate = useNavigate()
@@ -87,7 +87,7 @@ export function ProductPage() {
   ))
 
   return <Screen nav={false} className="bg-white pb-44">
-    <TopBar title="제품 정보" back/>
+    <CatalogHeader onBack={() => navigate(-1)} onAdd={() => navigate('/explore')}/>
     <div className="pb-8">
       <ProductHero product={data}/>
       <div className="px-5">
@@ -99,12 +99,12 @@ export function ProductPage() {
         <div className="py-8"><ProductAiAction product={data} onClick={openProductChat}/></div>
       </div>
     </div>
-    <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[430px] border-t border-line bg-white/96 px-4 pb-4 pt-3 shadow-[0_-12px_36px_rgba(23,24,22,.06)] backdrop-blur-xl">
+    <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[402px] bg-white/97 px-4 pb-4 pt-3 backdrop-blur-xl">
       {added && <p className="mb-2 text-center text-[11px] font-semibold text-[#52722d]">내 화장품에 담았어요. 현재 루틴은 바뀌지 않아요.</p>}
       {add.error && <p className="mb-2 text-center text-[11px] font-semibold leading-5 text-danger">{add.error.message}</p>}
-      {owned ? <div className="grid grid-cols-[118px_1fr] gap-2.5"><Button variant="secondary" onClick={() => navigate('/my-products')}>내 화장품</Button><Button onClick={openProductChat}><Sparkles size={17}/>{data.personalRecordCount > 0 ? '내 기록과 비교' : 'AI에게 묻기'}</Button></div> : <div className="grid grid-cols-[116px_1fr] gap-2.5">
-        <Button variant="secondary" onClick={openProductChat} aria-label="AI에게 이 제품 물어보기"><Sparkles size={17}/>AI에게 묻기</Button>
-        <Button disabled={add.isPending} onClick={() => add.mutate()}>{add.isPending ? '추가하는 중…' : '내 화장품에 추가'}</Button>
+      {owned ? <div className="grid grid-cols-2 gap-2.5"><Button className="rounded-full border-0 bg-[#edf3ff]" variant="secondary" onClick={() => navigate('/my-products')}>내 화장품</Button><Button className="rounded-full bg-black" onClick={openProductChat}>{data.personalRecordCount > 0 ? '내 기록 비교' : 'AI에게 묻기'}</Button></div> : <div className="grid grid-cols-2 gap-2.5">
+        <Button className="rounded-full border-0 bg-[#edf3ff]" variant="secondary" onClick={openProductChat} aria-label="AI에게 이 제품 물어보기">AI에게 묻기</Button>
+        <Button className="rounded-full bg-black" disabled={add.isPending} onClick={() => add.mutate()}>{add.isPending ? '추가하는 중…' : '내 화장품 추가'}</Button>
       </div>}
     </div>
   </Screen>
@@ -113,16 +113,13 @@ export function ProductPage() {
 function ProductHero({ product }: { product: Product }) {
   const meta = [product.volume, product.versionLabel ? `${product.versionLabel} 버전` : undefined].filter(Boolean)
   return <section>
-    <div className="relative isolate flex min-h-[286px] items-center justify-center overflow-hidden bg-[#f3f4ef]">
-      <div className="absolute -left-16 top-0 size-52 rounded-full bg-white/80 blur-3xl"/>
-      <div className="absolute -right-20 bottom-0 size-52 rounded-full bg-[#e9ebff]/75 blur-3xl"/>
-      <div className="absolute inset-x-20 bottom-8 h-8 rounded-[50%] bg-black/[.06] blur-xl"/>
-      <div className="relative -translate-y-1 drop-shadow-[0_18px_22px_rgba(32,38,31,.12)]"><ProductGlyph category={product.category} size="lg" src={product.imageUrl}/></div>
+    <div className="relative mx-[18px] flex h-[208px] items-center justify-center overflow-hidden rounded-[20px] border border-[#cfe0ff] bg-[#fbfcff]">
+      {product.imageUrl ? <><img src={product.imageUrl} alt="" className="absolute left-[116px] top-[30px] h-[122px] w-auto object-contain opacity-90"/><img src={product.imageUrl} alt={`${product.brand} ${product.name}`} className="relative ml-12 h-[180px] w-auto object-contain"/></> : <ProductGlyph category={product.category} size="lg"/>}
     </div>
-    <div className="px-5 pb-7 pt-6">
-      <div className="flex items-center gap-2 text-[12px] font-bold tracking-[.01em] text-muted"><span>{product.brand}</span><span className="size-0.5 rounded-full bg-[#b7bab3]"/><span>{product.category}</span></div>
-      <h1 className="mt-2.5 text-[29px] font-bold leading-[1.2] tracking-[-.05em]">{product.name}</h1>
-      {(meta.length > 0 || product.verified) && <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] font-medium text-muted">{meta.map(item => <span key={item}>{item}</span>)}{product.verified && <span className="inline-flex items-center gap-1 font-bold text-[#52722d]"><BadgeCheck size={14}/>제품 버전 확인됨</span>}</div>}
+    <div className="px-[30px] pb-6 pt-5">
+      <div className="text-[12px] text-[#777]"><span>{product.brand} {product.category}</span></div>
+      <h1 className="mt-2 text-[31px] font-semibold leading-[1.18] tracking-[-.055em]">{product.name}</h1>
+      {(meta.length > 0 || product.verified) && <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[14px] font-medium text-black">{meta.map(item => <span key={item}>{item}</span>)}{product.verified && <span className="sr-only">제품 버전 확인됨</span>}</div>}
     </div>
   </section>
 }
@@ -130,10 +127,10 @@ function ProductHero({ product }: { product: Product }) {
 function GuideSummary({ guide, productName }: { guide: ProductGuide; productName: string }) {
   const aiGenerated = guide.origin === 'AI_GENERATED'
   const summary = withoutRepeatedProductName(guide.summary, productName)
-  return <section aria-labelledby="guide-summary-title" className="border-t border-line py-7">
-    <div className="flex items-center gap-1.5 text-[11px] font-bold text-accent"><Sparkles size={13}/><span>{aiGenerated ? 'SKN AI 제품 요약' : 'SKN 제품 요약'}</span></div>
+  return <section aria-labelledby="guide-summary-title" className="rounded-[20px] border border-[#cfe0ff] px-4 py-4">
+    <div className="flex items-center gap-1.5 text-[14px] font-medium text-black"><Sparkles size={18} className="text-[#9ec1ff]"/><span>{aiGenerated ? 'SKN AI 제품 요약' : 'SKN 제품 요약'}</span></div>
     <h2 id="guide-summary-title" className="sr-only">이 제품이 무엇인지</h2>
-    <p className="mt-3 text-[19px] font-semibold leading-8 tracking-[-.03em]">{summary}</p>
+    <p className="mt-3 pl-2 text-[14px] leading-6 tracking-[-.02em]">・ {summary}</p>
   </section>
 }
 
@@ -224,19 +221,30 @@ export function ShelfPage() {
   const current = useQuery({ queryKey: ['current-routine'], queryFn: api.currentRoutine, retry: false })
   const routineIds = new Set(current.data?.items.map(item => item.userProductId) || [])
   const filtered = products.data?.filter(item => filter === 'ALL' || (filter === 'ROUTINE' ? routineIds.has(item.id) : !routineIds.has(item.id) && !(item.product?.personalRecordCount)))
-  return <Screen nav={false}>
-    <TopBar title="내 화장품" back right={<button onClick={() => navigate('/explore')} aria-label="탐색에서 화장품 추가" className="grid size-9 place-items-center rounded-full bg-ink text-white"><Plus size={18}/></button>}/>
-    <div className="px-5 py-6"><div className="flex items-end justify-between"><div><h1 className="text-[26px] font-bold tracking-[-.04em]">내가 가진 화장품</h1><p className="mt-2 text-sm text-muted">루틴에 넣을 제품을 고를 수 있어요.</p></div><Link to="/routine/edit" className="text-xs font-bold text-accent">루틴 편집</Link></div>
-      {!!products.data?.length && <div className="mt-6 flex gap-2">{([['ALL',`전체 ${products.data.length}`],['ROUTINE',`현재 루틴 ${routineIds.size}`],['UNUSED',`아직 안 써봄 ${products.data.filter(item => !routineIds.has(item.id) && !item.product?.personalRecordCount).length}`]] as const).map(([value,label]) => <button key={value} onClick={() => setFilter(value)} className={`rounded-full px-3 py-2 text-[11px] font-bold ${filter === value ? 'bg-ink text-white' : 'bg-soft text-muted'}`}>{label}</button>)}</div>}
-      {products.isPending ? <Loading/> : products.data?.length ? filtered?.length ? <div className="mt-5 grid grid-cols-2 gap-3">{filtered.map(item => <ShelfCard key={item.id} item={item} inRoutine={routineIds.has(item.id)} onStart={() => {
+  const unusedCount = products.data?.filter(item => !routineIds.has(item.id) && !item.product?.personalRecordCount).length || 0
+  return <Screen className="bg-white">
+    <CatalogHeader onBack={() => navigate(-1)} onAdd={() => navigate('/explore')}/>
+    <div className="px-5 pb-8"><h1 className="text-[31px] font-semibold tracking-[-.055em]">내가 가진 화장품</h1><p className="mt-2 text-[14px] text-[#8c8c8c]">루틴에 넣을 제품을 고를 수 있어요.</p>
+      {!!products.data?.length && <div className="mt-8 flex gap-2">{([['ALL',`전체 ${products.data.length}`],['ROUTINE',`현재 루틴 ${routineIds.size}`],['UNUSED',`아직 안 써봄 ${unusedCount}`]] as const).map(([value,label]) => <button key={value} onClick={() => setFilter(value)} className={`whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-medium ${filter === value ? 'border-black bg-black text-white' : 'border-[#cfe0ff] bg-white text-[#9ab8e8]'}`}>{label}</button>)}</div>}
+      {products.isPending ? <Loading/> : products.data?.length ? filtered?.length ? <div className="mt-4 grid grid-cols-2 gap-3">{filtered.map(item => <ShelfCard key={item.id} item={item} inRoutine={routineIds.has(item.id)} onStart={() => {
         if (item.product) navigate(`/products/${item.product.id}`)
         else navigate('/routine/edit')
-      }}/>)}</div> : <EmptyState icon={<CirclePlus/>} title={filter === 'ROUTINE' ? '현재 루틴에 제품이 없어요' : '아직 사용 전인 제품이 없어요'} body={filter === 'ROUTINE' ? '루틴 편집에서 실제 사용하는 제품을 추가해보세요.' : '새로 추가한 제품은 현재 루틴에 넣기 전까지 여기에 보여요.'} action={<Button variant="secondary" onClick={() => setFilter('ALL')}>전체 보기</Button>}/> : <EmptyState icon={<CirclePlus/>} title="아직 추가한 화장품이 없어요" body="탐색에서 제품을 찾아 내 화장품에 추가해주세요." action={<Link to="/explore"><Button>화장품 찾기</Button></Link>}/>} 
+      }}/>)}</div> : <ShelfEmpty filter={filter} onAdd={() => navigate('/explore')}/> : <ShelfEmpty filter="ALL" onAdd={() => navigate('/explore')}/>}
     </div>
   </Screen>
 }
 
 function ShelfCard({ item, inRoutine, onStart }: { item: UserProduct; inRoutine: boolean; onStart: () => void }) {
   const product = item.product
-  return <button onClick={onStart} className="rounded-[20px] border border-line bg-white p-3 text-left"><div className="flex justify-center"><ProductGlyph category={product?.category || item.customCategory} src={product?.imageUrl}/></div><p className="mt-2 truncate text-[11px] font-semibold text-muted">{product?.brand || item.customBrand || '브랜드 미입력'}</p><h2 className="mt-1 line-clamp-2 min-h-10 text-sm font-bold leading-5">{product?.name || item.customName}</h2><p className="mt-2 text-[10px] font-bold text-accent">{inRoutine ? '현재 루틴' : product?.personalRecordCount ? `연결된 경험 ${product.personalRecordCount}건` : '아직 안 써봄'} <ArrowRight className="inline" size={11}/></p></button>
+  return <button onClick={onStart} className="min-h-[198px] rounded-[20px] border border-[#cfe0ff] bg-[#fcfdff] px-3 pb-3 pt-3 text-left"><p className="truncate text-[10px] text-[#8c8c8c]">{product?.brand || item.customBrand || '브랜드 미입력'} {product?.category || item.customCategory}</p><h2 className="mt-1 truncate text-[13px] font-semibold leading-5">・ {product?.name || item.customName}</h2><div className="mt-2 grid h-[96px] place-items-center rounded-[15px] border border-dashed border-[#d8e6ff] bg-white">{product?.imageUrl ? <img src={product.imageUrl} alt="" className="h-[88px] w-auto object-contain"/> : <ProductGlyph category={product?.category || item.customCategory} size="sm"/>}</div><p className="mt-2 text-[10px] font-medium text-[#9ec1ff]">{inRoutine ? '현재 루틴' : product?.personalRecordCount ? `연결된 경험 ${product.personalRecordCount}건` : '아직 안 써봄'} <ArrowRight className="inline" size={11}/></p></button>
+}
+
+function ShelfEmpty({ filter, onAdd }: { filter: 'ALL' | 'ROUTINE' | 'UNUSED'; onAdd: () => void }) {
+  const title = filter === 'ROUTINE' ? '현재 루틴에 제품이 없어요' : filter === 'UNUSED' ? '아직 사용 전인 제품이 없어요' : '아직 추가한 화장품이 없어요'
+  const body = filter === 'ROUTINE' ? '루틴에서 실제 사용하는 제품을 추가해보세요.' : filter === 'UNUSED' ? '새로 추가한 제품은 현재 루틴에\n넣기 전까지 여기에 보여요.' : '탐색에서 제품을 찾아 내 화장품에 추가해주세요.'
+  return <div className="pt-24 text-center"><button onClick={onAdd} className="relative mx-auto block"><img src="/skn-assets/ai-drop.png" alt="" className="size-[190px] object-contain"/><span className="absolute left-1/2 top-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-2xl shadow-md">+</span></button><h2 className="mt-5 text-[22px] font-medium tracking-[-.035em]">{title}</h2><p className="mt-3 whitespace-pre-line text-[14px] leading-5 text-[#8c8c8c]">{body}</p></div>
+}
+
+function CatalogHeader({ onBack, onAdd }: { onBack: () => void; onAdd: () => void }) {
+  return <header className="sticky top-0 z-30 grid h-[82px] grid-cols-3 items-center bg-white px-5"><button onClick={onBack} aria-label="뒤로" className="-ml-2 grid size-11 place-items-center justify-self-start rounded-full active:bg-[#f5f8fc]"><ChevronLeft size={27}/></button><SknMark className="h-9 w-9 justify-self-center"/><button onClick={onAdd} aria-label="화장품 추가" className="grid size-11 place-items-center justify-self-end rounded-full bg-white shadow-[0_3px_12px_rgba(0,0,0,.09)]"><Plus size={22}/></button></header>
 }
