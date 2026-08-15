@@ -8,6 +8,7 @@ import { ExplorePage, ProductPage, ShelfPage } from './pages/ExplorePages'
 import { ExperiencePage, RecordPage, RoutineEditPage } from './pages/ExperiencePages'
 import { AiLandingPage, ChatPage, ChatStartPage } from './pages/ChatPages'
 import { PatternPage, RecordsPage } from './pages/RecordsPages'
+import { RoutineDetailPage, RoutineListPage } from './pages/RoutinesPages'
 import { ExperienceHubPage } from './pages/ExperienceHubPage'
 import { DesktopQuickLogin } from './components/DesktopQuickLogin'
 import { OnboardingPage } from './pages/OnboardingPage'
@@ -24,6 +25,8 @@ export default function App() {
     <Route path="/products/:id" element={<ProductPage/>}/>
     <Route path="/my-products" element={<ShelfPage/>}/>
     <Route path="/routine/edit" element={<RoutineEditPage/>}/>
+    <Route path="/routines" element={<RoutineListPage/>}/>
+    <Route path="/routines/:id" element={<RoutineDetailPage/>}/>
     <Route path="/experiences/:id" element={<ExperiencePage/>}/>
     <Route path="/experiences/:id/record" element={<RecordPage/>}/>
     <Route path="/ai" element={<AiLandingPage/>}/>
